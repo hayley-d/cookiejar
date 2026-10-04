@@ -40,5 +40,7 @@ yarn-error.*
 /ios
 /android
 
-*.DS_Store
+*/*.DS_Store
 /docs
+/assets
+../.DS_Store
