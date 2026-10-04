@@ -1,19 +1,11 @@
 import { router, Stack } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useState } from 'react';
 
+import { TextButton } from '@/components/atoms/TextButton';
 import { ExerciseForm } from '@/components/organisms/ExerciseForm';
-import { Touchable } from '@/components/primitives/Touchable';
-import { Typography } from '@/components/primitives/Typography';
-import { createExercise, DuplicateExerciseNameError } from '@/database/repositories/exerciseRepository';
-import {
-  duplicateExerciseNameMessage,
-  imageUrlToStore,
-  validateExerciseForm,
-  type ExerciseFormErrors,
-  type ExerciseFormValues,
-} from '@/exercises/validateExerciseForm';
-import { useExercises } from '@/hooks/useExercises';
+import { createExercise, type NewExercise } from '@/database/repositories/exerciseRepository';
+import type { ExerciseFormValues } from '@/exercises/validateExerciseForm';
+import { useExerciseForm } from '@/hooks/useExerciseForm';
 
 const initialValues: ExerciseFormValues = {
   name: '',
@@ -24,60 +16,28 @@ const initialValues: ExerciseFormValues = {
 
 export default function NewExerciseScreen() {
   const database = useSQLiteContext();
-  const exercises = useExercises();
-  const [values, setValues] = useState(initialValues);
-  const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
 
-  const validationErrors = validateExerciseForm(values, { existingExercises: exercises ?? [] });
-  const visibleErrors: ExerciseFormErrors = hasAttemptedSave ? validationErrors : {};
-  const errors: ExerciseFormErrors = saveError ? { ...visibleErrors, name: saveError } : visibleErrors;
-
-  function handleChangeValues(changedValues: ExerciseFormValues) {
-    setSaveError(null);
-    setValues(changedValues);
+  async function saveExercise(newExercise: NewExercise) {
+    await createExercise(database, newExercise);
+    router.back();
   }
 
-  async function handleSave() {
-    setHasAttemptedSave(true);
-    if (Object.keys(validationErrors).length > 0 || !values.bodyPart || !values.defaultTrackingType) {
-      return;
-    }
-    setIsSaving(true);
-    try {
-      await createExercise(database, {
-        name: values.name.trim(),
-        bodyPart: values.bodyPart,
-        defaultTrackingType: values.defaultTrackingType,
-        imageUrl: imageUrlToStore(values.imageUrl),
-      });
-      router.back();
-    } catch (error) {
-      if (error instanceof DuplicateExerciseNameError) {
-        setSaveError(duplicateExerciseNameMessage(error.exerciseName));
-      } else {
-        throw error;
-      }
-    } finally {
-      setIsSaving(false);
-    }
-  }
+  const exerciseForm = useExerciseForm({ initialValues, saveExercise });
 
   return (
     <>
       <Stack.Screen
         options={{
           headerRight: () => (
-            <Touchable onPress={handleSave} disabled={isSaving} accessibilityLabel="Save">
-              <Typography variant="label" color="accent">
-                Save
-              </Typography>
-            </Touchable>
+            <TextButton label="Save" onPress={exerciseForm.save} disabled={exerciseForm.isSaving} />
           ),
         }}
       />
-      <ExerciseForm values={values} errors={errors} onChangeValues={handleChangeValues} />
+      <ExerciseForm
+        values={exerciseForm.values}
+        errors={exerciseForm.errors}
+        onChangeValues={exerciseForm.changeValues}
+      />
     </>
   );
 }

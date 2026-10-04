@@ -13,7 +13,13 @@ type ExerciseRow = {
   created_at: string;
 };
 
+type UsageCountRow = {
+  usage_count: number;
+};
+
 export type NewExercise = Omit<Exercise, 'id' | 'createdAt'>;
+
+export type ExerciseChanges = NewExercise;
 
 export class DuplicateExerciseNameError extends Error {
   constructor(readonly exerciseName: string) {
@@ -71,4 +77,41 @@ export async function createExercise(database: SQLiteDatabase, newExercise: NewE
     }
     throw error;
   }
+}
+
+export async function updateExercise(
+  database: SQLiteDatabase,
+  exerciseId: number,
+  changes: ExerciseChanges,
+): Promise<void> {
+  try {
+    await database.runAsync(
+      'UPDATE exercises SET name = ?, body_part = ?, image_url = ?, default_tracking_type = ? WHERE id = ?',
+      changes.name,
+      changes.bodyPart,
+      changes.imageUrl,
+      changes.defaultTrackingType,
+      exerciseId,
+    );
+  } catch (error) {
+    if (isUniqueNameViolation(error)) {
+      throw new DuplicateExerciseNameError(changes.name);
+    }
+    throw error;
+  }
+}
+
+export async function countExerciseUsages(database: SQLiteDatabase, exerciseId: number): Promise<number> {
+  const row = await database.getFirstAsync<UsageCountRow>(
+    `SELECT
+      (SELECT COUNT(*) FROM workout_items WHERE exercise_id = $exerciseId)
+      + (SELECT COUNT(*) FROM session_exercises WHERE exercise_id = $exerciseId OR replaced_exercise_id = $exerciseId)
+      AS usage_count`,
+    { $exerciseId: exerciseId },
+  );
+  return row?.usage_count ?? 0;
+}
+
+export async function deleteExercise(database: SQLiteDatabase, exerciseId: number): Promise<void> {
+  await database.runAsync('DELETE FROM exercises WHERE id = ?', exerciseId);
 }

@@ -1,14 +1,17 @@
 import { router, Stack } from 'expo-router';
 
+import { TextButton } from '@/components/atoms/TextButton';
 import { EmptyState } from '@/components/molecules/EmptyState';
 import { ExerciseRow } from '@/components/molecules/ExerciseRow';
 import { List } from '@/components/primitives/List';
-import { Touchable } from '@/components/primitives/Touchable';
-import { Typography } from '@/components/primitives/Typography';
 import { useExercises } from '@/hooks/useExercises';
 
 function openNewExercise() {
   router.push('/exercises/new');
+}
+
+function openExercise(exerciseId: number) {
+  router.push({ pathname: '/exercises/[exerciseId]', params: { exerciseId: String(exerciseId) } });
 }
 
 export default function ExerciseLibraryScreen() {
@@ -19,11 +22,7 @@ export default function ExerciseLibraryScreen() {
       <Stack.Screen
         options={{
           headerRight: () => (
-            <Touchable onPress={openNewExercise} accessibilityLabel="Add exercise">
-              <Typography variant="label" color="accent">
-                Add
-              </Typography>
-            </Touchable>
+            <TextButton label="Add" accessibilityLabel="Add exercise" onPress={openNewExercise} />
           ),
         }}
       />
@@ -39,7 +38,13 @@ export default function ExerciseLibraryScreen() {
         <List
           data={exercises}
           keyExtractor={(exercise) => String(exercise.id)}
-          renderItem={({ item: exercise }) => <ExerciseRow name={exercise.name} imageUrl={exercise.imageUrl} />}
+          renderItem={({ item: exercise }) => (
+            <ExerciseRow
+              name={exercise.name}
+              imageUrl={exercise.imageUrl}
+              onPress={() => openExercise(exercise.id)}
+            />
+          )}
         />
       )}
     </>
