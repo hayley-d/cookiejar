@@ -6,10 +6,10 @@ Cookiejar is a personal exercise tracker that runs on one iPhone. It is fully of
 
 Core capabilities:
 
-- Define exercises (name, category, how it is measured: reps and weight, duration, or distance).
-- Log a workout as an ordered list of exercises, each with one or more sets.
-- Browse workout history.
-- See progress for an exercise over time (best set, volume, personal records).
+- Define exercises (name, body part, how it is tracked: repetitions, repetitions and weight, duration, or distance).
+- Build workouts and classes, and schedule them in a weekly plan.
+- Log sessions as an ordered list of exercises, each with one or more sets.
+- Browse session history and see progress for an exercise over time (best set, volume, personal records).
 
 ## Non-goals
 
@@ -44,7 +44,7 @@ Read the versioned docs at https://docs.expo.dev/versions/v57.0.0/ before using 
 ## Data Layer
 
 - The database is opened once through `SQLiteProvider` at the root layout. Components reach it with `useSQLiteContext`.
-- `PRAGMA journal_mode = WAL` is set on open.
+- `PRAGMA journal_mode = WAL` and `PRAGMA foreign_keys = ON` are set on open.
 - Schema changes are versioned migrations driven by `PRAGMA user_version`. Migrations run in the provider's `onInit` before any screen renders. A migration is never edited after it has shipped to the phone; new changes go in a new migration.
 - Each entity has a repository module in `src/database/repositories` that holds all of its SQL. Screens and components call repository functions and never write SQL themselves.
 - Every query uses bound parameters, never string interpolation.
@@ -53,7 +53,7 @@ Read the versioned docs at https://docs.expo.dev/versions/v57.0.0/ before using 
 
 Migrations run in order through `src/database/migrations/migrations.ts` array: `[createInitialSchema, createTrainingSchema]`. The `user_version` PRAGMA tracks which migrations have run.
 
-- **v1 (createInitialSchema)**: Draft schema with exercises, workouts, workout_exercises and sets tables. Never edited. Kept to preserve existing databases.
+- **v1 (createInitialSchema)**: Draft schema with exercises, workouts, workout_exercises and sets tables. Never edited. Kept so the migration order stays the same on every device.
 - **v2 (createTrainingSchema)**: Drops draft tables and creates the full training schema for production use.
 
 ### Schema v2
@@ -66,7 +66,7 @@ Migrations run in order through `src/database/migrations/migrations.ts` array: `
 | **target_sets** | Target reps/weight/duration for a workout_item | `id`, `workout_item_id`, `position`, `repetitions`, `weight_kilograms`, `duration_seconds`, `distance_meters` |
 | **plans** | Training plans | `id`, `name`, `is_active` (0\|1 unique), `starts_on`, `created_at` |
 | **plan_entries** | Workouts scheduled in a plan | `id`, `plan_id`, `workout_id`, `day_of_week`, `time_of_day` |
-| **sessions** | Completed workouts (copies workout_name/kind/class_type at time of session) | `id`, `workout_id`, `workout_name`, `workout_kind`, `class_type`, `scheduled_date`, `started_at`, `finished_at`, `health_*` fields, `notes` |
+| **sessions** | Started or finished workout sessions (copies workout_name/kind/class_type at time of session) | `id`, `workout_id`, `workout_name`, `workout_kind`, `class_type`, `scheduled_date`, `started_at`, `finished_at`, `health_*` fields, `notes` |
 | **session_exercises** | Exercises in a session | `id`, `session_id`, `exercise_id`, `replaced_exercise_id`, `position`, `superset_group`, `tracking_type` |
 | **session_sets** | Completed sets in a session | `id`, `session_exercise_id`, `position`, `target_*` columns, `repetitions`, `weight_kilograms`, `duration_seconds`, `distance_meters`, `completed_at` |
 | **profile** | Single user profile (id=1) | `id`, `display_name`, `birth_date`, `sex`, `height_centimetres`, `goal`, `weekly_workout_target`, `daily_step_goal`, `updated_at` |
@@ -109,13 +109,13 @@ Rules:
 
 When the app launches:
 
-1. The root layout shows a native splash screen through `expo-splash-screen`.
-2. `NuggieLoadingScreen` appears as an overlay (sky-blue background, 180-point centred nuggie image, caption). The nuggie is chosen by `chooseNuggie({ kind: 'appLoading' }, new Date())` to match the hour of day (sleeping 22–04, early morning 05–07, workout 08–21).
+1. The native splash screen stays up because the root layout calls `SplashScreen.preventAutoHideAsync()` at module scope.
+2. `NuggieLoadingScreen` appears as an overlay (sky-blue background, 180-point centred nuggie image, caption) and hides the native splash on its first layout. The nuggie is chosen by `chooseNuggie({ kind: 'appLoading' }, new Date())` to match the hour of day (sleeping 22–04, early morning 05–07, workout 08–21).
 3. The `SQLiteProvider` (with `useSuspense`) runs its `onInit` function: migrations execute against the database, driven by `PRAGMA user_version`.
 4. Once the database is ready and the minimum 800ms has elapsed, the loading screen hides and the tab navigation appears.
 5. Four tabs occupy the bottom: Home, Calendar, Create, Profile. The `CoachFloatingButton` (64-point circle with a 3-point accent ring) floats in the bottom-right, 16 points from each edge, above the tab bar. Tapping it opens the coach modal.
 
-The theme is applied at the root: `ThemeProvider` wraps `SQLiteProvider`, and gesture handlers wrap the entire navigation stack.
+The root layout nests `ThemeProvider` → `Suspense` (null fallback) → `SQLiteProvider` → `GestureHandlerRootView` → `Stack`. The loading screen is a sibling overlay inside `ThemeProvider`, so the tabs mount underneath while it is still showing.
 
 ## Directory Layout
 
@@ -123,7 +123,7 @@ The theme is applied at the root: `ThemeProvider` wraps `SQLiteProvider`, and ge
 src/
   app/                      Expo Router routes and layouts
     (tabs)/                 bottom tabs: index, calendar, create, profile
-    _layout.tsx             root: SQLiteProvider → ThemeProvider → Stack
+    _layout.tsx             root: ThemeProvider → Suspense → SQLiteProvider → GestureHandlerRootView → Stack
     coach.tsx               Coach modal screen
   components/
     primitives/             themed wrappers: Box, Typography, Stack, Image, TextField
