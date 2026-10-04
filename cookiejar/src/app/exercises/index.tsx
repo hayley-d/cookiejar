@@ -1,7 +1,7 @@
 import { router, Stack } from 'expo-router';
 
-import { Card } from '@/components/atoms/Card';
 import { EmptyState } from '@/components/molecules/EmptyState';
+import { ExerciseRow } from '@/components/molecules/ExerciseRow';
 import { List } from '@/components/primitives/List';
 import { Touchable } from '@/components/primitives/Touchable';
 import { Typography } from '@/components/primitives/Typography';
@@ -39,11 +39,7 @@ export default function ExerciseLibraryScreen() {
         <List
           data={exercises}
           keyExtractor={(exercise) => String(exercise.id)}
-          renderItem={({ item: exercise }) => (
-            <Card>
-              <Typography variant="label">{exercise.name}</Typography>
-            </Card>
-          )}
+          renderItem={({ item: exercise }) => <ExerciseRow name={exercise.name} imageUrl={exercise.imageUrl} />}
         />
       )}
     </>

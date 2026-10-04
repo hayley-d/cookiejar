@@ -6,9 +6,11 @@ type ImageProperties = {
   contentFit?: ImageContentFit;
   style?: StyleProp<ImageStyle>;
   accessibilityLabel?: string;
+  onLoad?: () => void;
+  onError?: () => void;
 };
 
-export function Image({ source, contentFit = 'cover', style, accessibilityLabel }: ImageProperties) {
+export function Image({ source, contentFit = 'cover', style, accessibilityLabel, onLoad, onError }: ImageProperties) {
   return (
     <ExpoImage
       source={source}
@@ -16,6 +18,8 @@ export function Image({ source, contentFit = 'cover', style, accessibilityLabel 
       cachePolicy="disk"
       style={style}
       accessibilityLabel={accessibilityLabel}
+      onLoad={onLoad ? () => onLoad() : undefined}
+      onError={onError ? () => onError() : undefined}
     />
   );
 }

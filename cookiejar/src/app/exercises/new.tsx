@@ -8,6 +8,7 @@ import { Typography } from '@/components/primitives/Typography';
 import { createExercise, DuplicateExerciseNameError } from '@/database/repositories/exerciseRepository';
 import {
   duplicateExerciseNameMessage,
+  imageUrlToStore,
   validateExerciseForm,
   type ExerciseFormErrors,
   type ExerciseFormValues,
@@ -18,6 +19,7 @@ const initialValues: ExerciseFormValues = {
   name: '',
   bodyPart: null,
   defaultTrackingType: 'repetitions_and_weight',
+  imageUrl: '',
 };
 
 export default function NewExerciseScreen() {
@@ -48,7 +50,7 @@ export default function NewExerciseScreen() {
         name: values.name.trim(),
         bodyPart: values.bodyPart,
         defaultTrackingType: values.defaultTrackingType,
-        imageUrl: null,
+        imageUrl: imageUrlToStore(values.imageUrl),
       });
       router.back();
     } catch (error) {
