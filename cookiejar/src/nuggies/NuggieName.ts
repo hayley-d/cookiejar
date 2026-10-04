@@ -1,0 +1,18 @@
+export type NuggieName =
+  | 'coach'
+  | 'sleeping'
+  | 'earlyMorning'
+  | 'workout'
+  | 'notification'
+  | 'beast'
+  | 'celebrate'
+  | 'celebrateAlternate'
+  | 'celebrateThird'
+  | 'goodJob'
+  | 'yoga'
+  | 'pilates'
+  | 'hiking'
+  | 'restDay'
+  | 'tired'
+  | 'analytics'
+  | 'cooking';
