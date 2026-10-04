@@ -1,17 +1,23 @@
 import { Button } from '@/components/atoms/Button';
+import { NuggieImage } from '@/components/atoms/NuggieImage';
 import { Box } from '@/components/primitives/Box';
 import { Typography } from '@/components/primitives/Typography';
+import type { NuggieName } from '@/nuggies/NuggieName';
 
 type EmptyStateProperties = {
   title: string;
   message: string;
+  nuggie?: NuggieName;
   actionLabel?: string;
   onAction?: () => void;
 };
 
-export function EmptyState({ title, message, actionLabel, onAction }: EmptyStateProperties) {
+const nuggieSize = 140;
+
+export function EmptyState({ title, message, nuggie, actionLabel, onAction }: EmptyStateProperties) {
   return (
     <Box flex={1} align="center" justify="center" gap="medium" padding="large">
+      {nuggie ? <NuggieImage name={nuggie} size={nuggieSize} /> : null}
       <Box align="center" gap="small">
         <Typography variant="title" align="center">
           {title}

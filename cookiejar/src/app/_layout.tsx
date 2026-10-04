@@ -67,6 +67,11 @@ export default function RootLayout() {
             >
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="coach" options={{ presentation: 'modal', title: 'Coach Nuggie' }} />
+              <Stack.Screen name="exercises/index" options={{ title: 'Exercise library' }} />
+              <Stack.Screen
+                name="exercises/new"
+                options={{ presentation: 'modal', title: 'New exercise', headerLargeTitleEnabled: false }}
+              />
             </Stack>
           </GestureHandlerRootView>
         </SQLiteProvider>
