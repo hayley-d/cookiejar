@@ -1,18 +1,34 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { Stack } from 'expo-router';
+import { SQLiteProvider } from 'expo-sqlite';
+import { StatusBar } from 'expo-status-bar';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { databaseName } from '@/database/databaseName';
+import { migrateDatabase } from '@/database/migrateDatabase';
+import { ThemeProvider } from '@/theme/ThemeProvider';
+import { palettes } from '@/theme/tokens';
+import { useColorSchemeName } from '@/theme/useColorSchemeName';
 
-SplashScreen.preventAutoHideAsync();
+export default function RootLayout() {
+  const palette = palettes[useColorSchemeName()];
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <SQLiteProvider databaseName={databaseName} onInit={migrateDatabase}>
+      <ThemeProvider>
+        <StatusBar style="auto" />
+        <Stack
+          screenOptions={{
+            headerLargeTitleEnabled: true,
+            headerShadowVisible: false,
+            headerStyle: { backgroundColor: palette.background },
+            headerTintColor: palette.accent,
+            headerTitleStyle: { color: palette.textPrimary },
+            headerLargeTitleStyle: { color: palette.textPrimary },
+            contentStyle: { backgroundColor: palette.background },
+          }}
+        >
+          <Stack.Screen name="index" options={{ title: 'Workouts' }} />
+        </Stack>
+      </ThemeProvider>
+    </SQLiteProvider>
   );
 }
