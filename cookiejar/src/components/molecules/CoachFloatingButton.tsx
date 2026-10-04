@@ -53,7 +53,6 @@ export function CoachFloatingButton({ tipText }: CoachFloatingButtonProperties) 
             borderWidth: ringWidth,
             borderColor: theme.colors.accent,
             backgroundColor: theme.colors.surface,
-            overflow: 'hidden',
           },
           theme.shadows.card,
         ]}
