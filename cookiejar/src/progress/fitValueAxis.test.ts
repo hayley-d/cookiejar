@@ -33,4 +33,21 @@ describe('fitValueAxis', () => {
     expect(axis.minimum).toBeLessThanOrEqual(61.3);
     expect(axis.maximum).toBeGreaterThanOrEqual(64.9);
   });
+
+  test('starts at zero when asked to', () => {
+    expect(fitValueAxis([4200, 9800], { startsAtZero: true })).toEqual({
+      minimum: 0,
+      maximum: 10000,
+      ticks: [0, 5000, 10000],
+    });
+    expect(fitValueAxis([61, 64], { startsAtZero: true }).minimum).toBe(0);
+  });
+
+  test('keeps a from-zero axis usable for empty, zero and flat data', () => {
+    expect(fitValueAxis([], { startsAtZero: true }).minimum).toBe(0);
+    expect(fitValueAxis([0, 0], { startsAtZero: true }).maximum).toBeGreaterThan(0);
+    const flatAxis = fitValueAxis([50], { startsAtZero: true });
+    expect(flatAxis.minimum).toBe(0);
+    expect(flatAxis.maximum).toBeGreaterThanOrEqual(50);
+  });
 });

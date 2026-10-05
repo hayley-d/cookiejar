@@ -12,6 +12,7 @@ import { useTheme } from '@/theme/useTheme';
 
 type ExerciseRowProperties = {
   name: string;
+  caption?: string;
   imageUrl: string | null;
   onPress?: () => void;
   isSelected?: boolean;
@@ -20,7 +21,7 @@ type ExerciseRowProperties = {
 
 const imageSize = 88;
 
-export function ExerciseRow({ name, imageUrl, onPress, isSelected, disabled }: ExerciseRowProperties) {
+export function ExerciseRow({ name, caption, imageUrl, onPress, isSelected, disabled }: ExerciseRowProperties) {
   const theme = useTheme();
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
   const showsImage = imageUrl !== null && imageUrl !== failedImageUrl;
@@ -38,8 +39,13 @@ export function ExerciseRow({ name, imageUrl, onPress, isSelected, disabled }: E
         ) : (
           <NuggieImage name="workout" size={imageSize} shape="rounded" />
         )}
-        <Box flex={1}>
+        <Box flex={1} gap="extraSmall">
           <Typography variant="label">{name}</Typography>
+          {caption === undefined ? null : (
+            <Typography variant="caption" color="textSecondary">
+              {caption}
+            </Typography>
+          )}
         </Box>
         {isSelected === undefined ? null : <Checkbox isChecked={isSelected} />}
       </Stack>

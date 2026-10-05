@@ -39,9 +39,9 @@ export function estimateOneRepMax(weightKilograms: number, repetitions: number):
   return weightKilograms * (1 + repetitions / epleyRepetitionsDivisor);
 }
 
-type WeightedSet = CompletedSet & { repetitions: number; weightKilograms: number };
+export type WeightedSet = CompletedSet & { repetitions: number; weightKilograms: number };
 
-function isWeightedSet(set: CompletedSet): set is WeightedSet {
+export function isWeightedSet(set: CompletedSet): set is WeightedSet {
   return (
     set.trackingType === 'repetitions_and_weight' &&
     set.repetitions !== null &&

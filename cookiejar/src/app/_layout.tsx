@@ -105,6 +105,10 @@ export default function RootLayout() {
                 name="progress/records"
                 options={{ title: 'Personal records', headerLargeTitleEnabled: false }}
               />
+              <Stack.Screen
+                name="progress/exercises/[exerciseId]"
+                options={{ title: '', headerLargeTitleEnabled: false }}
+              />
               <Stack.Screen name="stats/[metric]" options={{ title: '', headerLargeTitleEnabled: false }} />
               <Stack.Screen name="workout/[workoutId]" options={{ title: '', headerLargeTitleEnabled: false }} />
               <Stack.Screen name="workouts" options={{ presentation: 'modal', headerShown: false }} />

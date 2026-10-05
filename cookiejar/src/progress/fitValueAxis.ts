@@ -18,13 +18,24 @@ function candidateSteps(smallestStep: number): number[] {
   );
 }
 
-export function fitValueAxis(values: number[]): ValueAxis {
+type ValueAxisOptions = {
+  startsAtZero?: boolean;
+};
+
+function dataBounds(values: number[], startsAtZero: boolean) {
   const dataValues = values.length === 0 ? [0] : values;
   const smallestValue = Math.min(...dataValues);
   const largestValue = Math.max(...dataValues);
+  if (startsAtZero) {
+    const low = Math.min(0, smallestValue);
+    return { low, high: largestValue > low ? largestValue : low + 1 };
+  }
   const isFlat = smallestValue === largestValue;
-  const low = isFlat ? smallestValue - 1 : smallestValue;
-  const high = isFlat ? largestValue + 1 : largestValue;
+  return { low: isFlat ? smallestValue - 1 : smallestValue, high: isFlat ? largestValue + 1 : largestValue };
+}
+
+export function fitValueAxis(values: number[], { startsAtZero = false }: ValueAxisOptions = {}): ValueAxis {
+  const { low, high } = dataBounds(values, startsAtZero);
   const smallestStep = (high - low) / 2;
 
   for (const step of candidateSteps(smallestStep)) {

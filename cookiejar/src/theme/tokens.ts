@@ -146,6 +146,9 @@ export const sizes = {
   chartHighlightRing: 3,
   chartEdgePadding: 12,
   chartReferenceDash: 6,
+  chartBarMaximumWidth: 24,
+  chartBarWidthRatio: 0.7,
+  chartBarCornerRadius: 4,
 };
 
 export const durations = {

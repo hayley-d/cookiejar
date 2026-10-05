@@ -1,7 +1,7 @@
 import { Circle, DashPathEffect, Line as StraightLine, matchFont, vec } from '@shopify/react-native-skia';
 import { useMemo, useRef, useState } from 'react';
 import type { GestureResponderEvent } from 'react-native';
-import { CartesianChart, Line, Scatter, type Scale } from 'victory-native';
+import { Bar, CartesianChart, type Scale } from 'victory-native';
 
 import { Box } from '@/components/primitives/Box';
 import { Touchable } from '@/components/primitives/Touchable';
@@ -14,11 +14,10 @@ import { fitValueAxis } from '@/progress/fitValueAxis';
 import { useTheme } from '@/theme/useTheme';
 import type { ChartPoint } from '@/types/ChartPoint';
 
-type ProgressLineChartProperties = {
+type ProgressBarChartProperties = {
   points: ChartPoint[];
   unit: string;
   referenceValue?: number;
-  emphasisedDates?: string[];
 };
 
 type ChartDatum = {
@@ -26,7 +25,7 @@ type ChartDatum = {
   value: number;
 };
 
-export function ProgressLineChart({ points, unit, referenceValue, emphasisedDates }: ProgressLineChartProperties) {
+export function ProgressBarChart({ points, unit, referenceValue }: ProgressBarChartProperties) {
   const theme = useTheme();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const xScaleReference = useRef<Scale | null>(null);
@@ -43,11 +42,12 @@ export function ProgressLineChart({ points, unit, referenceValue, emphasisedDate
     referenceValue === undefined
       ? points.map((point) => point.value)
       : [...points.map((point) => point.value), referenceValue],
+    { startsAtZero: true },
   );
   const dayTicks = chartDayTicks(data.map((datum) => datum.day));
-  const emphasisedDays = new Set((emphasisedDates ?? []).map(toChartDayNumber));
   const selectedPoint = points.find((point) => point.date === selectedDate) ?? null;
   const edgePadding = theme.sizes.chartEdgePadding;
+  const barMaximumWidth = theme.sizes.chartBarMaximumWidth;
 
   function selectNearestPoint(event: GestureResponderEvent) {
     const xScale = xScaleReference.current;
@@ -61,17 +61,15 @@ export function ProgressLineChart({ points, unit, referenceValue, emphasisedDate
     setSelectedDate(nearestIndex === null ? null : points[nearestIndex].date);
   }
 
-  const accessibilityLabel = describeChartSummary(points, unit, valueAxis);
-
   return (
     <Box gap="small">
       <Typography variant="caption" color={selectedPoint === null ? 'textSecondary' : 'textPrimary'}>
-        {selectedPoint === null ? 'Tap a point to see its value' : describeChartPoint(selectedPoint, unit)}
+        {selectedPoint === null ? 'Tap a column to see its value' : describeChartPoint(selectedPoint, unit)}
       </Typography>
       <Touchable
         onPress={selectNearestPoint}
         accessibilityRole="image"
-        accessibilityLabel={accessibilityLabel}
+        accessibilityLabel={describeChartSummary(points, unit, valueAxis)}
         style={{ height: theme.sizes.progressChartHeight }}
       >
         <CartesianChart
@@ -79,7 +77,7 @@ export function ProgressLineChart({ points, unit, referenceValue, emphasisedDate
           xKey="day"
           yKeys={['value']}
           domain={{ y: [valueAxis.minimum, valueAxis.maximum] }}
-          domainPadding={{ left: edgePadding, right: edgePadding, top: edgePadding, bottom: edgePadding }}
+          domainPadding={{ left: barMaximumWidth, right: barMaximumWidth, top: edgePadding, bottom: 0 }}
           onScaleChange={(xScale) => {
             xScaleReference.current = xScale;
           }}
@@ -103,49 +101,53 @@ export function ProgressLineChart({ points, unit, referenceValue, emphasisedDate
             },
           ]}
         >
-          {({ points: chartPoints, chartBounds, xScale, yScale }) => (
-            <>
-              {referenceValue === undefined ? null : (
-                <StraightLine
-                  p1={vec(chartBounds.left, yScale(referenceValue))}
-                  p2={vec(chartBounds.right, yScale(referenceValue))}
-                  color={theme.colors.textSecondary}
-                  strokeWidth={theme.sizes.chartGridLineWidth}
-                >
-                  <DashPathEffect intervals={[theme.sizes.chartReferenceDash, theme.sizes.chartReferenceDash]} />
-                </StraightLine>
-              )}
-              <Line
-                points={chartPoints.value}
-                color={theme.colors.chart}
-                strokeWidth={theme.sizes.chartLineWidth}
-                curveType="linear"
-              />
-              <Scatter
-                points={chartPoints.value}
-                color={theme.colors.chart}
-                radius={(chartPoint) =>
-                  emphasisedDays.has(Number(chartPoint.xValue)) ? theme.sizes.chartEmphasisedDot : theme.sizes.chartDot
-                }
-              />
-              {selectedPoint === null ? null : (
-                <>
-                  <Circle
-                    cx={xScale(toChartDayNumber(selectedPoint.date))}
-                    cy={yScale(selectedPoint.value)}
-                    r={theme.sizes.chartHighlightDot + theme.sizes.chartHighlightRing}
-                    color={theme.colors.surface}
-                  />
-                  <Circle
-                    cx={xScale(toChartDayNumber(selectedPoint.date))}
-                    cy={yScale(selectedPoint.value)}
-                    r={theme.sizes.chartHighlightDot}
-                    color={theme.colors.textPrimary}
-                  />
-                </>
-              )}
-            </>
-          )}
+          {({ points: chartPoints, chartBounds, xScale, yScale }) => {
+            const firstDay = data.length === 0 ? 0 : data[0].day;
+            const lastDay = data.length === 0 ? 0 : data[data.length - 1].day;
+            const pixelsPerDay =
+              lastDay === firstDay ? Infinity : (xScale(lastDay) - xScale(firstDay)) / (lastDay - firstDay);
+            const barWidth = Math.min(barMaximumWidth, pixelsPerDay * theme.sizes.chartBarWidthRatio);
+            return (
+              <>
+                {referenceValue === undefined ? null : (
+                  <StraightLine
+                    p1={vec(chartBounds.left, yScale(referenceValue))}
+                    p2={vec(chartBounds.right, yScale(referenceValue))}
+                    color={theme.colors.textSecondary}
+                    strokeWidth={theme.sizes.chartGridLineWidth}
+                  >
+                    <DashPathEffect intervals={[theme.sizes.chartReferenceDash, theme.sizes.chartReferenceDash]} />
+                  </StraightLine>
+                )}
+                <Bar
+                  points={chartPoints.value}
+                  chartBounds={chartBounds}
+                  color={theme.colors.chart}
+                  barWidth={barWidth}
+                  roundedCorners={{
+                    topLeft: theme.sizes.chartBarCornerRadius,
+                    topRight: theme.sizes.chartBarCornerRadius,
+                  }}
+                />
+                {selectedPoint === null ? null : (
+                  <>
+                    <Circle
+                      cx={xScale(toChartDayNumber(selectedPoint.date))}
+                      cy={yScale(selectedPoint.value)}
+                      r={theme.sizes.chartHighlightDot + theme.sizes.chartHighlightRing}
+                      color={theme.colors.surface}
+                    />
+                    <Circle
+                      cx={xScale(toChartDayNumber(selectedPoint.date))}
+                      cy={yScale(selectedPoint.value)}
+                      r={theme.sizes.chartHighlightDot}
+                      color={theme.colors.textPrimary}
+                    />
+                  </>
+                )}
+              </>
+            );
+          }}
         </CartesianChart>
       </Touchable>
     </Box>
