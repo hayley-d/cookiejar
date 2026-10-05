@@ -42,3 +42,5 @@ export function fillSetForTick(trackingType: TrackingType, set: FillableSet): Se
   const hasAnyTrackedValue = fields.some((field) => filledValues[field] !== null);
   return hasAnyTrackedValue ? { outcome: 'ticked', values: filledValues } : { outcome: 'refused' };
 }
+
+export type SetCompletionOutcome = 'ticked' | 'unticked' | 'refused';

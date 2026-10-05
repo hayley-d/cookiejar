@@ -12,6 +12,7 @@ export type Palette = {
   accentSoft: string;
   onAccent: string;
   success: string;
+  successSoft: string;
   danger: string;
   cardShadow: string;
   tabBar: string;
@@ -28,6 +29,7 @@ export const palettes: Record<ColorSchemeName, Palette> = {
     accentSoft: '#FCE3EE',
     onAccent: '#1B2A40',
     success: '#5BBF8A',
+    successSoft: '#DDF3E6',
     danger: '#D9534F',
     cardShadow: '#7FA9CC',
     tabBar: '#FFFFFF',
@@ -42,6 +44,7 @@ export const palettes: Record<ColorSchemeName, Palette> = {
     accentSoft: '#4A2A3A',
     onAccent: '#1B2A40',
     success: '#6FD39E',
+    successSoft: '#1F3B2E',
     danger: '#E5675A',
     cardShadow: '#000000',
     tabBar: '#16233A',
@@ -90,11 +93,17 @@ export const sizes = {
   headerCardImageHeight: 200,
   headerCardNuggie: 140,
   detailBottomBarClearance: 96,
+  setCompletionColumn: 44,
+  shakeDistance: 8,
+  statTileMinimumHeight: 88,
+  sessionClassNuggie: 140,
 };
 
 export const durations = {
   dragLongPress: 300,
   autoScrollInterval: 16,
+  shakeStep: 50,
+  timerTick: 1000,
 };
 
 export const typography = {
