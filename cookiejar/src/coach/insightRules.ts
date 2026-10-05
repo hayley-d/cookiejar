@@ -1,8 +1,11 @@
 import type { InsightRule } from '@/coach/Insight';
+import { elevatedRestingHeartRate } from '@/coach/rules/elevatedRestingHeartRate';
+import { lowSleep } from '@/coach/rules/lowSleep';
 import { missedSessions } from '@/coach/rules/missedSessions';
 import { newPersonalRecords } from '@/coach/rules/newPersonalRecords';
 import { noData } from '@/coach/rules/noData';
 import { plateau } from '@/coach/rules/plateau';
+import { recoveryGood } from '@/coach/rules/recoveryGood';
 import { stalePlan } from '@/coach/rules/stalePlan';
 import { streakMilestone } from '@/coach/rules/streakMilestone';
 import { strengthTrend } from '@/coach/rules/strengthTrend';
@@ -19,4 +22,7 @@ export const insightRules: readonly InsightRule[] = [
   streakMilestone,
   strengthTrend,
   weekAhead,
+  lowSleep,
+  elevatedRestingHeartRate,
+  recoveryGood,
 ];
