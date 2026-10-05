@@ -94,7 +94,7 @@ export const seededPlan: PlanWithEntries = {
   id: 7,
   name: 'Summer Strength',
   isActive: true,
-  startsOn: '2026-08-26',
+  startsOn: '2026-08-12',
   createdAt: '',
   entries: [],
 };

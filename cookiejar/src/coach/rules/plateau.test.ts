@@ -212,7 +212,7 @@ describe('plateau', () => {
     ).toEqual([]);
   });
 
-  test('lists at most 3 plateaus', () => {
+  test('lists at most 3 plateaus in one insight, longest stall first', () => {
     const exercises = [1, 2, 3, 4].map((id) => ({
       ...squat,
       id,
@@ -222,26 +222,13 @@ describe('plateau', () => {
       ...weightedSet(80, 5),
       exerciseId,
     });
+    const setsForExercises = (identifiers: number[]) => identifiers.map(setFor);
     const sessions = [
-      sessionOn(
-        14,
-        exercises.map((exercise) => setFor(exercise.id)),
-        8,
-      ),
-      sessionOn(
-        21,
-        exercises.map((exercise) => setFor(exercise.id)),
-        8,
-      ),
-      sessionOn(
-        28,
-        exercises.map((exercise) => setFor(exercise.id)),
-        8,
-      ),
-      sessionOn(
-        5,
-        exercises.map((exercise) => setFor(exercise.id)),
-      ),
+      sessionOn(14, setsForExercises([1, 2, 3, 4]), 8),
+      sessionOn(21, setsForExercises([1, 2, 3, 4]), 8),
+      sessionOn(28, setsForExercises([1, 2, 3, 4]), 8),
+      sessionOn(5, setsForExercises([1, 2, 3, 4])),
+      sessionOn(12, setsForExercises([4])),
     ];
     const insights = plateau(
       createCoachSnapshot({
@@ -249,6 +236,28 @@ describe('plateau', () => {
         sessionsLastTwelveWeeks: sessions,
       }),
     );
-    expect(insights).toHaveLength(3);
+    expect(insights).toHaveLength(1);
+    expect(insights[0].messages).toHaveLength(3);
+    expect(insights[0].messages[0]).toContain('Exercise 4 has been stuck for 4 weeks');
+    expect(insights[0].action?.destination).toEqual({ screen: 'exerciseHistory', exerciseId: 4 });
+  });
+
+  test('lists an exercise once when it plateaus under two tracking types', () => {
+    const repetitionSet = (repetitions: number): CompletedSet => ({
+      exerciseId: 2,
+      trackingType: 'repetitions',
+      repetitions,
+      weightKilograms: null,
+      durationSeconds: null,
+      distanceMeters: null,
+    });
+    const insights = insightsFor([
+      sessionOn(14, [weightedSet(80, 5), repetitionSet(10)], 8),
+      sessionOn(21, [weightedSet(80, 5), repetitionSet(10)], 8),
+      sessionOn(28, [weightedSet(80, 5), repetitionSet(10)], 8),
+      sessionOn(5, [weightedSet(80, 5), repetitionSet(10)]),
+    ]);
+    expect(insights).toHaveLength(1);
+    expect(insights[0].messages).toHaveLength(1);
   });
 });

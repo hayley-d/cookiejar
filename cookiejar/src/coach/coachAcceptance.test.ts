@@ -13,7 +13,13 @@ import {
   createCoachSnapshot,
   createFullyLoadedCoachSnapshot,
   createHealthSnapshot,
+  createFinishedSession,
   createSeededCoachSnapshot,
+  createWeightedSet,
+  seededBenchPress,
+  seededDeadlift,
+  seededPlan,
+  seededSquat,
 } from '@/coach/coachSnapshotFixture';
 import type { RuleIdentifier } from '@/coach/Insight';
 import { allTopics, type Topic } from '@/coach/Topic';
@@ -50,13 +56,32 @@ describe('seeded acceptance fixture', () => {
   test('reports a plan older than 6 weeks as stale under "Should I change things up?"', () => {
     const bubbles = answerQuestion(questionFor('changeItUp'), snapshot);
     const staleBubble = bubbles.find((bubble) => bubble.text.includes('Summer Strength'));
-    expect(staleBubble?.text).toContain('6 weeks');
+    expect(staleBubble?.text).toContain('8 weeks');
     expect(staleBubble?.nuggie).toBe('coach');
     expect(staleBubble?.action?.destination).toEqual({
       screen: 'planEditor',
       planId: 7,
     });
     expect(identifiersFor('changeItUp', snapshot)).toEqual(['plateau', 'stalePlan']);
+  });
+
+  test('three stalled lifts and an old plan still answer with both plateau and stalePlan', () => {
+    const stalledLifts = [seededSquat, seededBenchPress, seededDeadlift];
+    const stalledSets = stalledLifts.map((exercise) => createWeightedSet(exercise.id, 80, 5));
+    const stalledSnapshot = createCoachSnapshot({
+      activePlan: seededPlan,
+      finishedSessionCount: 12,
+      exercisesById: new Map(stalledLifts.map((exercise) => [exercise.id, exercise])),
+      sessionsLastTwelveWeeks: [
+        createFinishedSession(8, 14, stalledSets),
+        createFinishedSession(8, 21, stalledSets),
+        createFinishedSession(8, 28, stalledSets),
+        createFinishedSession(9, 5, stalledSets),
+      ],
+    });
+    const identifiers = identifiersFor('changeItUp', stalledSnapshot);
+    expect(identifiers).toContain('plateau');
+    expect(identifiers).toContain('stalePlan');
   });
 
   test('reports sleep under 6 hours as low sleep with the tired nuggie', () => {

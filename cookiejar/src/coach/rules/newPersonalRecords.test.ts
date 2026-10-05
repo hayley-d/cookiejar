@@ -105,6 +105,22 @@ describe('newPersonalRecords', () => {
     });
   });
 
+  test('lists an exercise once, using its newest record', () => {
+    const [insight] = newPersonalRecords(
+      createCoachSnapshot({
+        exercisesById,
+        personalRecordsLastFourteenDays: [
+          createRecordEvent(2, 1, 60),
+          createRecordEvent(6, 1, 65),
+          createRecordEvent(4, 2, 100),
+        ],
+      }),
+    );
+    expect(insight.messages).toHaveLength(2);
+    expect(insight.messages[0]).toStartWith('New record on Bench Press — 65 kg');
+    expect(insight.messages[1]).toContain('Squat');
+  });
+
   test('skips records whose exercise is unknown', () => {
     expect(
       newPersonalRecords(

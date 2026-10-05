@@ -3,6 +3,8 @@ import { addDays } from '@/dates/addDays';
 import { parseLocalDateString } from '@/dates/parseLocalDateString';
 import { toLocalDateString } from '@/dates/toLocalDateString';
 
+export const restingHeartRateAverageDayCount = 7;
+
 function datesBeforeToday(snapshot: CoachSnapshot, dayCount: number, firstOffset: number): string[] {
   const today = parseLocalDateString(snapshot.today);
   return Array.from({ length: dayCount }, (_, index) => toLocalDateString(addDays(today, -(firstOffset + index))));

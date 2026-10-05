@@ -1,10 +1,13 @@
 import type { CoachSnapshot } from '@/coach/CoachSnapshot';
 import type { Insight } from '@/coach/Insight';
-import { averageRestingHeartRateBeforeToday, todayRestingHeartRate } from '@/coach/recoveryReadings';
+import {
+  averageRestingHeartRateBeforeToday,
+  restingHeartRateAverageDayCount,
+  todayRestingHeartRate,
+} from '@/coach/recoveryReadings';
 
 export const elevatedRestingHeartRatePriority = 85;
 export const elevatedRestingHeartRateBeatsPerMinute = 5;
-export const restingHeartRateAverageDayCount = 7;
 
 export function elevatedRestingHeartRate(snapshot: CoachSnapshot): Insight[] {
   const today = todayRestingHeartRate(snapshot);

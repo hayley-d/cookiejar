@@ -1,15 +1,8 @@
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 
-import { buildCoachSnapshot, coachSnapshotDateRanges } from '@/coach/buildCoachSnapshot';
 import type { CoachSnapshot } from '@/coach/CoachSnapshot';
-import { getLatestBodyMeasurement } from '@/database/repositories/bodyMeasurementRepository';
-import { listExercises } from '@/database/repositories/exerciseRepository';
-import { getHealthSnapshotsBetween } from '@/database/repositories/healthSnapshotRepository';
-import { getActivePlanWithEntries } from '@/database/repositories/planRepository';
-import { getProfile } from '@/database/repositories/profileRepository';
-import { getTrainingTotals, listAllFinishedSessionSets } from '@/database/repositories/progressRepository';
-import { listSessionsBetween } from '@/database/repositories/scheduleRepository';
+import { loadCoachSnapshot } from '@/hooks/loadCoachSnapshot';
 import { useDataVersion } from '@/stores/dataVersionStore';
 
 export type CoachSnapshotLookup =
@@ -22,48 +15,15 @@ export function useCoachSnapshot(): CoachSnapshotLookup {
 
   useEffect(() => {
     let isActive = true;
-    const now = new Date();
-    const dateRanges = coachSnapshotDateRanges(now);
-    Promise.all([
-      getProfile(database),
-      getActivePlanWithEntries(database),
-      getTrainingTotals(database, null, dateRanges.today),
-      listAllFinishedSessionSets(database),
-      listSessionsBetween(database, dateRanges.scheduleStartDate, dateRanges.weekEndDate),
-      getHealthSnapshotsBetween(database, dateRanges.recentStartDate, dateRanges.today),
-      getLatestBodyMeasurement(database),
-      listExercises(database),
-    ]).then(
-      ([
-        profile,
-        activePlan,
-        lifetimeTotals,
-        finishedSessionSets,
-        scheduledSessions,
-        healthSnapshots,
-        latestBodyMeasurement,
-        exercises,
-      ]) => {
+    loadCoachSnapshot(database, new Date()).then(
+      (snapshot) => {
         if (isActive) {
-          setLookup({
-            status: 'ready',
-            snapshot: buildCoachSnapshot({
-              now,
-              profile,
-              activePlan,
-              finishedSessionCount: lifetimeTotals.workoutCount,
-              finishedSessionSets,
-              scheduledSessions,
-              healthSnapshots,
-              latestBodyMeasurement,
-              exercises,
-            }),
-          });
+          setLookup({ status: 'ready', snapshot });
         }
       },
       () => {
         if (isActive) {
-          setLookup({ status: 'failed' });
+          setLookup((current) => (current.status === 'ready' ? current : { status: 'failed' }));
         }
       },
     );

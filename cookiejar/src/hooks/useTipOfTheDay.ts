@@ -1,38 +1,41 @@
 import { useSQLiteContext } from 'expo-sqlite';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { chooseGeneralTip, chooseTipOfTheDay } from '@/coach/chooseTipOfTheDay';
 import { coachTipLastShownDateSettingKey } from '@/coach/coachSettingKeys';
 import { getSetting, setSetting } from '@/database/repositories/appSettingsRepository';
 import { toLocalDateString } from '@/dates/toLocalDateString';
-import { useCoachSnapshot } from '@/hooks/useCoachSnapshot';
+import { loadCoachSnapshot } from '@/hooks/loadCoachSnapshot';
 import { durations } from '@/theme/tokens';
 
 export function useTipOfTheDay(): string | undefined {
   const database = useSQLiteContext();
-  const snapshotLookup = useCoachSnapshot();
   const [tipText, setTipText] = useState<string | undefined>(undefined);
-  const hasDecided = useRef(false);
 
   useEffect(() => {
-    if (hasDecided.current || snapshotLookup.status === 'loading') {
-      return;
-    }
-    hasDecided.current = true;
-    const now = snapshotLookup.status === 'ready' ? snapshotLookup.snapshot.now : new Date();
+    let isActive = true;
+    const now = new Date();
     const today = toLocalDateString(now);
     getSetting(database, coachTipLastShownDateSettingKey)
-      .then((lastShownDate) => {
+      .then(async (lastShownDate) => {
         if (lastShownDate === today) {
           return;
         }
-        const chosenTip =
-          snapshotLookup.status === 'ready' ? chooseTipOfTheDay(snapshotLookup.snapshot) : chooseGeneralTip(now);
+        const chosenTip = await loadCoachSnapshot(database, now).then(
+          chooseTipOfTheDay,
+          () => chooseGeneralTip(now),
+        );
+        if (!isActive) {
+          return;
+        }
         setTipText(chosenTip);
-        return setSetting(database, coachTipLastShownDateSettingKey, today);
+        await setSetting(database, coachTipLastShownDateSettingKey, today);
       })
       .catch(() => undefined);
-  }, [database, snapshotLookup]);
+    return () => {
+      isActive = false;
+    };
+  }, [database]);
 
   useEffect(() => {
     if (tipText === undefined) {

@@ -188,6 +188,17 @@ describe('recoveryGood', () => {
     expect(recoveryGood(heartRateWeek(56, 55, 480))).toEqual([]);
   });
 
+  test('does not fire when the three night average is low even if last night was long', () => {
+    const snapshot = snapshotWith([
+      { date: '2026-10-07', sleepMinutes: 480, restingHeartRate: 55 },
+      { date: '2026-10-06', sleepMinutes: 240, restingHeartRate: 55 },
+      { date: '2026-10-05', sleepMinutes: 240, restingHeartRate: 55 },
+      ...previousDates.slice(2).map((date) => ({ date, restingHeartRate: 55 })),
+    ]);
+    expect(lowSleep(snapshot)).toHaveLength(1);
+    expect(recoveryGood(snapshot)).toEqual([]);
+  });
+
   test('never fires with missing data', () => {
     expect(recoveryGood(createCoachSnapshot())).toEqual([]);
     expect(recoveryGood(heartRateWeek(55, 55, null))).toEqual([]);

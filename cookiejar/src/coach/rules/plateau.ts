@@ -9,6 +9,7 @@ import {
   maximumRepetitionsForOneRepMaxEstimate,
   type CompletedSet,
 } from '@/progress/detectPersonalRecords';
+import type { Exercise } from '@/types/Exercise';
 import type { TrackingType } from '@/types/TrackingType';
 
 export const plateauPriority = 60;
@@ -119,23 +120,34 @@ function findPlateaus(snapshot: CoachSnapshot): Plateau[] {
 }
 
 export function plateau(snapshot: CoachSnapshot): Insight[] {
-  return findPlateaus(snapshot)
-    .flatMap((foundPlateau) => {
-      const exercise = snapshot.exercisesById.get(foundPlateau.exerciseId);
-      return exercise === undefined ? [] : [{ exercise, weekCount: foundPlateau.weekCount }];
-    })
-    .slice(0, maximumListedPlateaus)
-    .map(({ exercise, weekCount }): Insight => ({
+  const seenExerciseIds = new Set<number>();
+  const listedPlateaus: { exercise: Exercise; weekCount: number }[] = [];
+  for (const foundPlateau of findPlateaus(snapshot)) {
+    const exercise = snapshot.exercisesById.get(foundPlateau.exerciseId);
+    if (exercise === undefined || seenExerciseIds.has(exercise.id)) {
+      continue;
+    }
+    seenExerciseIds.add(exercise.id);
+    listedPlateaus.push({ exercise, weekCount: foundPlateau.weekCount });
+  }
+  listedPlateaus.splice(maximumListedPlateaus);
+  if (listedPlateaus.length === 0) {
+    return [];
+  }
+  return [
+    {
       ruleIdentifier: 'plateau',
       topics: ['changeItUp', 'improvement'],
       priority: plateauPriority,
       nuggie: 'coach',
-      messages: [
-        `${exercise.name} has been stuck for ${weekCount} weeks. Try a new rep range (e.g. 5×5 → 4×8) or a variation.`,
-      ],
+      messages: listedPlateaus.map(
+        ({ exercise, weekCount }) =>
+          `${exercise.name} has been stuck for ${weekCount} weeks. Try a new rep range (e.g. 5×5 → 4×8) or a variation.`,
+      ),
       action: {
-        label: `See ${exercise.name} history`,
-        destination: { screen: 'exerciseHistory', exerciseId: exercise.id },
+        label: `See ${listedPlateaus[0].exercise.name} history`,
+        destination: { screen: 'exerciseHistory', exerciseId: listedPlateaus[0].exercise.id },
       },
-    }));
+    },
+  ];
 }

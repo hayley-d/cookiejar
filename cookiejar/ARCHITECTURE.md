@@ -1002,6 +1002,8 @@ Phase 09a replaces the placeholder coach modal with a rule-based coach. It adds 
 
 An `Insight` has a `ruleIdentifier`, a list of `topics` (not one topic; a question matches when its topic is in the list), a `priority`, a `nuggie`, one or more `messages` and an optional `action` (`label` and `destination`). `insightToBubbles` makes one bubble per message and puts the action on the last bubble only. The five topics are `progress`, `improvement`, `changeItUp`, `recovery` and `week` (`Topic.ts`), and `coachQuestions` has one prompt chip per topic.
 
+`plateau`, like `newPersonalRecords` and `strengthTrend`, emits one insight. Its messages cover up to 3 exercises (one per exercise, longest stall first) and its action opens the longest-stalled exercise's history.
+
 Each priority is a named constant in its rule's file, and each rule file also holds that rule's thresholds as named constants.
 
 | Priority | Rule | Topics |
@@ -1035,7 +1037,7 @@ Each priority is a named constant in its rule's file, and each rule file also ho
 
 Tapping an action calls `router.dismiss()` and then `router.navigate(...)`, so the destination is not stacked under the coach modal.
 
-Other files: `buildCoachSnapshot.ts` and `recoveryReadings.ts` (sleep and resting heart rate averages shared by the recovery rules), `coachConversation.ts` (the reducer, below), `coachSettingKeys.ts`, and `coachSnapshotFixture.ts` with `coachAcceptance.test.ts`, which prove the four seeded-data cases (squat plateau, stale plan, low sleep with the `tired` nuggie, new record with the `beast` nuggie) on a pure snapshot. Nothing is seeded on the device.
+Other files: `buildCoachSnapshot.ts` and `recoveryReadings.ts` (sleep and resting heart rate averages, and `restingHeartRateAverageDayCount`, shared by the recovery rules; `recoveryGood` also needs the 3-night sleep average at or above `lowSleepAverageMinutes`, so it never fires with `lowSleep`), `coachConversation.ts` (the reducer, below), `coachSettingKeys.ts`, and `coachSnapshotFixture.ts` with `coachAcceptance.test.ts`, which prove the four seeded-data cases (squat plateau, stale plan, low sleep with the `tired` nuggie, new record with the `beast` nuggie) on a pure snapshot. Nothing is seeded on the device.
 
 ### Coach Conversation
 
@@ -1055,7 +1057,7 @@ While the snapshot loads, the typing indicator uses the `coach` nuggie.
 
 ### Tip of the Day
 
-`useTipOfTheDay()` is called by `src/app/(tabs)/_layout.tsx` and returns the tip text, or `undefined`. Once the snapshot lookup has settled it decides once per mount: it reads `coachTipLastShownDateSettingKey` (`coach_tip_last_shown_date`) from `app_settings`; if that equals today's local date it shows nothing, otherwise it picks the tip (`chooseTipOfTheDay` when the snapshot is ready, `chooseGeneralTip` when it failed) and stores today's date. So the tip shows at most once per local day. It clears the text after `durations.tipBubbleVisible` (6000 ms). `CoachFloatingButton` shows `tipText` in a bubble that is a `Touchable`, and tapping it opens the coach like the button does.
+`useTipOfTheDay()` is called by `src/app/(tabs)/_layout.tsx` and returns the tip text, or `undefined`. On mount it decides once and never reloads on data changes: it reads `coachTipLastShownDateSettingKey` (`coach_tip_last_shown_date`) from `app_settings`; if that equals today's local date it shows nothing, otherwise it loads the snapshot once with `loadCoachSnapshot(database, now)` (in `src/hooks/loadCoachSnapshot.ts`, the plain async loader that `useCoachSnapshot` also uses), picks the tip (`chooseTipOfTheDay` when the load succeeds, `chooseGeneralTip` when it fails) and stores today's date. `useCoachSnapshot` itself still reloads on every data version change and keeps a ready snapshot if a later reload fails. So the tip shows at most once per local day. It clears the text after `durations.tipBubbleVisible` (6000 ms). `CoachFloatingButton` shows `tipText` in a bubble that is a `Touchable`, and tapping it opens the coach like the button does.
 
 ### Hooks
 
