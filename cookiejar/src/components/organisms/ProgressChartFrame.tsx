@@ -8,7 +8,7 @@ import { Touchable } from '@/components/primitives/Touchable';
 import { Typography } from '@/components/primitives/Typography';
 import { formatDayMonth } from '@/dates/formatDayMonth';
 import { chartDayTicks, fromChartDayNumber, toChartDayNumber } from '@/progress/chartDayNumber';
-import { describeChartPoint, describeChartSummary } from '@/progress/describeChart';
+import { describeChartPoint, describeChartSummary, type ChartValueFormatter } from '@/progress/describeChart';
 import { findNearestPointIndex } from '@/progress/findNearestPointIndex';
 import { fitValueAxis } from '@/progress/fitValueAxis';
 import { useTheme } from '@/theme/useTheme';
@@ -24,6 +24,7 @@ export type ProgressChartMarksArguments = CartesianChartRenderArg<ChartDatum, 'v
 type ProgressChartFrameProperties = {
   points: ChartPoint[];
   unit: string;
+  formatValue?: ChartValueFormatter;
   referenceValue?: number;
   startsAtZero: boolean;
   hasBottomPadding: boolean;
@@ -35,6 +36,7 @@ type ProgressChartFrameProperties = {
 export function ProgressChartFrame({
   points,
   unit,
+  formatValue,
   referenceValue,
   startsAtZero,
   hasBottomPadding,
@@ -79,12 +81,12 @@ export function ProgressChartFrame({
   return (
     <Box gap="small">
       <Typography variant="caption" color={selectedPoint === null ? 'textSecondary' : 'textPrimary'}>
-        {selectedPoint === null ? selectionHint : describeChartPoint(selectedPoint, unit)}
+        {selectedPoint === null ? selectionHint : describeChartPoint(selectedPoint, unit, formatValue)}
       </Typography>
       <Touchable
         onPress={selectNearestPoint}
         accessibilityRole="image"
-        accessibilityLabel={describeChartSummary(points, unit, valueAxis)}
+        accessibilityLabel={describeChartSummary(points, unit, valueAxis, formatValue)}
         style={{ height: theme.sizes.progressChartHeight }}
       >
         <CartesianChart
@@ -114,7 +116,7 @@ export function ProgressChartFrame({
               font,
               tickValues: valueAxis.ticks,
               domain: [valueAxis.minimum, valueAxis.maximum],
-              formatYLabel: (value) => String(value),
+              formatYLabel: (value) => (formatValue === undefined ? String(value) : formatValue(value)),
               labelColor: theme.colors.textSecondary,
               lineColor: theme.colors.border,
               lineWidth: theme.sizes.chartGridLineWidth,

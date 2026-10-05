@@ -2,11 +2,9 @@ import type { HealthStatsMetric } from '@/stats/parseStatsMetric';
 import type { ChartPoint } from '@/types/ChartPoint';
 import type { HealthSnapshot } from '@/types/HealthSnapshot';
 
-const minutesPerHour = 60;
-
 export const healthChartUnits: Record<HealthStatsMetric, string> = {
   steps: 'steps',
-  sleep: 'h',
+  sleep: 'min',
   restingHeartRate: 'bpm',
 };
 
@@ -17,7 +15,7 @@ function readChartValue(metric: HealthStatsMetric, snapshot: HealthSnapshot): nu
   if (metric === 'restingHeartRate') {
     return snapshot.restingHeartRate;
   }
-  return snapshot.sleepMinutes === null ? null : Math.round((snapshot.sleepMinutes / minutesPerHour) * 10) / 10;
+  return snapshot.sleepMinutes;
 }
 
 export function healthChartPoints(

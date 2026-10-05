@@ -1,4 +1,6 @@
+import { formatDuration } from '@/dates/formatDuration';
 import type { TrackingType } from '@/types/TrackingType';
+import { formatDistance } from '@/workouts/describeTargetSets';
 
 export type ExerciseMetric =
   'estimatedOneRepMax' | 'heaviestWeight' | 'volume' | 'mostRepetitions' | 'longestDuration' | 'longestDistance';
@@ -19,6 +21,11 @@ export const exerciseMetricUnits: Record<ExerciseMetric, string> = {
   mostRepetitions: 'reps',
   longestDuration: 's',
   longestDistance: 'm',
+};
+
+export const exerciseMetricValueFormatters: Partial<Record<ExerciseMetric, (value: number) => string>> = {
+  longestDuration: formatDuration,
+  longestDistance: formatDistance,
 };
 
 export const exerciseMetricTrackingTypes: Record<ExerciseMetric, TrackingType> = {

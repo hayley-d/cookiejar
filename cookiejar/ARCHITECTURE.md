@@ -892,7 +892,7 @@ All are registered flat on the root `Stack` in `src/app/_layout.tsx`.
 
 `victory-native` and `@shopify/react-native-skia` are imported only by three organisms: `ProgressChartFrame`, `ProgressLineChart` and `ProgressBarChart`. Every other file, including routes and pure modules, gets chart data as `ChartPoint` (`{ date, value }`, from `src/types/ChartPoint.ts`) and renders through these organisms. Pure modules must also not import either library.
 
-- `ProgressChartFrame` is the chart-internal module shared by the other two (no route or other organism imports it). It takes `points`, `unit`, an optional `referenceValue`, `startsAtZero`, `hasBottomPadding`, `horizontalPadding`, `selectionHint` and a `renderMarks` function. It draws the `CartesianChart` inside a `Touchable` of height `sizes.progressChartHeight`, sets the font with Skia `matchFont` on the system font (no font file is bundled), draws the dashed reference line, and handles selection.
+- `ProgressChartFrame` is the chart-internal module shared by the other two (no route or other organism imports it). It takes `points`, `unit`, an optional `formatValue` (used by the y-axis labels and the tap and accessibility captions; without it values show with the `unit` suffix), an optional `referenceValue`, `startsAtZero`, `hasBottomPadding`, `horizontalPadding`, `selectionHint` and a `renderMarks` function. It draws the `CartesianChart` inside a `Touchable` of height `sizes.progressChartHeight`, sets the font with Skia `matchFont` on the system font (no font file is bundled), draws the dashed reference line, and handles selection.
 - `ProgressLineChart` takes `points`, `unit`, an optional `referenceValue` and optional `emphasisedDates`. It draws a linear line and a dot per point; dates in `emphasisedDates` get the larger `chartEmphasisedDot`. The Y axis is fitted to the data.
 - `ProgressBarChart` takes `points`, `unit` and an optional `referenceValue`. It draws columns with rounded top corners. The Y axis starts at zero. Column width is the narrower of `chartBarMaximumWidth` and `chartBarWidthRatio` times the pixels per day.
 - Points are placed by real date, not by index, through `toChartDayNumber` and `fromChartDayNumber` (`src/progress/chartDayNumber.ts`). The X axis shows at most three ticks from `chartDayTicks` (first, middle and last day), labelled by `formatDayMonth`.
@@ -941,7 +941,7 @@ All are registered flat on the root `Stack` in `src/app/_layout.tsx`.
 | `useMeasurementForm({ onSaved })` | Like `useProfileForm` for a new measurement (date defaults to today). A save-in-flight guard stops double saves |
 | `useTrainingTotals(range)` | `{ totals, hasLoadFailed }` from `getTrainingTotals` |
 | `usePersonalRecords()` | `{ personalRecords, hasLoadFailed }`: `listAllFinishedSessionSets` run through `buildPersonalRecordList` |
-| `useNewRecordCount()` | The number of record events in the current month |
+| `useNewRecordCount()` | The number of record events in the current month, or `null` while the records load or if loading failed |
 | `useExercisesWithHistory()` | `{ exercises, hasLoadFailed }` from `listExercisesWithHistory` |
 | `useExerciseHistory(exerciseId)` | `{ exercise, sessions, recordSetIds, recordDates, seriesSets, isLoaded, hasLoadFailed }` from `getExercise` and `listFinishedSessionSetsForExercise`, shaped by `buildExerciseHistory` |
 | `useClassStatistics()` | `{ classStatistics, hasLoadFailed }` for the current month |
@@ -967,7 +967,7 @@ These import no React Native, expo-sqlite, Skia, victory-native or HealthKit cod
 `src/progress/` (alongside the Phase 05 and 07 files):
 
 - `calculateBodyMassIndex.ts`: kilograms over metres squared, one decimal place, `null` without a height
-- `calculateWeightChange.ts`: `selectWeighIns` and `calculateWeightChange` (latest weight minus the weight at or just before the window start, else the oldest in the window, `null` under 2 weigh-ins)
+- `calculateWeightChange.ts`: `selectWeighIns` and `calculateWeightChange` (latest weight minus the weight at or just before the window start, else the oldest in the window, `null` under 2 weigh-ins or when the latest weigh-in is before the window start)
 - `summarizeWeight.ts`, `describeWeightSummary.ts`, `selectWeightPoints.ts`: the hub summary and the weight chart points
 - `progressRanges.ts`: `ProgressRange`, `progressRangeLabels`, `rangeStartDate` and `filterPointsToRange`
 - `fitValueAxis.ts`, `chartDayNumber.ts`, `findNearestPointIndex.ts`, `describeChart.ts`: chart helpers (see Charts)

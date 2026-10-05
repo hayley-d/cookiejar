@@ -1,6 +1,7 @@
 import { Bar } from 'victory-native';
 
 import { ProgressChartFrame } from '@/components/organisms/ProgressChartFrame';
+import type { ChartValueFormatter } from '@/progress/describeChart';
 import { toChartDayNumber } from '@/progress/chartDayNumber';
 import { useTheme } from '@/theme/useTheme';
 import type { ChartPoint } from '@/types/ChartPoint';
@@ -8,10 +9,11 @@ import type { ChartPoint } from '@/types/ChartPoint';
 type ProgressBarChartProperties = {
   points: ChartPoint[];
   unit: string;
+  formatValue?: ChartValueFormatter;
   referenceValue?: number;
 };
 
-export function ProgressBarChart({ points, unit, referenceValue }: ProgressBarChartProperties) {
+export function ProgressBarChart({ points, unit, formatValue, referenceValue }: ProgressBarChartProperties) {
   const theme = useTheme();
   const barMaximumWidth = theme.sizes.chartBarMaximumWidth;
   const firstDay = points.length === 0 ? 0 : toChartDayNumber(points[0].date);
@@ -21,6 +23,7 @@ export function ProgressBarChart({ points, unit, referenceValue }: ProgressBarCh
     <ProgressChartFrame
       points={points}
       unit={unit}
+      formatValue={formatValue}
       referenceValue={referenceValue}
       startsAtZero
       hasBottomPadding={false}

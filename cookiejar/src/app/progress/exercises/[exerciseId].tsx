@@ -16,6 +16,7 @@ import { buildExerciseSeries } from '@/progress/buildExerciseSeries';
 import {
   exerciseMetricLabels,
   exerciseMetricUnits,
+  exerciseMetricValueFormatters,
   isColumnMetric,
   metricsForTrackingType,
   type ExerciseMetric,
@@ -50,6 +51,7 @@ export default function ExerciseHistoryScreen() {
   }
 
   const unit = exerciseMetricUnits[metric];
+  const formatValue = exerciseMetricValueFormatters[metric];
 
   return (
     <ScrollBox>
@@ -69,9 +71,9 @@ export default function ExerciseHistoryScreen() {
             No sessions in this range
           </Typography>
         ) : isColumnMetric(metric) ? (
-          <ProgressBarChart points={points} unit={unit} />
+          <ProgressBarChart points={points} unit={unit} formatValue={formatValue} />
         ) : (
-          <ProgressLineChart points={points} unit={unit} emphasisedDates={recordDates} />
+          <ProgressLineChart points={points} unit={unit} formatValue={formatValue} emphasisedDates={recordDates} />
         )}
       </Box>
       <Typography variant="heading">Sessions</Typography>

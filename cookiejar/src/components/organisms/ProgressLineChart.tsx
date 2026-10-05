@@ -1,6 +1,7 @@
 import { Line, Scatter } from 'victory-native';
 
 import { ProgressChartFrame } from '@/components/organisms/ProgressChartFrame';
+import type { ChartValueFormatter } from '@/progress/describeChart';
 import { toChartDayNumber } from '@/progress/chartDayNumber';
 import { useTheme } from '@/theme/useTheme';
 import type { ChartPoint } from '@/types/ChartPoint';
@@ -8,11 +9,18 @@ import type { ChartPoint } from '@/types/ChartPoint';
 type ProgressLineChartProperties = {
   points: ChartPoint[];
   unit: string;
+  formatValue?: ChartValueFormatter;
   referenceValue?: number;
   emphasisedDates?: string[];
 };
 
-export function ProgressLineChart({ points, unit, referenceValue, emphasisedDates }: ProgressLineChartProperties) {
+export function ProgressLineChart({
+  points,
+  unit,
+  formatValue,
+  referenceValue,
+  emphasisedDates,
+}: ProgressLineChartProperties) {
   const theme = useTheme();
   const emphasisedDays = new Set((emphasisedDates ?? []).map(toChartDayNumber));
 
@@ -20,6 +28,7 @@ export function ProgressLineChart({ points, unit, referenceValue, emphasisedDate
     <ProgressChartFrame
       points={points}
       unit={unit}
+      formatValue={formatValue}
       referenceValue={referenceValue}
       startsAtZero={false}
       hasBottomPadding

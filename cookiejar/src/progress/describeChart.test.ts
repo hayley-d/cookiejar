@@ -17,4 +17,17 @@ describe('describeChart', () => {
     );
     expect(describeChartSummary([], 'kg', { minimum: 0, maximum: 1 })).toBe('No values in kg');
   });
+
+  test('uses the value formatter instead of the unit suffix', () => {
+    const formatMinutes = (value: number) => `${value / 60}m`;
+    expect(describeChartPoint({ date: '2026-10-05', value: 2700 }, 's', formatMinutes)).toBe('Mon 5 Oct · 45m');
+    const points = [
+      { date: '2026-10-01', value: 1800 },
+      { date: '2026-10-05', value: 2700 },
+    ];
+    expect(describeChartSummary(points, 's', { minimum: 0, maximum: 3000 }, formatMinutes)).toBe(
+      '2 values from Thu 1 Oct to Mon 5 Oct, between 0m and 50m',
+    );
+    expect(describeChartSummary([], 's', { minimum: 0, maximum: 1 }, formatMinutes)).toBe('No values');
+  });
 });

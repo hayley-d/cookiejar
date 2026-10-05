@@ -15,10 +15,15 @@ import { useProfile } from '@/hooks/useProfile';
 import { useScheduledWorkouts } from '@/hooks/useScheduledWorkouts';
 import { parseStatsMetric, type StatsMetric } from '@/stats/parseStatsMetric';
 import { averageOfPoints, healthChartPoints, healthChartUnits } from '@/stats/healthChartPoints';
+import { formatSleepChartValue } from '@/stats/formatSleepChartValue';
 import { statsDetailDayCount } from '@/stats/statsDetail';
 
 type StatsParameters = {
   metric: string;
+};
+
+const metricValueFormatters: Partial<Record<StatsMetric, (value: number) => string>> = {
+  sleep: formatSleepChartValue,
 };
 
 const metricTitles: Record<StatsMetric, string> = {
@@ -35,7 +40,7 @@ export default function StatsScreen() {
   const endDate = toLocalDateString(now);
   const startDate = toLocalDateString(addDays(now, 1 - statsDetailDayCount));
   const { snapshotsByDate } = useHealthRange(startDate, endDate);
-  const { dailyStepGoal } = useProfile();
+  const { dailyStepGoal, isLoaded } = useProfile();
   const scheduledWorkoutsLookup = useScheduledWorkouts(startDate, endDate);
 
   if (metric === null) {
@@ -74,7 +79,8 @@ export default function StatsScreen() {
               <ProgressBarChart
                 points={chartPoints}
                 unit={healthChartUnits[metric]}
-                referenceValue={metric === 'steps' ? dailyStepGoal : undefined}
+                formatValue={metricValueFormatters[metric]}
+                referenceValue={metric === 'steps' && isLoaded ? dailyStepGoal : undefined}
               />
             )}
             <HealthMetricBarList

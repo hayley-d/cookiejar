@@ -21,8 +21,8 @@ describe('healthChartPoints', () => {
     ]);
   });
 
-  test('converts sleep minutes to hours with one decimal', () => {
-    expect(healthChartPoints('sleep', dates, snapshots)).toEqual([{ date: '2026-10-01', value: 7.3 }]);
+  test('keeps sleep in minutes', () => {
+    expect(healthChartPoints('sleep', dates, snapshots)).toEqual([{ date: '2026-10-01', value: 435 }]);
   });
 
   test('reads resting heart rate', () => {

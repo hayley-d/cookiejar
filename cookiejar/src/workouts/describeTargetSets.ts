@@ -9,7 +9,7 @@ function formatWeight(weightKilograms: number): string {
   return String(weightKilograms);
 }
 
-function formatDistance(distanceMeters: number): string {
+export function formatDistance(distanceMeters: number): string {
   if (distanceMeters >= metersPerKilometer) {
     return `${metersToKilometers(distanceMeters)} km`;
   }
