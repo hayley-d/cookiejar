@@ -65,6 +65,19 @@ Read the versioned docs at https://docs.expo.dev/versions/v57.0.0/ before using 
 
 `createExercise` and `updateExercise` turn a `UNIQUE` violation on `name` into `DuplicateExerciseNameError`. The form also checks uniqueness (ignoring case) before saving, so the error is a safety net that shows the same message.
 
+### Workout Repository
+
+`src/database/repositories/workoutRepository.ts` holds all workout SQL. expo-sqlite can't run under bun, so it is checked on the device, not with `bun test`.
+
+| Function | Behaviour |
+| --- | --- |
+| `listWorkouts(database)` | Every workout with exercise count, ordered by `updated_at DESC` |
+| `getWorkoutWithItems(database, workoutId)` | One workout, or `null`. Loads items and their target sets in three queries and assembles them in memory |
+| `saveWorkout(database, editorState)` | One `withTransactionAsync`. Inserts a new workout row or updates an existing one, setting `updated_at`. Deletes and re-inserts items and target sets (which cascades). Returns the workout id |
+| `duplicateWorkout(database, workoutId)` | Copies the workout row, its items and its target sets in one transaction, named "(copy)". The copy has `updated_at` set to now so it sorts to the top |
+| `deleteWorkout(database, workoutId)` | Deletes the workout |
+| `countPlansUsingWorkout(database, workoutId)` | Counts `plan_entries` rows that reference the workout, for the delete warning |
+
 ### Migrations
 
 Migrations run in order through `src/database/migrations/migrations.ts` array: `[createInitialSchema, createTrainingSchema]`. The `user_version` PRAGMA tracks which migrations have run.
@@ -109,11 +122,11 @@ routes (src/app)  →  organisms  →  molecules  →  atoms  →  primitives  �
 
 | Layer | Responsibility | Examples |
 | --- | --- | --- |
-| **primitives** | Thin themed wrappers over React Native elements. The only layer that touches raw `View`, `Text`, `Pressable`, `TextInput`, `ScrollView`, `FlatList`, `SectionList`, `expo-image` and `expo-symbols`. They apply theme tokens and nothing else. | `Box`, `Typography`, `Touchable`, `TextField`, `Stack`, `Image`, `Icon`, `List`, `SectionedList`, `ScrollBox` |
-| **atoms** | The smallest pieces of UI with meaning, built from primitives. No data access. | `Button`, `TextButton`, `IconButton`, `Badge`, `Chip`, `Checkbox`, `NuggieImage`, `Card` |
-| **molecules** | Small groups of atoms that work as a unit. Hold local UI state at most. | `CoachFloatingButton`, `ScreenHeader`, `EmptyState`, `ChipGroup`, `SegmentedControl`, `SearchBar`, `AlphabetIndex`, `ExerciseRow` |
-| **organisms** | Self-contained sections of a screen. Receive data and callbacks through props. | `NuggieLoadingScreen`, `ExerciseForm`, `ExercisePicker` |
-| **routes** | Expo Router screens. Load data through repositories and hooks, then compose organisms. | `src/app/(tabs)/index.tsx`, `src/app/(tabs)/_layout.tsx`, `src/app/coach.tsx`, `src/app/exercises/*` |
+| **primitives** | Thin themed wrappers over React Native elements. The only layer that touches raw `View`, `Text`, `Pressable`, `TextInput`, `ScrollView`, `FlatList`, `SectionList`, `expo-image` and `expo-symbols`. They apply theme tokens and nothing else. | `Box`, `Typography`, `Touchable`, `TextField`, `Stack`, `Image`, `Icon`, `List`, `SectionedList`, `ScrollBox`, `AnimatedBox`, `SwipeableBox`, `LongPressDragBox`, `WindowMeasuredBox` |
+| **atoms** | The smallest pieces of UI with meaning, built from primitives. No data access. | `Button`, `TextButton`, `IconButton`, `Badge`, `Chip`, `Checkbox`, `NuggieImage`, `Card`, `NumberInput`, `DurationInput`, `DragHandle`, `SupersetBracket`, `Toast` |
+| **molecules** | Small groups of atoms that work as a unit. Hold local UI state at most. | `CoachFloatingButton`, `ScreenHeader`, `EmptyState`, `ChipGroup`, `SegmentedControl`, `SearchBar`, `AlphabetIndex`, `ExerciseRow`, `FormField`, `ImageUrlField`, `Stepper`, `KindChoiceCard`, `ActionCard`, `TargetSetRow`, `TargetSetTable`, `WorkoutRow` |
+| **organisms** | Self-contained sections of a screen. Receive data and callbacks through props. | `NuggieLoadingScreen`, `ExerciseForm`, `ExercisePicker`, `ExerciseEditorCard`, `ReorderableExerciseList`, `ClassDetailsForm`, `CreateHub`, `WorkoutEditorFooter` |
+| **routes** | Expo Router screens. Load data through repositories and hooks, then compose organisms. | `src/app/(tabs)/index.tsx`, `src/app/(tabs)/_layout.tsx`, `src/app/coach.tsx`, `src/app/exercises/*`, `src/app/workouts/*` |
 
 Rules:
 
@@ -157,9 +170,71 @@ Expo Router can't pass a result back through `router.back()`, so screens that re
 
 The picker uses the same pattern in both directions. Callers open the picker with it, and the picker's `+` opens `/exercises/new` with its own request. On save, the form completes that request with the new id, and the picker appends it to the end of the selection. Opened without a `requestIdentifier`, the form just saves and goes back.
 
-### Temporary Create Harness
+## Workout Builder
 
-No screen calls the picker until phase 02, so the Create tab placeholder carries temporary buttons: "Exercise library", "Try picker", "Try single picker" and, after a pick, "Try picker excluding last pick". It lists the last result in order and says whether it was a superset. Phase 02 removes the harness.
+### Routes
+
+All routes are nested under `src/app/workouts/_layout.tsx`, which wraps them in `WorkoutEditorProvider` and presents them as a modal stack from the root Stack.
+
+| Route | Presentation | Purpose |
+| --- | --- | --- |
+| `/workouts/new` | Stack push (first) | Name and kind choice (Individual or Class) |
+| `/workouts/class-details` | Stack push | Step 2 for class workouts: class type, duration, description, image URL |
+| `/workouts/editor` | Stack push | Step 2 for individual workouts: exercise picker on open (if `pickOnOpen`), then exercise editor with target sets, superset grouping, and drag to reorder |
+| `/workouts/[workoutId]/edit` | Modal | Loads an existing workout into the editor or the class form after `loaded` |
+| `/workouts/superset-info` | Form sheet | Info about supersets with the `coach` nuggie and a tip |
+
+### Builder Modal Stack and Editor Context
+
+`src/app/workouts/_layout.tsx` nests a `Stack` inside `WorkoutEditorProvider`, so all builder screens share one editor state through the context. The state is never passed through route params.
+
+`WorkoutEditorProvider` (in `src/workouts/WorkoutEditorProvider.tsx`) wraps `useReducer(workoutEditorReducer)` and exposes the context via `useWorkoutEditor()` hook.
+
+### Editor State and Reducer
+
+`src/workouts/workoutEditorReducer.ts` is pure with no React Native imports and is tested. It is built by `createWorkoutEditorReducer(createKey)`, a factory that injects a key counter for deterministic test fixtures.
+
+The `WorkoutEditorState` shape holds `workoutId` (null for new), `name`, `kind` (individual or class), `classDetails` (only for class), `items` (exercises with tracking type, rest time, superset group and target sets), and `hasUnsavedChanges`.
+
+The actions are `renamed`, `kindChosen`, `classDetailsChanged`, `exercisesAdded`, `itemRemoved`, `supersetCreated`, `supersetRemoved`, `exerciseReplaced`, `restChanged`, `trackingTypeChanged`, `targetSetAdded`, `targetSetRemoved`, `targetSetChanged`, `itemsReordered` (takes block keys), and `loaded`.
+
+After every action, `normaliseSupersets` reletters groups A, B, C… from top to bottom and clears any group with a single member.
+
+### Superset Blocks and Drag
+
+Exercises are grouped into superset blocks by `groupIntoBlocks` (in `src/workouts/groupIntoBlocks.ts`) before rendering, so drag reorder sees and reorders whole blocks. When a drop happens, `applyBlockOrder` updates the item positions.
+
+Drag to reorder is implemented in the custom `ReorderableExerciseList` organism (in `src/components/organisms/ReorderableExerciseList.tsx`), built from `react-native-gesture-handler` and `react-native-reanimated` with the `LongPressDragBox` primitive. `react-native-draggable-flatlist` was not installed because it has no stable release for Reanimated 4.
+
+### Unsaved Changes Guard and Save Flow
+
+`useUnsavedChangesGuard(hasUnsavedChanges)` uses `expo-router/react-navigation`'s `usePreventRemove` to ask "Discard changes?" when leaving with unsaved changes. It is active on every builder screen but only prevents on the first route of the stack, so stepping back between builder steps does not ask.
+
+`useSaveWorkout()` is called by Save and Discard buttons; it runs `saveWorkout(database, editorState)` through the repository, catches errors, closes the modal with `router.back()`, and sets `leaveWithoutPrompt` context to bypass the guard on the way out.
+
+### Saved Notice Store and Toast
+
+When a workout is saved, the route calls `announceWorkoutSaved(workoutName)` into `src/stores/workoutSavedStore.ts`. The store is consumed once by `useWorkoutSavedNoticeOnFocus()` on the Create hub, which reads `consumeWorkoutSavedNotice()` on focus and shows a `Toast` atom with the message "Saved <name>".
+
+### Picker Reuse
+
+The exercise picker is opened from inside the builder by calling `beginExercisePick()` into the existing `exercisePickerStore`, then pushing `/exercises/picker` with `mode: 'multiple'` (for Add exercises) or `mode: 'single'` (for Replace). The picker pushes back with results to the same store, so the builder gets them through `useExercisePickResult()`.
+
+### Pure Modules
+
+These hold the builder's logic, import no React Native, and are covered by `bun test`:
+
+- `src/workouts/workoutEditorReducer.ts`: all actions with deterministic keys
+- `src/workouts/normaliseSupersets.ts`: relettering groups and clearing single members
+- `src/workouts/groupIntoBlocks.ts`: grouping items into superset blocks and applying block-key order back
+- `src/workouts/targetSetColumns.ts`: columns and input rules by tracking type, empty values for each type
+- `src/workouts/workoutSaveRows.ts`: mapping from editor state to database rows (positions, superset letters, class vs individual fields)
+- `src/workouts/supersetCardPositions.ts`: Y-coordinates of superset cards for scroll-to-offset during drag
+- `src/workouts/reorderDrag.ts`: slot and scroll maths for the custom sortable list
+- `src/workouts/restPresets.ts`: preset rest times and formatting
+- `src/workouts/classTypeNuggie.ts`: nuggie choice for each class type
+- `src/numbers/numberText.ts`: parsing rules for number inputs (kg one decimal, distance in km)
+- `src/images/imageUrls.ts`: image URL validation and error (shared with exercise form)
 
 ## App Start
 
@@ -182,17 +257,21 @@ src/
     _layout.tsx             root: ThemeProvider → Suspense → SQLiteProvider → GestureHandlerRootView → Stack
     coach.tsx               Coach modal screen
     exercises/              library (index), new, [exerciseId] edit, picker
+    workouts/               builder: _layout with WorkoutEditorProvider, new, class-details, editor, [workoutId]/edit, superset-info
   components/
-    primitives/             themed wrappers: Box, Typography, Touchable, Stack, Image, Icon, TextField, List, SectionedList, ScrollBox
-    atoms/                  smallest UI pieces: Button, TextButton, IconButton, Badge, Chip, Checkbox, NuggieImage, Card
-    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow
-    organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker
+    primitives/             themed wrappers: Box, Typography, Touchable, TextField, Stack, Image, Icon, List, SectionedList, ScrollBox, AnimatedBox, SwipeableBox, LongPressDragBox, WindowMeasuredBox
+    atoms/                  smallest UI pieces: Button, TextButton, IconButton, Badge, Chip, Checkbox, NuggieImage, Card, NumberInput, DurationInput, DragHandle, SupersetBracket, Toast
+    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow
+    organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter
   database/
     migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2)
-    repositories/           one file per entity: exerciseRepository
+    repositories/           one file per entity: exerciseRepository, workoutRepository
   exercises/                pure exercise logic with tests: validation, A–Z grouping, filtering, selection
-  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, plus useExerciseForm
-  stores/                   exercisePickerStore for returning picks between screens, with tests
+  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useWorkoutSavedNoticeOnFocus
+  stores/                   exercisePickerStore and workoutSavedStore for returning values between screens, with tests
+  workouts/                 pure builder logic with tests: reducer, normalisation, grouping blocks, target set columns, save rows, drag maths, rest presets, class type nuggies, editor context and provider
+  numbers/                  pure number parsing with tests: textual input rules
+  images/                   pure image URL validation with tests: error messages
   nuggies/                  nuggie selection and image system
   dates/                    pure date/duration helpers with tests
   types/                    shared domain types (Exercise, Workout, Session, etc.)
