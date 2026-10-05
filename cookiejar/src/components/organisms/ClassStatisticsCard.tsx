@@ -1,5 +1,6 @@
 import { Card } from '@/components/atoms/Card';
 import { NuggieImage } from '@/components/atoms/NuggieImage';
+import { StatisticLine } from '@/components/molecules/StatisticLine';
 import { Box } from '@/components/primitives/Box';
 import { Typography } from '@/components/primitives/Typography';
 import { chooseNuggie } from '@/nuggies/chooseNuggie';
@@ -39,21 +40,5 @@ export function ClassStatisticsCard({ statistics }: ClassStatisticsCardPropertie
         </Box>
       </Box>
     </Card>
-  );
-}
-
-type StatisticLineProperties = {
-  label: string;
-  value: string;
-};
-
-function StatisticLine({ label, value }: StatisticLineProperties) {
-  return (
-    <Box direction="row" justify="space-between" accessible accessibilityLabel={`${label} ${value}`}>
-      <Typography variant="body" color="textSecondary">
-        {label}
-      </Typography>
-      <Typography variant="label">{value}</Typography>
-    </Box>
   );
 }
