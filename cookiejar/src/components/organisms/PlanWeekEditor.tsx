@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { ActionSheetIOS } from 'react-native';
 
 import { Card } from '@/components/atoms/Card';
@@ -12,6 +13,7 @@ import type { PlanEntryWithWorkout } from '@/types/PlanWithEntries';
 import { workoutNuggie } from '@/workouts/workoutNuggie';
 
 type PlanWeekEditorProperties = {
+  banner: ReactNode;
   days: WeekdayEntries<PlanEntryWithWorkout>[];
   onAddEntry: (dayOfWeek: number) => void;
   onChangeEntryTime: (planEntryId: number) => void;
@@ -38,9 +40,10 @@ function openDayMenu(day: WeekdayEntries<PlanEntryWithWorkout>, onCopyDay: (dayO
   );
 }
 
-export function PlanWeekEditor({ days, onAddEntry, onChangeEntryTime, onRemoveEntry, onCopyDay }: PlanWeekEditorProperties) {
+export function PlanWeekEditor({ banner, days, onAddEntry, onChangeEntryTime, onRemoveEntry, onCopyDay }: PlanWeekEditorProperties) {
   return (
     <ScrollBox gap="large">
+      {banner}
       {days.map((day) => (
         <Stack key={day.dayOfWeek} gap="small">
           <DaySectionHeader

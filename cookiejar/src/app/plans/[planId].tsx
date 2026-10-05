@@ -2,6 +2,7 @@ import { Alert } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 
 import { IconButton } from '@/components/atoms/IconButton';
+import { ActivePlanBanner } from '@/components/molecules/ActivePlanBanner';
 import { EmptyState } from '@/components/molecules/EmptyState';
 import { PlanWeekEditor } from '@/components/organisms/PlanWeekEditor';
 import { usePlan } from '@/hooks/usePlan';
@@ -15,13 +16,18 @@ type PlanEditorParameters = {
 export default function PlanEditorScreen() {
   const { planId: planIdParameter } = useLocalSearchParams<PlanEditorParameters>();
   const planId = Number(planIdParameter);
-  const { planLookup, removePlanEntry, renamePlan, duplicatePlan, deletePlan } = usePlan(planId);
-  const { openMenu } = usePlanActions({
+  const { planLookup, removePlanEntry, renamePlan, duplicatePlan, deletePlan, deactivatePlan } =
+    usePlan(planId);
+  const openActivateSheet = () =>
+    router.push({ pathname: '/plans/[planId]/activate', params: { planId: String(planId) } });
+  const { openMenu, openActiveMenu } = usePlanActions({
     planName: planLookup.status === 'found' ? planLookup.plan.name : '',
     isActive: planLookup.status === 'found' && planLookup.plan.isActive,
     renamePlan,
     duplicatePlan,
     deletePlan,
+    deactivatePlan,
+    onChangeStartDate: openActivateSheet,
   });
 
   if (planLookup.status === 'missing' || planLookup.status === 'failed') {
@@ -53,6 +59,13 @@ export default function PlanEditorScreen() {
         }}
       />
       <PlanWeekEditor
+        banner={
+          <ActivePlanBanner
+            startsOn={planLookup.plan.isActive ? planLookup.plan.startsOn : null}
+            onOpenActions={openActiveMenu}
+            onMakeActive={openActivateSheet}
+          />
+        }
         days={groupEntriesByWeekday(planLookup.plan.entries)}
         onChangeEntryTime={(planEntryId) =>
           router.push({

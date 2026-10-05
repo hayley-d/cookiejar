@@ -108,6 +108,15 @@ export default function RootLayout() {
                 }}
               />
               <Stack.Screen
+                name="plans/[planId]/activate"
+                options={{
+                  presentation: 'formSheet',
+                  headerShown: false,
+                  sheetAllowedDetents: [0.75],
+                  sheetGrabberVisible: true,
+                }}
+              />
+              <Stack.Screen
                 name="plans/[planId]/copy-day"
                 options={{
                   presentation: 'formSheet',

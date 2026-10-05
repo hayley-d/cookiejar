@@ -9,6 +9,8 @@ type UsePlanActionsOptions = {
   renamePlan: (name: string) => Promise<void>;
   duplicatePlan: () => Promise<number>;
   deletePlan: () => Promise<void>;
+  deactivatePlan: () => Promise<void>;
+  onChangeStartDate: () => void;
 };
 
 const menuOptions = ['Rename', 'Duplicate', 'Delete', 'Cancel'];
@@ -17,7 +19,20 @@ const duplicateMenuIndex = 1;
 const deleteMenuIndex = 2;
 const cancelMenuIndex = 3;
 
-export function usePlanActions({ planName, isActive, renamePlan, duplicatePlan, deletePlan }: UsePlanActionsOptions) {
+const activeMenuOptions = ['Change start date', 'Deactivate', 'Cancel'];
+const changeStartDateMenuIndex = 0;
+const deactivateMenuIndex = 1;
+const activeCancelMenuIndex = 2;
+
+export function usePlanActions({
+  planName,
+  isActive,
+  renamePlan,
+  duplicatePlan,
+  deletePlan,
+  deactivatePlan,
+  onChangeStartDate,
+}: UsePlanActionsOptions) {
   const showFailure = (title: string) => {
     Alert.alert(title, 'Something went wrong. Please try again.');
   };
@@ -100,5 +115,23 @@ export function usePlanActions({ planName, isActive, renamePlan, duplicatePlan, 
     );
   };
 
-  return { openMenu };
+  const openActiveMenu = () => {
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        title: planName,
+        options: activeMenuOptions,
+        destructiveButtonIndex: deactivateMenuIndex,
+        cancelButtonIndex: activeCancelMenuIndex,
+      },
+      (optionIndex) => {
+        if (optionIndex === changeStartDateMenuIndex) {
+          onChangeStartDate();
+        } else if (optionIndex === deactivateMenuIndex) {
+          deactivatePlan().catch(() => showFailure('Could not deactivate the plan'));
+        }
+      },
+    );
+  };
+
+  return { openMenu, openActiveMenu };
 }

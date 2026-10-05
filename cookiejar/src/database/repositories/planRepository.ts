@@ -216,3 +216,29 @@ export async function duplicatePlan(database: SQLiteDatabase, planId: number): P
 export async function deletePlan(database: SQLiteDatabase, planId: number): Promise<void> {
   await database.runAsync('DELETE FROM plans WHERE id = ?', planId);
 }
+
+export async function setActivePlan(database: SQLiteDatabase, planId: number, startsOn: string): Promise<void> {
+  await database.withTransactionAsync(async () => {
+    await database.runAsync('UPDATE plans SET is_active = 0');
+    const result = await database.runAsync(
+      'UPDATE plans SET is_active = 1, starts_on = ? WHERE id = ?',
+      startsOn,
+      planId,
+    );
+    if (result.changes === 0) {
+      throw new Error('The plan to activate no longer exists');
+    }
+  });
+}
+
+export async function deactivatePlan(database: SQLiteDatabase): Promise<void> {
+  await database.runAsync('UPDATE plans SET is_active = 0');
+}
+
+export async function getActivePlanWithEntries(database: SQLiteDatabase): Promise<PlanWithEntries | null> {
+  const activePlanRow = await database.getFirstAsync<{ id: number }>('SELECT id FROM plans WHERE is_active = 1');
+  if (activePlanRow === null) {
+    return null;
+  }
+  return getPlanWithEntries(database, activePlanRow.id);
+}
