@@ -62,7 +62,9 @@ export function ScheduledWorkoutCard({ scheduledWorkout, today, onPress, onStart
             gap="extraSmall"
             accessible
             accessibilityRole="button"
-            accessibilityLabel={summary === null ? `${kindText}, ${workout.name}` : `${kindText}, ${workout.name}, ${summary}`}
+            accessibilityLabel={
+              summary === null ? `${kindText}, ${workout.name}` : `${kindText}, ${workout.name}, ${summary}`
+            }
           >
             <Typography variant="caption" color="textSecondary">
               {kindText}
@@ -77,7 +79,14 @@ export function ScheduledWorkoutCard({ scheduledWorkout, today, onPress, onStart
             )}
             <StatusChip status={scheduledWorkout.status} date={scheduledWorkout.date} today={today} />
           </Box>
-          {canStart ? <IconButton icon="play.fill" accessibilityLabel={`Start ${workout.name}`} onPress={onStart} color="accent" /> : null}
+          {canStart ? (
+            <IconButton
+              icon="play.fill"
+              accessibilityLabel={`Start ${workout.name}`}
+              onPress={onStart}
+              color="accent"
+            />
+          ) : null}
         </Stack>
       </Card>
     </Touchable>
