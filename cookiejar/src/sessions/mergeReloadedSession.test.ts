@@ -55,7 +55,7 @@ function makeSession(overrides: { completedAt: string | null; repetitions: numbe
   return session;
 }
 
-const noPending = { pendingValueSetIds: new Set<number>(), hasPendingNotes: false };
+const noPending = { unsavedValueSetIds: new Set<number>(), hasUnsavedNotes: false };
 
 describe('mergeReloadedSession', () => {
   test('a tick made while a structural change was queued survives the reload', () => {
@@ -86,14 +86,58 @@ describe('mergeReloadedSession', () => {
   test('typed values with a pending write are kept', () => {
     const reloaded = makeSession({ completedAt: null, repetitions: null, restSeconds: 90 });
     const local = makeSession({ completedAt: null, repetitions: 12, restSeconds: 90 });
-    const merged = mergeReloadedSession(reloaded, local, { ...noPending, pendingValueSetIds: new Set([100]) });
+    const merged = mergeReloadedSession(reloaded, local, { ...noPending, unsavedValueSetIds: new Set([100]) });
     expect(merged.exercises[0]?.sets[0]?.repetitions).toBe(12);
   });
 
   test('pending notes are kept', () => {
     const reloaded = makeSession({ completedAt: null, repetitions: null, restSeconds: 90 });
     const local = { ...makeSession({ completedAt: null, repetitions: null, restSeconds: 90 }), notes: 'felt good' };
-    expect(mergeReloadedSession(reloaded, local, { ...noPending, hasPendingNotes: true }).notes).toBe('felt good');
+    expect(mergeReloadedSession(reloaded, local, { ...noPending, hasUnsavedNotes: true }).notes).toBe('felt good');
     expect(mergeReloadedSession(reloaded, local, noPending).notes).toBeNull();
+  });
+
+  test('a typed value whose write is queued behind a structural change is kept', () => {
+    const reloaded = makeSession({ completedAt: null, repetitions: 8, restSeconds: 90 });
+    const local = makeSession({ completedAt: null, repetitions: 10, restSeconds: 90 });
+    const merged = mergeReloadedSession(reloaded, local, { ...noPending, unsavedValueSetIds: new Set([100]) });
+    expect(merged.exercises[0]?.sets[0]?.repetitions).toBe(10);
+  });
+
+  test('notes whose write is queued behind a structural change are kept', () => {
+    const reloaded = { ...makeSession({ completedAt: null, repetitions: null, restSeconds: 90 }), notes: 'old' };
+    const local = { ...makeSession({ completedAt: null, repetitions: null, restSeconds: 90 }), notes: 'new' };
+    expect(mergeReloadedSession(reloaded, local, { ...noPending, hasUnsavedNotes: true }).notes).toBe('new');
+  });
+
+  test('kept local values are cleared by the replace rule when the tracking type changed', () => {
+    const reloadedSession = makeSession({ completedAt: null, repetitions: null, restSeconds: 90 });
+    const reloadedExercise = reloadedSession.exercises[0];
+    if (reloadedExercise === undefined) {
+      throw new Error('missing exercise');
+    }
+    const reloaded = {
+      ...reloadedSession,
+      exercises: [{ ...reloadedExercise, trackingType: 'duration' as const }],
+    };
+    const localSession = makeSession({ completedAt: null, repetitions: 12, restSeconds: 90 });
+    const localExercise = localSession.exercises[0];
+    const localSet = localExercise?.sets[0];
+    if (localExercise === undefined || localSet === undefined) {
+      throw new Error('missing set');
+    }
+    const local = {
+      ...localSession,
+      exercises: [{ ...localExercise, sets: [{ ...localSet, durationSeconds: 45 }] }],
+    };
+    const merged = mergeReloadedSession(reloaded, local, { ...noPending, unsavedValueSetIds: new Set([100]) });
+    expect(merged.exercises[0]?.sets[0]).toMatchObject({ repetitions: null, durationSeconds: 45 });
+  });
+
+  test('kept local values are unchanged when the tracking type is the same', () => {
+    const reloaded = makeSession({ completedAt: null, repetitions: null, restSeconds: 90 });
+    const local = makeSession({ completedAt: null, repetitions: 12, restSeconds: 90 });
+    const merged = mergeReloadedSession(reloaded, local, { ...noPending, unsavedValueSetIds: new Set([100]) });
+    expect(merged.exercises[0]?.sets[0]?.repetitions).toBe(12);
   });
 });

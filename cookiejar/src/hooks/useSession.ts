@@ -61,6 +61,9 @@ export function useSession(sessionId: number) {
   const sessionReference = useRef<SessionWithExercises | null>(null);
   const pendingValueWrites = useRef(new Map<number, ReturnType<typeof setTimeout>>());
   const pendingNotesWrite = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const unsavedValueChangeCounts = useRef(new Map<number, number>());
+  const notesChangeCount = useRef(0);
+  const savedNotesChangeCount = useRef(0);
   const writeQueue = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
@@ -127,16 +130,24 @@ export function useSession(sessionId: number) {
     return writeQueue.current;
   }, []);
 
+  const markValuesSaved = useCallback((sessionSetId: number, changeCountAtWrite: number | undefined) => {
+    if (unsavedValueChangeCounts.current.get(sessionSetId) === changeCountAtWrite) {
+      unsavedValueChangeCounts.current.delete(sessionSetId);
+    }
+  }, []);
+
   const writeLatestValues = useCallback(
     (sessionSetId: number) =>
       enqueueWrite(async () => {
+        const changeCountAtWrite = unsavedValueChangeCounts.current.get(sessionSetId);
         const session = sessionReference.current;
         const found = session === null ? null : findSessionSet(session, sessionSetId);
         if (found !== null) {
           await updateSessionSet(database, sessionSetId, actualValuesOf(found.set));
         }
+        markValuesSaved(sessionSetId, changeCountAtWrite);
       }),
-    [database, enqueueWrite],
+    [database, enqueueWrite, markValuesSaved],
   );
 
   const cancelPendingValueWrite = useCallback((sessionSetId: number) => {
@@ -147,13 +158,23 @@ export function useSession(sessionId: number) {
     }
   }, []);
 
+  const forgetSessionSetWrites = useCallback(
+    (sessionSetId: number) => {
+      cancelPendingValueWrite(sessionSetId);
+      unsavedValueChangeCounts.current.delete(sessionSetId);
+    },
+    [cancelPendingValueWrite],
+  );
+
   const writeLatestNotes = useCallback(
     () =>
       enqueueWrite(async () => {
+        const changeCountAtWrite = notesChangeCount.current;
         const session = sessionReference.current;
         if (session !== null) {
           await updateSessionNotes(database, session.id, session.notes);
         }
+        savedNotesChangeCount.current = changeCountAtWrite;
       }),
     [database, enqueueWrite],
   );
@@ -165,7 +186,7 @@ export function useSession(sessionId: number) {
     }
   }, []);
 
-  const flushPendingValueWrites = useCallback(async () => {
+  const enqueuePendingWrites = useCallback(() => {
     const pendingSessionSetIds = [...pendingValueWrites.current.keys()];
     for (const sessionSetId of pendingSessionSetIds) {
       cancelPendingValueWrite(sessionSetId);
@@ -175,8 +196,12 @@ export function useSession(sessionId: number) {
       cancelPendingNotesWrite();
       writeLatestNotes();
     }
-    await writeQueue.current;
   }, [cancelPendingNotesWrite, cancelPendingValueWrite, writeLatestNotes, writeLatestValues]);
+
+  const flushPendingValueWrites = useCallback(async () => {
+    enqueuePendingWrites();
+    await writeQueue.current;
+  }, [enqueuePendingWrites]);
 
   useEffect(() => {
     return () => {
@@ -197,6 +222,7 @@ export function useSession(sessionId: number) {
   const changeSetValues = useCallback(
     (sessionSetId: number, changes: Partial<SetValues>) => {
       applySessionChange((session) => withSessionSetChanges(session, sessionSetId, changes));
+      unsavedValueChangeCounts.current.set(sessionSetId, (unsavedValueChangeCounts.current.get(sessionSetId) ?? 0) + 1);
       cancelPendingValueWrite(sessionSetId);
       pendingValueWrites.current.set(
         sessionSetId,
@@ -212,6 +238,7 @@ export function useSession(sessionId: number) {
   const changeNotes = useCallback(
     (notes: string) => {
       applySessionChange((session) => ({ ...session, notes: notes.length === 0 ? null : notes }));
+      notesChangeCount.current += 1;
       cancelPendingNotesWrite();
       pendingNotesWrite.current = setTimeout(() => {
         pendingNotesWrite.current = null;
@@ -222,21 +249,23 @@ export function useSession(sessionId: number) {
   );
 
   const enqueueStructuralChange = useCallback(
-    (change: () => Promise<void>) =>
-      enqueueWrite(async () => {
+    (change: () => Promise<void>) => {
+      enqueuePendingWrites();
+      return enqueueWrite(async () => {
         await change();
         const reloadedSession = await getSessionWithExercises(database, sessionId);
         if (reloadedSession === null) {
           return;
         }
         const mergedSession = mergeReloadedSession(reloadedSession, sessionReference.current, {
-          pendingValueSetIds: new Set(pendingValueWrites.current.keys()),
-          hasPendingNotes: pendingNotesWrite.current !== null,
+          unsavedValueSetIds: new Set(unsavedValueChangeCounts.current.keys()),
+          hasUnsavedNotes: notesChangeCount.current !== savedNotesChangeCount.current,
         });
         sessionReference.current = mergedSession;
         setLoadedSession({ sessionId: mergedSession.id, lookup: { status: 'found', session: mergedSession } });
-      }),
-    [database, enqueueWrite, sessionId],
+      });
+    },
+    [database, enqueuePendingWrites, enqueueWrite, sessionId],
   );
 
   const addSet = useCallback(
@@ -254,10 +283,10 @@ export function useSession(sessionId: number) {
 
   const removeSet = useCallback(
     (sessionExerciseId: number, sessionSetId: number) => {
-      cancelPendingValueWrite(sessionSetId);
+      forgetSessionSetWrites(sessionSetId);
       enqueueStructuralChange(() => removeSessionSet(database, sessionExerciseId, sessionSetId));
     },
-    [cancelPendingValueWrite, database, enqueueStructuralChange],
+    [database, enqueueStructuralChange, forgetSessionSetWrites],
   );
 
   const addExercises = useCallback(
@@ -278,11 +307,11 @@ export function useSession(sessionId: number) {
     (sessionExerciseId: number) => {
       const exercise = sessionReference.current?.exercises.find((candidate) => candidate.id === sessionExerciseId);
       for (const set of exercise?.sets ?? []) {
-        cancelPendingValueWrite(set.id);
+        forgetSessionSetWrites(set.id);
       }
       enqueueStructuralChange(() => removeSessionExercise(database, sessionId, sessionExerciseId));
     },
-    [cancelPendingValueWrite, database, enqueueStructuralChange, sessionId],
+    [database, enqueueStructuralChange, forgetSessionSetWrites, sessionId],
   );
 
   const changeExerciseRest = useCallback(
@@ -320,12 +349,14 @@ export function useSession(sessionId: number) {
       }
 
       const completedAt = new Date().toISOString();
+      const changeCountAtWrite = unsavedValueChangeCounts.current.get(sessionSetId);
       cancelPendingValueWrite(sessionSetId);
       applySessionChange((currentSession) =>
         withSessionSetChanges(currentSession, sessionSetId, { ...tickResult.values, completedAt }),
       );
       enqueueWrite(async () => {
         await updateSessionSet(database, sessionSetId, tickResult.values);
+        markValuesSaved(sessionSetId, changeCountAtWrite);
         await completeSessionSet(database, sessionSetId, completedAt);
       });
       const tickedSession = sessionReference.current;
@@ -337,7 +368,7 @@ export function useSession(sessionId: number) {
       }
       return 'ticked';
     },
-    [applySessionChange, cancelPendingValueWrite, database, enqueueWrite],
+    [applySessionChange, cancelPendingValueWrite, database, enqueueWrite, markValuesSaved],
   );
 
   const finish = useCallback(async () => {

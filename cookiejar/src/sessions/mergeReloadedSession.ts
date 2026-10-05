@@ -1,26 +1,28 @@
+import { actualValuesAfterReplace } from '@/sessions/replaceExercise';
 import type { SessionWithExercises } from '@/types/SessionWithExercises';
 
 type MergeOptions = {
-  pendingValueSetIds: ReadonlySet<number>;
-  hasPendingNotes: boolean;
+  unsavedValueSetIds: ReadonlySet<number>;
+  hasUnsavedNotes: boolean;
 };
 
 export function mergeReloadedSession(
   reloadedSession: SessionWithExercises,
   localSession: SessionWithExercises | null,
-  { pendingValueSetIds, hasPendingNotes }: MergeOptions,
+  { unsavedValueSetIds, hasUnsavedNotes }: MergeOptions,
 ): SessionWithExercises {
   if (localSession === null) {
     return reloadedSession;
   }
   return {
     ...reloadedSession,
-    notes: hasPendingNotes ? localSession.notes : reloadedSession.notes,
+    notes: hasUnsavedNotes ? localSession.notes : reloadedSession.notes,
     exercises: reloadedSession.exercises.map((reloadedExercise) => {
       const localExercise = localSession.exercises.find((candidate) => candidate.id === reloadedExercise.id);
       if (localExercise === undefined) {
         return reloadedExercise;
       }
+      const hasTrackingTypeChanged = localExercise.trackingType !== reloadedExercise.trackingType;
       return {
         ...reloadedExercise,
         restSeconds: localExercise.restSeconds,
@@ -30,18 +32,22 @@ export function mergeReloadedSession(
             return reloadedSet;
           }
           const keepsLocalValues =
-            pendingValueSetIds.has(reloadedSet.id) || localSet.completedAt !== reloadedSet.completedAt;
+            unsavedValueSetIds.has(reloadedSet.id) || localSet.completedAt !== reloadedSet.completedAt;
+          if (!keepsLocalValues) {
+            return { ...reloadedSet, completedAt: localSet.completedAt };
+          }
+          const localValues = {
+            repetitions: localSet.repetitions,
+            weightKilograms: localSet.weightKilograms,
+            durationSeconds: localSet.durationSeconds,
+            distanceMeters: localSet.distanceMeters,
+          };
           return {
             ...reloadedSet,
             completedAt: localSet.completedAt,
-            ...(keepsLocalValues
-              ? {
-                  repetitions: localSet.repetitions,
-                  weightKilograms: localSet.weightKilograms,
-                  durationSeconds: localSet.durationSeconds,
-                  distanceMeters: localSet.distanceMeters,
-                }
-              : {}),
+            ...(hasTrackingTypeChanged
+              ? actualValuesAfterReplace(localValues, reloadedExercise.trackingType)
+              : localValues),
           };
         }),
       };
