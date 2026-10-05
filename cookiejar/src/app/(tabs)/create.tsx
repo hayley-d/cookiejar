@@ -5,13 +5,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CreateHub, type CreateHubToast } from '@/components/organisms/CreateHub';
 import { Box } from '@/components/primitives/Box';
 import { useWorkouts } from '@/hooks/useWorkouts';
-import { useWorkoutSavedNotice, type WorkoutSavedNotice } from '@/stores/workoutSavedStore';
+import { useWorkoutSavedNoticeOnFocus } from '@/hooks/useWorkoutSavedNoticeOnFocus';
+import type { WorkoutSavedNotice } from '@/stores/workoutSavedStore';
 
 const coachButtonClearance = 96;
 
 export default function CreateScreen() {
   const workouts = useWorkouts();
-  const savedNotice = useWorkoutSavedNotice();
+  const savedNotice = useWorkoutSavedNoticeOnFocus();
   const [lastSavedNotice, setLastSavedNotice] = useState<WorkoutSavedNotice | null>(null);
   const [toastCount, setToastCount] = useState(0);
   const [toast, setToast] = useState<CreateHubToast | null>(null);

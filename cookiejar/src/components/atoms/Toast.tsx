@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 
+import { AnimatedBox } from '@/components/primitives/AnimatedBox';
 import { Icon } from '@/components/primitives/Icon';
 import { Stack } from '@/components/primitives/Stack';
 import { Typography } from '@/components/primitives/Typography';
@@ -23,9 +23,8 @@ export function Toast({ message, onDismiss }: ToastProperties) {
   }, [onDismiss]);
 
   return (
-    <Animated.View
-      entering={FadeInDown}
-      exiting={FadeOutDown}
+    <AnimatedBox
+      motion="rise"
       accessibilityRole="alert"
       accessibilityLiveRegion="polite"
       style={[
@@ -45,6 +44,6 @@ export function Toast({ message, onDismiss }: ToastProperties) {
           {message}
         </Typography>
       </Stack>
-    </Animated.View>
+    </AnimatedBox>
   );
 }

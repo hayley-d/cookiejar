@@ -5,7 +5,6 @@ import {
   consumeWorkoutSavedNotice,
   peekWorkoutSavedNotice,
   resetWorkoutSavedNotices,
-  subscribeToWorkoutSavedNotices,
 } from '@/stores/workoutSavedStore';
 
 beforeEach(() => {
@@ -15,6 +14,13 @@ beforeEach(() => {
 describe('workoutSavedStore', () => {
   test('there is no notice until a workout is saved', () => {
     expect(peekWorkoutSavedNotice()).toBeNull();
+    expect(consumeWorkoutSavedNotice()).toBeNull();
+  });
+
+  test('a saved workout name waits until it is consumed', () => {
+    announceWorkoutSaved('Morning Pilates');
+    expect(peekWorkoutSavedNotice()).toEqual({ workoutName: 'Morning Pilates' });
+    expect(peekWorkoutSavedNotice()).toEqual({ workoutName: 'Morning Pilates' });
   });
 
   test('a saved workout name is returned once, then nothing', () => {
@@ -22,12 +28,6 @@ describe('workoutSavedStore', () => {
     expect(consumeWorkoutSavedNotice()).toEqual({ workoutName: 'Morning Pilates' });
     expect(consumeWorkoutSavedNotice()).toBeNull();
     expect(peekWorkoutSavedNotice()).toBeNull();
-  });
-
-  test('peeking does not consume the notice', () => {
-    announceWorkoutSaved('Push Day');
-    expect(peekWorkoutSavedNotice()).toEqual({ workoutName: 'Push Day' });
-    expect(peekWorkoutSavedNotice()).toEqual({ workoutName: 'Push Day' });
   });
 
   test('a later save replaces an unconsumed notice', () => {
@@ -41,19 +41,5 @@ describe('workoutSavedStore', () => {
     const firstNotice = consumeWorkoutSavedNotice();
     announceWorkoutSaved('Push Day');
     expect(consumeWorkoutSavedNotice()).not.toBe(firstNotice);
-  });
-
-  test('listeners hear about saves and consumptions until they unsubscribe', () => {
-    let notificationCount = 0;
-    const unsubscribe = subscribeToWorkoutSavedNotices(() => {
-      notificationCount += 1;
-    });
-    announceWorkoutSaved('Push Day');
-    consumeWorkoutSavedNotice();
-    consumeWorkoutSavedNotice();
-    expect(notificationCount).toBe(2);
-    unsubscribe();
-    announceWorkoutSaved('Push Day');
-    expect(notificationCount).toBe(2);
   });
 });
