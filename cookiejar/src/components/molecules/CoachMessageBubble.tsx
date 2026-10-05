@@ -4,29 +4,21 @@ import { Button } from '@/components/atoms/Button';
 import { NuggieImage } from '@/components/atoms/NuggieImage';
 import { Box } from '@/components/primitives/Box';
 import { Typography } from '@/components/primitives/Typography';
-import type { NuggieName } from '@/nuggies/NuggieName';
 import { useTheme } from '@/theme/useTheme';
 
 type CoachMessageBubbleProperties = {
-  nuggie: NuggieName;
   text?: string;
   actionLabel?: string;
   onActionPress?: () => void;
   children?: ReactNode;
 };
 
-export function CoachMessageBubble({
-  nuggie,
-  text,
-  actionLabel,
-  onActionPress,
-  children,
-}: CoachMessageBubbleProperties) {
+export function CoachMessageBubble({ text, actionLabel, onActionPress, children }: CoachMessageBubbleProperties) {
   const theme = useTheme();
 
   return (
     <Box direction="row" align="flex-end" gap="small">
-      <NuggieImage name={nuggie} size={theme.sizes.coachAvatar} />
+      <NuggieImage name="coach" size={theme.sizes.coachAvatar} />
       {children ?? (
         <Box
           gap="small"

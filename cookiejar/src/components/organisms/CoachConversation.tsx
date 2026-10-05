@@ -7,15 +7,14 @@ import { CoachMessageBubble } from '@/components/molecules/CoachMessageBubble';
 import { UserMessageBubble } from '@/components/molecules/UserMessageBubble';
 import { AnimatedBox } from '@/components/primitives/AnimatedBox';
 import { ScrollBox, type ScrollBoxHandle } from '@/components/primitives/ScrollBox';
-import type { NuggieName } from '@/nuggies/NuggieName';
 
 type CoachConversationProperties = {
   messages: readonly ConversationMessage[];
-  typingNuggie: NuggieName | null;
+  isTyping: boolean;
   onActionPress: (action: InsightAction) => void;
 };
 
-export function CoachConversation({ messages, typingNuggie, onActionPress }: CoachConversationProperties) {
+export function CoachConversation({ messages, isTyping, onActionPress }: CoachConversationProperties) {
   const scrollReference = useRef<ScrollBoxHandle>(null);
 
   return (
@@ -36,7 +35,6 @@ export function CoachConversation({ messages, typingNuggie, onActionPress }: Coa
         return (
           <AnimatedBox key={message.identifier} motion="rise">
             <CoachMessageBubble
-              nuggie={message.bubble.nuggie}
               text={message.bubble.text}
               actionLabel={action?.label}
               onActionPress={action ? () => onActionPress(action) : undefined}
@@ -44,8 +42,8 @@ export function CoachConversation({ messages, typingNuggie, onActionPress }: Coa
           </AnimatedBox>
         );
       })}
-      {typingNuggie ? (
-        <CoachMessageBubble nuggie={typingNuggie}>
+      {isTyping ? (
+        <CoachMessageBubble>
           <TypingIndicator />
         </CoachMessageBubble>
       ) : null}

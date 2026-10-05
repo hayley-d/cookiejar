@@ -33,7 +33,7 @@ function openAction(action: InsightAction) {
 export default function CoachScreen() {
   const snapshotLookup = useCoachSnapshot();
   const snapshot = snapshotLookup.status === 'ready' ? snapshotLookup.snapshot : null;
-  const { messages, isTyping, typingNuggie, askQuestion } = useCoachConversation(snapshot);
+  const { messages, isTyping, askQuestion } = useCoachConversation(snapshot);
 
   if (snapshotLookup.status === 'failed') {
     return (
@@ -55,7 +55,7 @@ export default function CoachScreen() {
         <Box flex={1}>
           <CoachConversation
             messages={messages}
-            typingNuggie={snapshot === null ? 'coach' : typingNuggie}
+            isTyping={snapshot === null || isTyping}
             onActionPress={openAction}
           />
         </Box>

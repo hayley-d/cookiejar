@@ -1043,7 +1043,7 @@ Other files: `buildCoachSnapshot.ts` and `recoveryReadings.ts` (sleep and restin
 
 `conversationReducer` (`src/coach/coachConversation.ts`) holds `messages`, `queuedBubbles` and `nextIdentifier`. Its actions are `opened` (replaces the state with the opening bubbles queued), `questionAsked` (adds the user's prompt and queues the answer bubbles; ignored while bubbles are still queued) and `nextBubbleRevealed` (moves the first queued bubble into `messages`). `isTyping` is true while any bubble is queued.
 
-`useCoachConversation(snapshot)` wraps the reducer. It opens once, as soon as the snapshot is not `null`, and reveals one queued bubble every `coachTypingDelayMilliseconds` (400 ms) with `setTimeout`. It returns `{ messages, isTyping, typingNuggie, askQuestion }`, where `typingNuggie` is the nuggie of the next queued bubble. The conversation is never stored, so it starts again each time the coach opens.
+`useCoachConversation(snapshot)` wraps the reducer. It opens once, as soon as the snapshot is not `null`, and reveals one queued bubble every `coachTypingDelayMilliseconds` (400 ms) with `setTimeout`. It returns `{ messages, isTyping, askQuestion }`. The conversation is never stored, so it starts again each time the coach opens.
 
 ### Coach Route
 
@@ -1053,7 +1053,7 @@ Other files: `buildCoachSnapshot.ts` and `recoveryReadings.ts` (sleep and restin
 - `PromptChipBar` (organism): a horizontal `ScrollBox` of `PromptChip`s, one per question in `coachQuestions`. The chips are disabled while the snapshot is loading or while an answer is typing, so a chip can't be tapped again mid-answer.
 - When the snapshot fails to load, an `EmptyState` ("Coach Nuggie is stuck") with a Close button.
 
-While the snapshot loads, the typing indicator uses the `coach` nuggie.
+While the snapshot loads, the typing indicator shows. Every Nuggie bubble and the typing indicator use the `coach` nuggie (`unicorn_nuggie.webp`) as the avatar, whatever the insight's own `nuggie`.
 
 ### Tip of the Day
 
@@ -1073,7 +1073,7 @@ While the snapshot loads, the typing indicator uses the `coach` nuggie.
 | --- | --- |
 | `PulseBox` (primitive) | An `Animated.View` that loops its opacity between 0.3 and 1. Takes `pulseDuration` and an optional `delay` |
 | `TypingIndicator` (atom) | Three `PulseBox` dots in a surface bubble, staggered, with the label "Coach Nuggie is typing" |
-| `CoachMessageBubble` (molecule) | A `NuggieImage` avatar beside a bubble with text and an optional action `Button`. Takes `children` in place of the bubble, which the typing state uses |
+| `CoachMessageBubble` (molecule) | The `coach` `NuggieImage` avatar beside a bubble with text and an optional action `Button`. Takes `children` in place of the bubble, which the typing state uses |
 | `UserMessageBubble` (molecule) | Right-aligned accent bubble with the user's prompt |
 | `PromptChip` (molecule) | A pill-shaped prompt button with an accent border. Takes `disabled` |
 | `CoachConversation` (organism) | See Coach Route |

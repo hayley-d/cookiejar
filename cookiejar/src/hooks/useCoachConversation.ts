@@ -43,7 +43,6 @@ export function useCoachConversation(snapshot: CoachSnapshot | null) {
   return {
     messages: state.messages,
     isTyping: isTyping(state),
-    typingNuggie: state.queuedBubbles[0]?.nuggie ?? null,
     askQuestion,
   };
 }
