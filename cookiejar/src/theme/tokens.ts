@@ -20,6 +20,7 @@ export type Palette = {
   danger: string;
   cardShadow: string;
   tabBar: string;
+  chart: string;
 };
 
 export const palettes: Record<ColorSchemeName, Palette> = {
@@ -41,6 +42,7 @@ export const palettes: Record<ColorSchemeName, Palette> = {
     danger: '#D9534F',
     cardShadow: '#7FA9CC',
     tabBar: '#FFFFFF',
+    chart: '#E0628F',
   },
   dark: {
     background: '#0F1B2D',
@@ -60,6 +62,7 @@ export const palettes: Record<ColorSchemeName, Palette> = {
     danger: '#E5675A',
     cardShadow: '#000000',
     tabBar: '#16233A',
+    chart: '#E0628F',
   },
 };
 
@@ -134,6 +137,15 @@ export const sizes = {
   statBarHeight: 12,
   statBarDateColumn: 88,
   statBarValueColumn: 72,
+  progressChartHeight: 200,
+  chartLineWidth: 2,
+  chartGridLineWidth: 1,
+  chartDot: 4,
+  chartEmphasisedDot: 7,
+  chartHighlightDot: 6,
+  chartHighlightRing: 3,
+  chartEdgePadding: 12,
+  chartReferenceDash: 6,
 };
 
 export const durations = {
