@@ -1,5 +1,9 @@
 import { formatTargetSetValue } from '@/workouts/describeTargetSets';
-import { estimateOneRepMax, type PersonalRecord } from '@/progress/detectPersonalRecords';
+import {
+  estimateOneRepMax,
+  maximumRepetitionsForOneRepMaxEstimate,
+  type PersonalRecord,
+} from '@/progress/detectPersonalRecords';
 
 export function describePersonalRecordDetail(record: PersonalRecord): string {
   const { set } = record;
@@ -8,7 +12,11 @@ export function describePersonalRecordDetail(record: PersonalRecord): string {
     case 'bestEstimatedOneRepMax':
     case 'mostRepetitionsAtWeight': {
       const detail = `${formatTargetSetValue('weightKilograms', set)} kg × ${set.repetitions}`;
-      if (set.weightKilograms === null || set.repetitions === null) {
+      if (
+        set.weightKilograms === null ||
+        set.repetitions === null ||
+        set.repetitions > maximumRepetitionsForOneRepMaxEstimate
+      ) {
         return detail;
       }
       return `${detail} (est. 1RM ${Math.round(estimateOneRepMax(set.weightKilograms, set.repetitions))} kg)`;

@@ -26,6 +26,13 @@ describe('describePersonalRecordDetail', () => {
     );
   });
 
+  test('weighted records above twelve reps show no estimated one-rep max', () => {
+    const thirteenRepetitions = recordOf('mostRepetitionsAtWeight', { weightKilograms: 50, repetitions: 13 });
+    const twelveRepetitions = recordOf('mostRepetitionsAtWeight', { weightKilograms: 50, repetitions: 12 });
+    expect(describePersonalRecordDetail(thirteenRepetitions)).toBe('50 kg × 13');
+    expect(describePersonalRecordDetail(twelveRepetitions)).toBe('50 kg × 12 (est. 1RM 70 kg)');
+  });
+
   test('repetitions', () => {
     expect(describePersonalRecordDetail(recordOf('mostRepetitions', { repetitions: 21 }))).toBe('21 reps');
     expect(describePersonalRecordDetail(recordOf('mostRepetitions', { repetitions: 1 }))).toBe('1 rep');

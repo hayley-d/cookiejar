@@ -32,7 +32,7 @@ export const personalRecordPriority: readonly PersonalRecordType[] = [
   'longestDistance',
 ];
 
-const maximumRepetitionsForOneRepMaxEstimate = 12;
+export const maximumRepetitionsForOneRepMaxEstimate = 12;
 const epleyRepetitionsDivisor = 30;
 
 export function estimateOneRepMax(weightKilograms: number, repetitions: number): number {
