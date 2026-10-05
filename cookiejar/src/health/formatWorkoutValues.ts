@@ -1,5 +1,5 @@
-import { formatDuration } from '@/dates/formatDuration';
 import { missingHealthValue } from '@/health/formatSteps';
+import { formatSessionDuration } from '@/sessions/formatSessionValues';
 
 export function formatHeartRatePair(averageHeartRate: number | null, maximumHeartRate: number | null): string {
   const average = averageHeartRate === null ? missingHealthValue : String(Math.round(averageHeartRate));
@@ -21,5 +21,5 @@ export function formatWorkoutDuration(durationSeconds: number | null): string {
   if (durationSeconds === null) {
     return missingHealthValue;
   }
-  return formatDuration(durationSeconds);
+  return formatSessionDuration(durationSeconds);
 }

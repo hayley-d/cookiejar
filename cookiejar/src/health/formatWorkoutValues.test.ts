@@ -15,7 +15,7 @@ describe('formatWorkoutValues', () => {
   });
 
   test('formats duration', () => {
-    expect(formatWorkoutDuration(3725)).toBe('1h 2m 5s');
+    expect(formatWorkoutDuration(3725)).toBe('1 h 2 min');
     expect(formatWorkoutDuration(null)).toBe('—');
   });
 });
