@@ -32,6 +32,20 @@ type SessionLoggerProperties = {
   onDiscard: () => void;
 };
 
+function SessionRestTimerBar() {
+  const restTimer = useRestTimer();
+  if (restTimer.remainingSeconds === null) {
+    return null;
+  }
+  return (
+    <RestTimerBar
+      remainingSeconds={restTimer.remainingSeconds}
+      isPaused={restTimer.isPaused}
+      onTogglePause={restTimer.isPaused ? restTimer.resume : restTimer.pause}
+    />
+  );
+}
+
 export function SessionLogger({
   session,
   isFinishing,
@@ -50,7 +64,6 @@ export function SessionLogger({
 }: SessionLoggerProperties) {
   const theme = useTheme();
   const safeAreaInsets = useSafeAreaInsets();
-  const restTimer = useRestTimer();
   const cardPositions = toSupersetCardPositions(session.exercises);
 
   return (
@@ -71,13 +84,7 @@ export function SessionLogger({
         <ElapsedTimer startedAt={session.startedAt} />
         <TextButton label="Finish" onPress={onFinish} disabled={isFinishing} />
       </Box>
-      {restTimer.remainingSeconds === null ? null : (
-        <RestTimerBar
-          remainingSeconds={restTimer.remainingSeconds}
-          isPaused={restTimer.isPaused}
-          onTogglePause={restTimer.isPaused ? restTimer.resume : restTimer.pause}
-        />
-      )}
+      <SessionRestTimerBar />
       <ScrollBox automaticallyAdjustKeyboardInsets contentInsetAdjustmentBehavior="never">
         {session.exercises.length === 0 ? (
           <Typography color="textSecondary" align="center">
