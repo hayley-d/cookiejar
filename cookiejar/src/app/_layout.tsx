@@ -8,6 +8,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NuggieLoadingScreen } from '@/components/organisms/NuggieLoadingScreen';
 import { databaseName } from '@/database/databaseName';
 import { migrateDatabase } from '@/database/migrateDatabase';
+import { useNotificationReconciler } from '@/hooks/useNotificationReconciler';
+import { useNotificationTapRouting } from '@/hooks/useNotificationTapRouting';
+import { configureNotificationHandler } from '@/notifications/notificationHandler';
 import { chooseNuggie } from '@/nuggies/chooseNuggie';
 import type { NuggieName } from '@/nuggies/NuggieName';
 import { ThemeProvider } from '@/theme/ThemeProvider';
@@ -15,6 +18,7 @@ import { palettes } from '@/theme/tokens';
 import { useColorSchemeName } from '@/theme/useColorSchemeName';
 
 SplashScreen.preventAutoHideAsync();
+configureNotificationHandler();
 
 const defaultLoadingCaption = 'Getting your workouts ready…';
 
@@ -34,6 +38,13 @@ function DatabaseReadySignal({ onReady }: DatabaseReadySignalProperties) {
   useEffect(() => {
     onReady();
   }, [onReady]);
+
+  return null;
+}
+
+function NotificationServices() {
+  useNotificationReconciler();
+  useNotificationTapRouting();
 
   return null;
 }
@@ -180,6 +191,7 @@ export default function RootLayout() {
                 }}
               />
             </Stack>
+            <NotificationServices />
           </GestureHandlerRootView>
         </SQLiteProvider>
       </Suspense>

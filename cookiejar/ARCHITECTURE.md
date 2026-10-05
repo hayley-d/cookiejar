@@ -128,6 +128,20 @@ The profile form (see Profile and Progress) is the only writer.
 | `getLatestBodyMeasurement(database)` | The newest measurement (same order), or `null` |
 | `listWeightsBetween(database, startDate, endDate)` | `WeightMeasurement` rows (`measuredOn`, `weightKilograms`) with a weight, inclusive of both dates, ordered by `measured_on ASC, id ASC` |
 
+### Notification Repository
+
+`src/database/repositories/notificationRepository.ts` holds the `notifications` SQL (Phase 09b). A row is written when its notification is scheduled, with `created_at` set to the fire time, so only rows whose `created_at` is in the past have been delivered. Checked on the device, not with `bun test`.
+
+| Function | Behaviour |
+| --- | --- |
+| `upsertNotification(database, recordedNotification)` | Inserts or updates the row with the same `identifier`, and clears `read_at` |
+| `deleteFutureNotificationsWithIdentifierPrefix(database, identifierPrefix, now)` | Deletes rows whose identifier starts with the prefix and whose `created_at` is after `now` |
+| `listPastNotifications(database, now)` | Rows with `created_at` at or before `now` as `AppNotification`, newest first |
+| `countPastUnreadNotifications(database, now)` | The number of past rows with no `read_at` |
+| `markNotificationRead(database, notificationId, now)` | Sets `read_at` on one row by id |
+| `markNotificationReadByIdentifier(database, identifier, now)` | Sets `read_at` on one row by identifier |
+| `markAllNotificationsRead(database, now)` | Sets `read_at` on every past unread row |
+
 ### Progress Repository
 
 `src/database/repositories/progressRepository.ts` holds the read-only SQL behind the Progress screens (Phase 08). Only finished sessions (`finished_at IS NOT NULL`) and completed sets (`completed_at IS NOT NULL`) count. Checked on the device, not with `bun test`.
@@ -142,11 +156,12 @@ The profile form (see Profile and Progress) is the only writer.
 
 ### Migrations
 
-Migrations run in order through `src/database/migrations/migrations.ts` array: `[createInitialSchema, createTrainingSchema, addSessionExerciseRestSeconds]`. The `user_version` PRAGMA tracks which migrations have run.
+Migrations run in order through `src/database/migrations/migrations.ts` array: `[createInitialSchema, createTrainingSchema, addSessionExerciseRestSeconds, addNotificationIdentifier]`. The `user_version` PRAGMA tracks which migrations have run.
 
 - **v1 (createInitialSchema)**: Draft schema with exercises, workouts, workout_exercises and sets tables. Never edited. Kept so the migration order stays the same on every device.
 - **v2 (createTrainingSchema)**: Drops draft tables and creates the full training schema for production use.
 - **v3 (addSessionExerciseRestSeconds)**: Adds `rest_seconds` column to `session_exercises` table to allow per-session rest customization.
+- **v4 (addNotificationIdentifier)**: Adds a nullable `identifier` column to `notifications` and the unique index `notifications_by_identifier` on it. SQLite can't add a `UNIQUE` column with `ALTER TABLE`, so the uniqueness comes from the index.
 
 ### Schema v2
 
@@ -164,7 +179,7 @@ Migrations run in order through `src/database/migrations/migrations.ts` array: `
 | **profile** | Single user profile (id=1) | `id`, `display_name`, `birth_date`, `sex`, `height_centimetres`, `goal`, `weekly_workout_target`, `daily_step_goal`, `updated_at` |
 | **body_measurements** | Weight and body composition history | `id`, `measured_on`, `weight_kilograms`, `body_fat_percent`, waist/hip/chest measurements, `notes` |
 | **health_snapshots** | Apple Health data by date | `date`, `steps`, `sleep_minutes`, `resting_heart_rate`, `fetched_at` |
-| **notifications** | App notifications | `id`, `title`, `body`, `nuggie`, `route`, `created_at`, `read_at` |
+| **notifications** | App notifications | `id`, `identifier` (unique, added by v4), `title`, `body`, `nuggie`, `route`, `created_at`, `read_at` |
 | **app_settings** | Key-value settings | `key`, `value` |
 
 ### Storage Conventions
@@ -1096,6 +1111,39 @@ While the snapshot loads, the typing indicator shows. Every Nuggie bubble and th
 | `durations.typingDotStagger` | 150 | Delay between neighbouring typing dots |
 | `durations.tipBubbleVisible` | 6000 | How long the tip bubble stays before hiding itself |
 
+## Notifications
+
+Phase 09b adds local notifications with `expo-notifications`. There is no push server.
+
+### Module Boundary
+
+`src/notifications/` is the only place that imports `expo-notifications`, following the Apple Health precedent. Four adapter files import it:
+
+| File | Purpose |
+| --- | --- |
+| `notificationPermission.ts` | `requestNotificationPermission()` returns `granted` or `denied`. It asks iOS only when permission has not been decided |
+| `notificationScheduling.ts` | `schedulePlannedNotification(plannedNotification)` schedules a DATE trigger with the content, the sound choice and `data.route`. `cancelPendingNotificationsWithIdentifierPrefix(identifierPrefix)` cancels the pending requests whose identifier starts with the prefix |
+| `notificationHandler.ts` | `configureNotificationHandler()`, called at module scope in the root layout, picks the foreground presentation from the identifier's kind |
+| `notificationTaps.ts` | `takeLastNotificationTap()` reads and clears the response that opened the app, and `subscribeToNotificationTaps(listener)` follows later taps. Both give a `NotificationTap` (`identifier`, `route`) and ignore a response they have already handled |
+
+### Pure Modules
+
+- `notificationSettingKeys.ts`: `workout_reminders_enabled`, `reminder_lead_minutes`, `rest_alerts_enabled` and `weekly_summary_enabled`, with the `true` and `false` values
+- `NotificationSettings.ts` and `parseNotificationSettings.ts`: every toggle defaults to on, and the lead time is 15, 30 or 60 minutes, defaulting to 30
+- `notificationIdentifiers.ts`: the `workout-reminder:` prefix, `workoutReminderIdentifier(date, planEntryId)` and `notificationKindForIdentifier`
+- `foregroundPresentation.ts`: banner, list and sound per notification kind
+- `PlannedNotification.ts`: identifier, title, body, nuggie, route, fire time and whether it plays a sound
+- `buildWorkoutReminders.ts`: one reminder per planned workout with a time of day in the 14-day window (today and the 13 days after), firing at its time minus the lead time when that is still in the future. The body reads "Push Day at 17:30 — Nuggie's ready when you are!", the nuggie is `notification`, and the route is the workout detail from `resolveScheduledWorkoutRoute` as a string
+- `workoutReminderWindow.ts`, `routeToHref.ts`, `readNotificationRoute.ts`, `createQueuedRunner.ts` (one run at a time, with at most one queued rerun) and `notificationsConfiguration.ts`
+
+### Reconciling
+
+`useNotificationReconciler()` runs `reconcileNotifications(database, now)` on mount, when the app returns to the foreground and 2 seconds after the last data version bump, through one queued runner. Each run loads the settings, requests permission and, for each scheduled kind, cancels the pending requests with that kind's prefix, deletes its future rows, then schedules each planned notification again and upserts its row. Without permission, nothing is scheduled.
+
+### Tap Routing
+
+`useNotificationTapRouting()` handles the response that opened the app, then listens for taps. Each tap marks the row with that identifier read, bumps the data version and pushes the route from the content data. Both hooks are mounted once by `NotificationServices` in the root layout, inside `SQLiteProvider` and after the `Stack`.
+
 ## App Start
 
 When the app launches:
@@ -1130,8 +1178,8 @@ src/
     molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField, PlanEntryRow, DaySectionHeader, PlanRow, RestDay, ActivePlanBanner, DayChip, ScheduledWorkoutCard, HeaderImageCard, WorkoutDetailExerciseRow, ActiveSessionBanner, PersonalRecordRow, RestTimerBar, SessionSetRow, SessionTopBar, StatTile, HealthPermissionCard, HealthWorkoutRow, LinkedHealthWorkoutRow, HealthSuggestionBanner, GreetingHeader, TodayWorkoutCard, NuggieActionCard, RestDayCard, NoPlanCard, WeeklyStreakTile, StatBarRow, ProfileSummaryHeader, SettingsRow, MeasurementRow, RangeSwitcher, ClassCountTile, StatisticLine, CoachMessageBubble, UserMessageBubble, PromptChip
     organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter, PlanWeekEditor, AddPlanEntrySheet, ActivatePlanSheet, EntryTimeSheet, CopyDaySheet, WeekStrip, DayWorkoutList, IndividualWorkoutDetail, ClassWorkoutDetail, SessionLogger, ClassSessionView, SessionExerciseCard, SessionSummary, LinkHealthWorkoutSheet, TodayCarousel, StatTileGrid, StatBarList, HealthMetricBarList, StreakBarList, ProfileForm, MeasurementForm, ProgressOverview, RecentRecordsSection, PersonalRecordItemRow, ClassCountSection, ClassStatisticsCard, ExerciseProgressSection, ExerciseHistoryList, ProgressChartFrame, ProgressLineChart, ProgressBarChart, CoachConversation, PromptChipBar
   database/
-    migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2), addSessionExerciseRestSeconds (v3)
-    repositories/           one file per entity: exerciseRepository, workoutRepository, planRepository, scheduleRepository, sessionRepository, appSettingsRepository, healthSnapshotRepository, profileRepository, bodyMeasurementRepository, progressRepository
+    migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2), addSessionExerciseRestSeconds (v3), addNotificationIdentifier (v4)
+    repositories/           one file per entity: exerciseRepository, workoutRepository, planRepository, scheduleRepository, sessionRepository, appSettingsRepository, healthSnapshotRepository, profileRepository, bodyMeasurementRepository, progressRepository, notificationRepository
   exercises/                pure exercise logic with tests: validation, A–Z grouping, filtering, selection, body part param parsing
   hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan, usePlanActions, useScheduledWorkouts, useWeekPages, useSelectedDate, useScheduledWeeks, useSession, useStartSession, useActiveSession, useFinishedSession, useRestTimer, useSessionExercisePicks, useHealthAuthorization, useDailyHealth, useOverlappingHealthWorkouts, useUnlinkHealthWorkout, useProfile, useWeeklyStreak, useHealthRange, useFocusReloadKey, useProfileForm, useBodyMeasurements, useMeasurementForm, useTrainingTotals, usePersonalRecords, useNewRecordCount, useExercisesWithHistory, useExerciseHistory, useClassStatistics, useCoachSnapshot, useCoachConversation, useTipOfTheDay
   stores/                   exercisePickerStore, workoutSavedStore for returning values between screens; dataVersionStore, restTimerStore for module-level state; with tests
@@ -1150,7 +1198,8 @@ src/
   types/                    shared domain types (Exercise, Workout, Session, Plan, ScheduledWorkout, etc.)
   theme/                    design tokens and theme provider
   health/                   Apple Health integration (phase 06); range backfill, trend and step progress helpers (phase 07)
-  coach/                    pure coach logic with tests (phase 09a): snapshot, rule registry and rules/, answers, greeting, tip of the day, conversation reducer. No React Native, expo-sqlite or expo-router imports. Notifications arrive in phase 09b
+  coach/                    pure coach logic with tests (phase 09a): snapshot, rule registry and rules/, answers, greeting, tip of the day, conversation reducer. No React Native, expo-sqlite or expo-router imports
+  notifications/            local notifications (phase 09b): expo-notifications adapters, settings, reminder builder and identifiers
 ```
 
 **Note on typed routes:** Expo Router generates TypeScript types for file-based routes into `.expo/types/router.d.ts` during `npx expo start` on the development machine. A fresh checkout needs one dev-server start before `bun run typecheck` accepts new route references.
