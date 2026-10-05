@@ -182,3 +182,37 @@ export async function copyDayEntries(
 
   return copiedEntryCount;
 }
+
+export async function renamePlan(database: SQLiteDatabase, planId: number, name: string): Promise<void> {
+  await database.runAsync('UPDATE plans SET name = ? WHERE id = ?', name, planId);
+}
+
+export async function duplicatePlan(database: SQLiteDatabase, planId: number): Promise<number> {
+  let duplicatedPlanId = 0;
+
+  await database.withTransactionAsync(async () => {
+    const planResult = await database.runAsync(
+      `INSERT INTO plans (name, is_active, starts_on, created_at)
+      SELECT name || ' (copy)', 0, NULL, ? FROM plans WHERE id = ?`,
+      new Date().toISOString(),
+      planId,
+    );
+    if (planResult.changes === 0) {
+      throw new Error('The plan to duplicate no longer exists');
+    }
+    duplicatedPlanId = planResult.lastInsertRowId;
+
+    await database.runAsync(
+      `INSERT INTO plan_entries (plan_id, workout_id, day_of_week, time_of_day)
+      SELECT ?, workout_id, day_of_week, time_of_day FROM plan_entries WHERE plan_id = ?`,
+      duplicatedPlanId,
+      planId,
+    );
+  });
+
+  return duplicatedPlanId;
+}
+
+export async function deletePlan(database: SQLiteDatabase, planId: number): Promise<void> {
+  await database.runAsync('DELETE FROM plans WHERE id = ?', planId);
+}

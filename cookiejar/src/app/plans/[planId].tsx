@@ -1,9 +1,11 @@
 import { Alert } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 
+import { IconButton } from '@/components/atoms/IconButton';
 import { EmptyState } from '@/components/molecules/EmptyState';
 import { PlanWeekEditor } from '@/components/organisms/PlanWeekEditor';
 import { usePlan } from '@/hooks/usePlan';
+import { usePlanActions } from '@/hooks/usePlanActions';
 import { groupEntriesByWeekday } from '@/plans/groupEntriesByWeekday';
 
 type PlanEditorParameters = {
@@ -13,7 +15,14 @@ type PlanEditorParameters = {
 export default function PlanEditorScreen() {
   const { planId: planIdParameter } = useLocalSearchParams<PlanEditorParameters>();
   const planId = Number(planIdParameter);
-  const { planLookup, removePlanEntry } = usePlan(planId);
+  const { planLookup, removePlanEntry, renamePlan, duplicatePlan, deletePlan } = usePlan(planId);
+  const { openMenu } = usePlanActions({
+    planName: planLookup.status === 'found' ? planLookup.plan.name : '',
+    isActive: planLookup.status === 'found' && planLookup.plan.isActive,
+    renamePlan,
+    duplicatePlan,
+    deletePlan,
+  });
 
   if (planLookup.status === 'missing' || planLookup.status === 'failed') {
     return (
@@ -37,7 +46,12 @@ export default function PlanEditorScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: planLookup.plan.name }} />
+      <Stack.Screen
+        options={{
+          title: planLookup.plan.name,
+          headerRight: () => <IconButton icon="ellipsis" accessibilityLabel="Plan options" onPress={openMenu} />,
+        }}
+      />
       <PlanWeekEditor
         days={groupEntriesByWeekday(planLookup.plan.entries)}
         onChangeEntryTime={(planEntryId) =>

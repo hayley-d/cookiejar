@@ -5,8 +5,11 @@ import { useCallback, useState } from 'react';
 import {
   addPlanEntry as insertPlanEntry,
   copyDayEntries,
+  deletePlan as removePlan,
+  duplicatePlan as insertPlanCopy,
   getPlanWithEntries,
   removePlanEntry as deletePlanEntry,
+  renamePlan as writePlanName,
   type NewPlanEntry,
   updatePlanEntryTime as writePlanEntryTime,
 } from '@/database/repositories/planRepository';
@@ -67,6 +70,26 @@ export function usePlan(planId: number) {
     [database, planId],
   );
 
+  const renamePlan = useCallback(
+    async (name: string) => {
+      await writePlanName(database, planId, name);
+      bumpDataVersion();
+      await reloadPlan();
+    },
+    [database, planId, reloadPlan],
+  );
+
+  const duplicatePlan = useCallback(async () => {
+    const duplicatedPlanId = await insertPlanCopy(database, planId);
+    bumpDataVersion();
+    return duplicatedPlanId;
+  }, [database, planId]);
+
+  const deletePlan = useCallback(async () => {
+    await removePlan(database, planId);
+    bumpDataVersion();
+  }, [database, planId]);
+
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
@@ -92,5 +115,5 @@ export function usePlan(planId: number) {
     }, [database, planId]),
   );
 
-  return { planLookup, reloadPlan, addPlanEntry, updatePlanEntryTime, removePlanEntry, copyDay };
+  return { planLookup, reloadPlan, addPlanEntry, updatePlanEntryTime, removePlanEntry, copyDay, renamePlan, duplicatePlan, deletePlan };
 }

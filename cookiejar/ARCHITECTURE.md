@@ -262,7 +262,7 @@ The Create hub has a "New plan" `ActionCard` under "New workout", and "My plans"
 
 ### Plan Repository
 
-`src/database/repositories/planRepository.ts`: `listPlans` (entry count, active first, then newest), `getPlanWithEntries` (entries joined to the workout summary fields including `exerciseCount`, or `null`), `createPlan`, `addPlanEntry`, `updatePlanEntryTime`, `removePlanEntry` (swipe on `PlanEntryRow` through `SwipeableBox`) and `copyDayEntries` (one transaction, appends to each chosen day and skips a workout already there at the same time). `usePlans` and `usePlan` reload on focus, and their writes call `bumpDataVersion()`.
+`src/database/repositories/planRepository.ts`: `listPlans` (entry count, active first, then newest), `getPlanWithEntries` (entries joined to the workout summary fields including `exerciseCount`, or `null`), `createPlan`, `addPlanEntry`, `updatePlanEntryTime`, `renamePlan`, `duplicatePlan` (inactive "(copy)" with its entries, one transaction), `deletePlan` (entries cascade), `removePlanEntry` (swipe on `PlanEntryRow` through `SwipeableBox`) and `copyDayEntries` (one transaction, appends to each chosen day and skips a workout already there at the same time). `usePlans` and `usePlan` reload on focus, and their writes call `bumpDataVersion()`.
 
 ### Data Version Store
 
