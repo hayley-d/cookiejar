@@ -53,6 +53,12 @@ export function SessionSetRow({
     }
   };
 
+  const acceptPlaceholder = (column: TargetSetColumn) => {
+    if (actualValues[column.field] === null && targetValues[column.field] !== null) {
+      onChangeValues({ [column.field]: targetValues[column.field] });
+    }
+  };
+
   const toggleCompletion = () => {
     const outcome = onToggleCompletion();
     if (outcome === 'ticked') {
@@ -94,6 +100,7 @@ export function SessionSetRow({
                       seconds={actualValues.durationSeconds}
                       placeholder={placeholder}
                       accessibilityLabel={accessibilityLabel}
+                      onFocus={() => acceptPlaceholder(column)}
                       onChangeSeconds={(seconds) => onChangeValues(targetSetChangeFromInput(column, seconds))}
                     />
                   </Box>
@@ -109,6 +116,7 @@ export function SessionSetRow({
                   decimalPlaces={column.decimalPlaces}
                   placeholder={placeholder}
                   accessibilityLabel={accessibilityLabel}
+                  onFocus={() => acceptPlaceholder(column)}
                   onChangeValue={(value) => onChangeValues(targetSetChangeFromInput(column, value))}
                 />
               )}

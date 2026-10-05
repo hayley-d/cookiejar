@@ -8,6 +8,7 @@ type NumberInputProperties = {
   decimalPlaces: number;
   accessibilityLabel: string;
   placeholder?: string;
+  onFocus?: () => void;
   onChangeValue: (value: number | null) => void;
 };
 
@@ -16,6 +17,7 @@ export function NumberInput({
   decimalPlaces,
   accessibilityLabel,
   placeholder,
+  onFocus,
   onChangeValue,
 }: NumberInputProperties) {
   const [text, setText] = useState(() => formatNumberText(value));
@@ -43,6 +45,7 @@ export function NumberInput({
       onEndEditing={() => setText(formatNumberText(value))}
       keyboardType={decimalPlaces === 0 ? 'number-pad' : 'decimal-pad'}
       selectTextOnFocus
+      onFocus={onFocus}
       placeholder={placeholder}
       accessibilityLabel={accessibilityLabel}
       style={{ textAlign: 'center' }}
