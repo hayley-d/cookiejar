@@ -66,7 +66,7 @@ describe('newPersonalRecords', () => {
       },
     });
     expect(insights[0].messages).toHaveLength(1);
-    expect(insights[0].messages[0]).toStartWith('New record on Bench Press — 62.5 kg × 8');
+    expect(insights[0].messages[0]).toBe('New record on Bench Press! 62.5 kg × 8 (est. 1RM 79 kg)! very noopy 🤥👈🦄');
     expect(newPersonalRecordsPriority).toBe(80);
   });
 
@@ -117,7 +117,7 @@ describe('newPersonalRecords', () => {
       }),
     );
     expect(insight.messages).toHaveLength(2);
-    expect(insight.messages[0]).toStartWith('New record on Bench Press — 65 kg');
+    expect(insight.messages[0]).toStartWith('New record on Bench Press! 65 kg');
     expect(insight.messages[1]).toContain('Squat');
   });
 

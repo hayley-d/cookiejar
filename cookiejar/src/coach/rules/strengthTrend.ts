@@ -94,7 +94,7 @@ export function strengthTrend(snapshot: CoachSnapshot): Insight[] {
       nuggie: 'analytics',
       messages: listedTrends.map(
         ({ exercise, risePercent }) =>
-          `${exercise.name} up ${Math.round(risePercent)}% in ${strengthTrendWindowWeekCount} weeks 📈`,
+          `Ohh my noops, ${exercise.name} up ${Math.round(risePercent)}% in ${strengthTrendWindowWeekCount} weeks 📈`,
       ),
       action: {
         label: `See ${listedTrends[0].exercise.name} history`,

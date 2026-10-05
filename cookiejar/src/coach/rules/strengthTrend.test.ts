@@ -73,7 +73,7 @@ describe('strengthTrend', () => {
       topics: ['progress'],
       priority: strengthTrendPriority,
       nuggie: 'analytics',
-      messages: ['Squat up 6% in 8 weeks 📈'],
+      messages: ['Ohh my noops, Squat up 6% in 8 weeks 📈'],
       action: {
         label: 'See Squat history',
         destination: { screen: 'exerciseHistory', exerciseId: 2 },
@@ -138,7 +138,7 @@ describe('strengthTrend', () => {
       sessionOn(10 + index, new Date(2026, 8, 12 + index * 5, 18, 0), [weightedSet(1, weightKilograms, 5)]),
     );
     const messages = trendMessages([...squatSessions([100, 102, 104, 106]), ...benchSessions]);
-    expect(messages).toEqual(['Bench Press up 10% in 8 weeks 📈', 'Squat up 6% in 8 weeks 📈']);
+    expect(messages).toEqual(['Ohh my noops, Bench Press up 10% in 8 weeks 📈', 'Ohh my noops, Squat up 6% in 8 weeks 📈']);
   });
 
   test('skips an exercise missing from the library', () => {

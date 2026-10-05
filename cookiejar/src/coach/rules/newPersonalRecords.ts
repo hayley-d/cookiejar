@@ -33,7 +33,7 @@ export function newPersonalRecords(snapshot: CoachSnapshot): Insight[] {
       priority: newPersonalRecordsPriority,
       nuggie: 'beast',
       messages: listedRecords.map(
-        ({ exercise, record }) => `New record on ${exercise.name} — ${describePersonalRecordDetail(record)}!`,
+        ({ exercise, record }) => `New record on ${exercise.name}! ${describePersonalRecordDetail(record)}! very noopy 🤥👈🦄`,
       ),
       action: {
         label: `See ${listedRecords[0].exercise.name} history`,
