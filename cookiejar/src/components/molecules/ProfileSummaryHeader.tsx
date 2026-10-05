@@ -2,7 +2,6 @@ import { NuggieImage } from '@/components/atoms/NuggieImage';
 import { TextButton } from '@/components/atoms/TextButton';
 import { Box } from '@/components/primitives/Box';
 import { Typography } from '@/components/primitives/Typography';
-import { chooseNuggie } from '@/nuggies/chooseNuggie';
 import { fitnessGoalLabels } from '@/profile/profileLabels';
 import type { FitnessGoal } from '@/types/Profile';
 
@@ -28,7 +27,7 @@ export function ProfileSummaryHeader({
 }: ProfileSummaryHeaderProperties) {
   return (
     <Box direction="row" align="center" gap="medium">
-      <NuggieImage name={chooseNuggie({ kind: 'coach' }, new Date())} size={nuggieSize} />
+      <NuggieImage name="profile" size={nuggieSize} />
       <Box flex={1} gap="extraSmall">
         <Typography variant="title">{displayName ?? 'Your profile'}</Typography>
         <Typography color="textSecondary">{describeTarget(goal, weeklyWorkoutTarget)}</Typography>

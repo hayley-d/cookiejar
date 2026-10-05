@@ -18,4 +18,5 @@ export const nuggieImages: Record<NuggieName, number> = {
   tired: require('./images/tired_nuggie.png'),
   analytics: require('./images/analytics_nuggie.png'),
   cooking: require('./images/cooking_nuggie.png'),
+  profile: require('./images/profile_nuggie.jpg'),
 };

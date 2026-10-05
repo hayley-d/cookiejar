@@ -40,9 +40,9 @@ export default function AppleHealthScreen() {
         </Card>
         <Card>
           <Box gap="small">
-            <Typography variant="label">Get Garmin data into Cookiejar</Typography>
+            <Typography variant="label">Get Garmin data into Nuggie&apos;s Gym</Typography>
             <Typography variant="body" color="textSecondary">
-              Garmin Connect shares your data through Apple Health, and Cookiejar reads it from there.
+              Garmin Connect shares your data through Apple Health, and Nuggie&apos;s Gym reads it from there.
             </Typography>
             {garminSteps.map((step, stepIndex) => (
               <Typography key={step} variant="body" color="textSecondary">

@@ -15,4 +15,5 @@ export type NuggieName =
   | 'restDay'
   | 'tired'
   | 'analytics'
-  | 'cooking';
+  | 'cooking'
+  | 'profile';

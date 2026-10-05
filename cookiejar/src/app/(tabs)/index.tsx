@@ -29,7 +29,7 @@ import { useTheme } from '@/theme/useTheme';
 import type { ScheduledWorkout } from '@/types/ScheduledWorkout';
 
 const trendDayCount = 7;
-const healthAccessInstructions = 'Settings → Health → Data Access & Devices → Cookiejar → Turn On All';
+const healthAccessInstructions = "Settings → Health → Data Access & Devices → Nuggie's Gym → Turn On All";
 
 const showHealthAccessInstructions = () => {
   Alert.alert('Connect Apple Health', healthAccessInstructions);
