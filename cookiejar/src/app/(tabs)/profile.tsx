@@ -88,7 +88,9 @@ export default function ProfileScreen() {
             <Typography variant="caption" color="textSecondary">
               Progress
             </Typography>
-            {lifetimeTotals === null ? null : (
+            {lifetimeTotals === null ? null : newRecordCount === null ? (
+              <SettingsRow title={describeLifetimeTotals(lifetimeTotals)} onPress={openProgress} />
+            ) : (
               <SettingsRow
                 title={describeNewRecordCount(newRecordCount)}
                 subtitle={describeLifetimeTotals(lifetimeTotals)}

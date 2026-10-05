@@ -13,7 +13,7 @@ import { useExercisesWithHistory } from '@/hooks/useExercisesWithHistory';
 import { usePersonalRecords } from '@/hooks/usePersonalRecords';
 import { useTrainingTotals } from '@/hooks/useTrainingTotals';
 import { chooseNuggie } from '@/nuggies/chooseNuggie';
-import { countPersonalRecordsInRange } from '@/progress/buildPersonalRecordList';
+import { countNewRecordsThisMonth } from '@/progress/countNewRecordsThisMonth';
 import { currentMonthRange, lifetimeRange } from '@/progress/currentMonthRange';
 
 const recentRecordCount = 5;
@@ -39,14 +39,15 @@ export default function ProgressScreen() {
   const now = new Date();
   const monthLookup = useTrainingTotals(currentMonthRange(now));
   const lifetimeLookup = useTrainingTotals(lifetimeRange(now));
-  const { personalRecords } = usePersonalRecords();
+  const { personalRecords, hasLoadFailed: haveRecordsFailed } = usePersonalRecords();
   const { exercises } = useExercisesWithHistory();
   const { classStatistics } = useClassStatistics();
-  const newRecordCount =
-    personalRecords === null ? 0 : countPersonalRecordsInRange(personalRecords, currentMonthRange(now));
+  const newRecordCount = countNewRecordsThisMonth(personalRecords, now);
   const [isLoadingScreenVisible, setIsLoadingScreenVisible] = useState(true);
   const hasLoadFailed = monthLookup.hasLoadFailed || lifetimeLookup.hasLoadFailed;
-  const isReady = hasLoadFailed || (monthLookup.totals !== null && lifetimeLookup.totals !== null);
+  const areRecordsSettled = personalRecords !== null || haveRecordsFailed;
+  const isReady =
+    hasLoadFailed || (monthLookup.totals !== null && lifetimeLookup.totals !== null && areRecordsSettled);
 
   if (isLoadingScreenVisible) {
     return (

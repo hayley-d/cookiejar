@@ -1,8 +1,7 @@
-import { countPersonalRecordsInRange } from '@/progress/buildPersonalRecordList';
-import { currentMonthRange } from '@/progress/currentMonthRange';
 import { usePersonalRecords } from '@/hooks/usePersonalRecords';
+import { countNewRecordsThisMonth } from '@/progress/countNewRecordsThisMonth';
 
-export function useNewRecordCount(): number {
+export function useNewRecordCount(): number | null {
   const { personalRecords } = usePersonalRecords();
-  return personalRecords === null ? 0 : countPersonalRecordsInRange(personalRecords, currentMonthRange(new Date()));
+  return countNewRecordsThisMonth(personalRecords, new Date());
 }
