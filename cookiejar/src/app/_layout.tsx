@@ -129,7 +129,10 @@ export default function RootLayout() {
                   sheetGrabberVisible: true,
                 }}
               />
-              <Stack.Screen name="exercises/picker" options={{ presentation: 'fullScreenModal', headerShown: false }} />
+              <Stack.Screen
+                name="exercises/picker"
+                options={{ presentation: 'fullScreenModal', headerShown: false }}
+              />
               <Stack.Screen
                 name="plans/new"
                 options={{ presentation: 'modal', title: 'New plan', headerLargeTitleEnabled: false }}
