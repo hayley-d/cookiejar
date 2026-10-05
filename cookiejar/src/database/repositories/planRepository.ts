@@ -6,6 +6,7 @@ import type { Plan } from '@/types/Plan';
 import type { PlanSummary } from '@/types/PlanSummary';
 import type { PlanEntryWithWorkout, PlanWithEntries } from '@/types/PlanWithEntries';
 import type { WorkoutKind } from '@/types/WorkoutKind';
+import { defaultRestSeconds } from '@/workouts/estimateWorkoutMinutes';
 
 type PlanRow = {
   id: number;
@@ -31,6 +32,8 @@ type PlanEntryWithWorkoutRow = {
   workout_duration_minutes: number | null;
   workout_image_url: string | null;
   workout_exercise_count: number;
+  workout_target_set_count: number;
+  workout_target_rest_seconds: number;
 };
 
 export type NewPlanEntry = {
@@ -65,6 +68,8 @@ function toPlanEntryWithWorkout(row: PlanEntryWithWorkoutRow): PlanEntryWithWork
       durationMinutes: row.workout_duration_minutes,
       imageUrl: row.workout_image_url,
       exerciseCount: row.workout_exercise_count,
+      targetSetCount: row.workout_target_set_count,
+      targetRestSeconds: row.workout_target_rest_seconds,
     },
   };
 }
@@ -95,11 +100,18 @@ export async function getPlanWithEntries(database: SQLiteDatabase, planId: numbe
       plan_entries.time_of_day,
       workouts.name AS workout_name, workouts.kind AS workout_kind, workouts.class_type AS workout_class_type,
       workouts.duration_minutes AS workout_duration_minutes, workouts.image_url AS workout_image_url,
-      (SELECT COUNT(*) FROM workout_items WHERE workout_items.workout_id = workouts.id) AS workout_exercise_count
+      (SELECT COUNT(*) FROM workout_items WHERE workout_items.workout_id = workouts.id) AS workout_exercise_count,
+      (SELECT COUNT(*) FROM target_sets
+        JOIN workout_items ON workout_items.id = target_sets.workout_item_id
+        WHERE workout_items.workout_id = workouts.id) AS workout_target_set_count,
+      (SELECT COALESCE(SUM(COALESCE(workout_items.rest_seconds, ?)), 0) FROM target_sets
+        JOIN workout_items ON workout_items.id = target_sets.workout_item_id
+        WHERE workout_items.workout_id = workouts.id) AS workout_target_rest_seconds
     FROM plan_entries
     JOIN workouts ON workouts.id = plan_entries.workout_id
     WHERE plan_entries.plan_id = ?
     ORDER BY plan_entries.day_of_week, plan_entries.time_of_day, plan_entries.id`,
+    defaultRestSeconds,
     planId,
   );
 

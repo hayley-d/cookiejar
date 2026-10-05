@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getActivePlanWithEntries } from '@/database/repositories/planRepository';
 import { listSessionsBetween } from '@/database/repositories/scheduleRepository';
 import { buildScheduledWorkouts } from '@/plans/buildScheduledWorkouts';
+import type { ScheduledWorkoutsForDateLookup } from '@/plans/scheduledWeekCache';
 import { useDataVersion } from '@/stores/dataVersionStore';
 import type { ScheduledWorkout } from '@/types/ScheduledWorkout';
 
@@ -13,10 +14,7 @@ export type ScheduledWorkoutsLookup =
   | { status: 'failed' }
   | { status: 'ready'; scheduledWorkoutsByDate: Map<string, ScheduledWorkout[]> };
 
-export type ScheduledWorkoutsForDateLookup =
-  | { status: 'loading' }
-  | { status: 'failed' }
-  | { status: 'ready'; scheduledWorkouts: ScheduledWorkout[] };
+export type { ScheduledWorkoutsForDateLookup };
 
 type LoadedRange = {
   startDate: string;

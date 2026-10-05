@@ -4,6 +4,8 @@ import type { Workout } from '@/types/Workout';
 
 export type PlanEntryWorkout = Pick<Workout, 'id' | 'name' | 'kind' | 'classType' | 'durationMinutes' | 'imageUrl'> & {
   exerciseCount: number;
+  targetSetCount: number;
+  targetRestSeconds: number;
 };
 
 export type PlanEntryWithWorkout = PlanEntry & {

@@ -3,6 +3,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import type { ClassType } from '@/types/ClassType';
 import type { SessionSummary } from '@/types/SessionSummary';
 import type { WorkoutKind } from '@/types/WorkoutKind';
+import { defaultRestSeconds } from '@/workouts/estimateWorkoutMinutes';
 
 type SessionSummaryRow = {
   id: number;
@@ -17,6 +18,8 @@ type SessionSummaryRow = {
   workout_duration_minutes: number | null;
   workout_image_url: string | null;
   workout_exercise_count: number;
+  workout_target_set_count: number;
+  workout_target_rest_seconds: number;
 };
 
 function toSessionSummary(row: SessionSummaryRow): SessionSummary {
@@ -34,6 +37,8 @@ function toSessionSummary(row: SessionSummaryRow): SessionSummary {
       durationMinutes: row.workout_duration_minutes,
       imageUrl: row.workout_image_url,
       exerciseCount: row.workout_exercise_count,
+      targetSetCount: row.workout_target_set_count,
+      targetRestSeconds: row.workout_target_rest_seconds,
     },
   };
 }
@@ -48,11 +53,18 @@ export async function listSessionsBetween(
       sessions.workout_name AS session_workout_name, sessions.workout_kind AS session_workout_kind,
       sessions.class_type AS session_class_type, sessions.scheduled_date, sessions.started_at, sessions.finished_at,
       workouts.duration_minutes AS workout_duration_minutes, workouts.image_url AS workout_image_url,
-      (SELECT COUNT(*) FROM workout_items WHERE workout_items.workout_id = sessions.workout_id) AS workout_exercise_count
+      (SELECT COUNT(*) FROM workout_items WHERE workout_items.workout_id = sessions.workout_id) AS workout_exercise_count,
+      (SELECT COUNT(*) FROM target_sets
+        JOIN workout_items ON workout_items.id = target_sets.workout_item_id
+        WHERE workout_items.workout_id = sessions.workout_id) AS workout_target_set_count,
+      (SELECT COALESCE(SUM(COALESCE(workout_items.rest_seconds, ?)), 0) FROM target_sets
+        JOIN workout_items ON workout_items.id = target_sets.workout_item_id
+        WHERE workout_items.workout_id = sessions.workout_id) AS workout_target_rest_seconds
     FROM sessions
     LEFT JOIN workouts ON workouts.id = sessions.workout_id
     WHERE sessions.scheduled_date >= ? AND sessions.scheduled_date <= ?
     ORDER BY sessions.scheduled_date, sessions.started_at, sessions.id`,
+    defaultRestSeconds,
     startDate,
     endDate,
   );

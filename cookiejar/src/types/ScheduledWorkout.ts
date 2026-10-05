@@ -6,6 +6,8 @@ export type ScheduledWorkoutSummary = Pick<
 > & {
   id: number | null;
   exerciseCount: number;
+  targetSetCount: number;
+  targetRestSeconds: number;
 };
 
 export type ScheduledWorkoutStatus = 'planned' | 'inProgress' | 'completed';

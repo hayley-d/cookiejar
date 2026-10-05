@@ -16,6 +16,8 @@ function makeWorkout(id: number, name: string) {
     durationMinutes: null,
     imageUrl: null,
     exerciseCount: 3,
+    targetSetCount: 9,
+    targetRestSeconds: 540,
   };
 }
 

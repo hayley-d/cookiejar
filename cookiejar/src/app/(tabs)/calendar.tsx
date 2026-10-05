@@ -3,12 +3,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/atoms/Button';
 import { ScreenHeader } from '@/components/molecules/ScreenHeader';
+import { DayWorkoutList } from '@/components/organisms/DayWorkoutList';
 import { WeekStrip, type WeekStripHandle } from '@/components/organisms/WeekStrip';
 import { Box } from '@/components/primitives/Box';
+import { ScrollBox } from '@/components/primitives/ScrollBox';
 import { Typography } from '@/components/primitives/Typography';
 import { formatFullDate } from '@/dates/formatFullDate';
 import { toLocalDateString } from '@/dates/toLocalDateString';
 import { monthLabelForWeek } from '@/dates/weekPages';
+import { useScheduledWeeks } from '@/hooks/useScheduledWeeks';
 import { useSelectedDate } from '@/hooks/useSelectedDate';
 import { useWeekPages } from '@/hooks/useWeekPages';
 import { useTheme } from '@/theme/useTheme';
@@ -28,6 +31,7 @@ export default function CalendarScreen() {
     appendWeeks,
   } = useWeekPages(today);
   const { selectedDate, selectDate, followVisibleWeek } = useSelectedDate(todayDate);
+  const { lookupDate } = useScheduledWeeks(visibleWeekStart);
   const weekStripReference = useRef<WeekStripHandle>(null);
 
   const changeVisibleWeek = useCallback(
@@ -69,6 +73,9 @@ export default function CalendarScreen() {
             {formatFullDate(selectedDate)}
           </Typography>
         </Box>
+        <ScrollBox gap="medium" padding="none">
+          <DayWorkoutList lookup={lookupDate(selectedDate)} today={todayDate} />
+        </ScrollBox>
       </Box>
     </SafeAreaView>
   );
