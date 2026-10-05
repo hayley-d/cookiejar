@@ -49,6 +49,22 @@ Read the versioned docs at https://docs.expo.dev/versions/v57.0.0/ before using 
 - Each entity has a repository module in `src/database/repositories` that holds all of its SQL. Screens and components call repository functions and never write SQL themselves.
 - Every query uses bound parameters, never string interpolation.
 
+### Exercise Repository
+
+`src/database/repositories/exerciseRepository.ts` holds all exercise SQL. expo-sqlite can't run under bun, so it is checked on the device, not with `bun test`.
+
+| Function | Behaviour |
+| --- | --- |
+| `listExercises(database)` | Every exercise, ordered by name with `NOCASE` |
+| `listRecentlyUsedExercises(database, limit?)` | Every exercise, in one `LEFT JOIN` on `session_exercises.exercise_id` and `sessions`. Used exercises come first by their latest `started_at`, then the rest by `created_at` descending |
+| `getExercise(database, exerciseId)` | One exercise, or `null` |
+| `createExercise(database, newExercise)` | Inserts and returns the new id |
+| `updateExercise(database, exerciseId, changes)` | Saves the edited fields |
+| `countExerciseUsages(database, exerciseId)` | `workout_items` rows plus `session_exercises` rows that reference the exercise as `exercise_id` or `replaced_exercise_id` |
+| `deleteExercise(database, exerciseId)` | Deletes the exercise. Screens only offer it when the usage count is 0 |
+
+`createExercise` and `updateExercise` turn a `UNIQUE` violation on `name` into `DuplicateExerciseNameError`. The form also checks uniqueness (ignoring case) before saving, so the error is a safety net that shows the same message.
+
 ### Migrations
 
 Migrations run in order through `src/database/migrations/migrations.ts` array: `[createInitialSchema, createTrainingSchema]`. The `user_version` PRAGMA tracks which migrations have run.
@@ -93,17 +109,57 @@ routes (src/app)  →  organisms  →  molecules  →  atoms  →  primitives  �
 
 | Layer | Responsibility | Examples |
 | --- | --- | --- |
-| **primitives** | Thin themed wrappers over React Native elements. The only layer that touches raw `View`, `Text`, `Pressable`, `TextInput`, `ScrollView`. They apply theme tokens and nothing else. | `Box`, `Typography`, `Touchable`, `TextField`, `Stack`, `Image` |
-| **atoms** | The smallest pieces of UI with meaning, built from primitives. No data access. | `Button`, `Badge`, `NuggieImage`, `Card` |
-| **molecules** | Small groups of atoms that work as a unit. Hold local UI state at most. | `CoachFloatingButton`, `ScreenHeader` |
-| **organisms** | Self-contained sections of a screen. Receive data and callbacks through props. | `NuggieLoadingScreen` |
-| **routes** | Expo Router screens. Load data through repositories and hooks, then compose organisms. | `src/app/(tabs)/index.tsx`, `src/app/(tabs)/_layout.tsx`, `src/app/coach.tsx` |
+| **primitives** | Thin themed wrappers over React Native elements. The only layer that touches raw `View`, `Text`, `Pressable`, `TextInput`, `ScrollView`, `FlatList`, `SectionList`, `expo-image` and `expo-symbols`. They apply theme tokens and nothing else. | `Box`, `Typography`, `Touchable`, `TextField`, `Stack`, `Image`, `Icon`, `List`, `SectionedList`, `ScrollBox` |
+| **atoms** | The smallest pieces of UI with meaning, built from primitives. No data access. | `Button`, `TextButton`, `IconButton`, `Badge`, `Chip`, `Checkbox`, `NuggieImage`, `Card` |
+| **molecules** | Small groups of atoms that work as a unit. Hold local UI state at most. | `CoachFloatingButton`, `ScreenHeader`, `EmptyState`, `ChipGroup`, `SegmentedControl`, `SearchBar`, `AlphabetIndex`, `ExerciseRow` |
+| **organisms** | Self-contained sections of a screen. Receive data and callbacks through props. | `NuggieLoadingScreen`, `ExerciseForm`, `ExercisePicker` |
+| **routes** | Expo Router screens. Load data through repositories and hooks, then compose organisms. | `src/app/(tabs)/index.tsx`, `src/app/(tabs)/_layout.tsx`, `src/app/coach.tsx`, `src/app/exercises/*` |
 
 Rules:
 
 - Only routes and hooks talk to the database. Components below routes are given data through props, which keeps them easy to reuse and preview.
 - Colours, spacing, radii and typography come from `src/theme` tokens. No hard-coded values in components.
 - Light and dark mode are both supported through the theme.
+
+## Exercise Library
+
+### Routes
+
+All four routes are registered flat in the root `Stack`. There is no `exercises/_layout.tsx`.
+
+| Route | Presentation | Purpose |
+| --- | --- | --- |
+| `/exercises` | Stack push | The library. Renders `ExercisePicker` in its `browse` variant. Tapping a row opens edit, and Add in the header (or the empty state's button) opens the new form |
+| `/exercises/new` | Modal | `ExerciseForm` with Save in the header. Takes an optional `requestIdentifier` (see below) |
+| `/exercises/[exerciseId]` | Stack push | `ExerciseForm` for editing, plus a red Delete that asks for confirmation and is disabled with a reason when the exercise is in use |
+| `/exercises/picker` | Full-screen modal, no Stack header | `ExercisePicker` in `multiple` or `single` mode. Params: `requestIdentifier`, `mode`, `excludeExerciseIds` (comma-separated) |
+
+`ExercisePicker` is one organism for both the library and the picker, so they share one list. It has Alphabetical, Body part and Recent tabs (`SegmentedControl`), a `SearchBar` that narrows whichever tab is active, and an `AlphabetIndex` on the alphabetical lists. In `multiple` mode, the footer holds "Add exercises (n)" (needs at least 1) and "Create superset" (needs at least 2). In `single` mode there is no footer, and tapping a row returns it. Excluded exercises are disabled and show a tick.
+
+The new and edit screens share their save flow through `useExerciseForm`. `useExercises`, `useExercise` and `useRecentlyUsedExercises` reload on focus.
+
+### Pure Modules
+
+These hold the library's logic, import no React Native, and are covered by `bun test`:
+
+- `src/exercises/validateExerciseForm.ts`: name (required, trimmed, unique ignoring case), body part, tracking type and the `https` image URL rule
+- `src/exercises/groupExercisesAlphabetically.ts`: A–Z sections with `#` last, and `findNearestSectionTitle` for index letters that have no section
+- `src/exercises/filterExercises.ts`: search text and body part
+- `src/exercises/toggleExerciseSelection.ts`: ticks and unticks while keeping tick order
+
+### Pick Store Pattern
+
+Expo Router can't pass a result back through `router.back()`, so screens that return a value go through `src/stores/exercisePickerStore.ts`, a small module-level store read with `useSyncExternalStore`:
+
+1. The caller makes an identifier with `createExercisePickRequestIdentifier()`, calls `beginExercisePick(identifier)`, keeps the identifier in state, and pushes the screen with `requestIdentifier` in its params.
+2. The pushed screen calls `completeExercisePick(identifier, { exerciseIds, asSuperset })` and `router.back()`. A completion for a request that wasn't begun, or was already completed, is ignored.
+3. The caller reads `useExercisePickResult(identifier)`, which returns the result for one render and then consumes it. The caller copies it into its own state during render, guarded by the last result it saw, so no effect sets state.
+
+The picker uses the same pattern in both directions. Callers open the picker with it, and the picker's `+` opens `/exercises/new` with its own request. On save, the form completes that request with the new id, and the picker appends it to the end of the selection. Opened without a `requestIdentifier`, the form just saves and goes back.
+
+### Temporary Create Harness
+
+No screen calls the picker until phase 02, so the Create tab placeholder carries temporary buttons: "Exercise library", "Try picker", "Try single picker" and, after a pick, "Try picker excluding last pick". It lists the last result in order and says whether it was a superset. Phase 02 removes the harness.
 
 ## App Start
 
@@ -125,14 +181,18 @@ src/
     (tabs)/                 bottom tabs: index, calendar, create, profile
     _layout.tsx             root: ThemeProvider → Suspense → SQLiteProvider → GestureHandlerRootView → Stack
     coach.tsx               Coach modal screen
+    exercises/              library (index), new, [exerciseId] edit, picker
   components/
-    primitives/             themed wrappers: Box, Typography, Stack, Image, TextField
-    atoms/                  smallest UI pieces: Button, Badge, NuggieImage, Card
-    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader
-    organisms/              self-contained sections: NuggieLoadingScreen
+    primitives/             themed wrappers: Box, Typography, Touchable, Stack, Image, Icon, TextField, List, SectionedList, ScrollBox
+    atoms/                  smallest UI pieces: Button, TextButton, IconButton, Badge, Chip, Checkbox, NuggieImage, Card
+    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow
+    organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker
   database/
     migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2)
-    repositories/           one file per entity (populated in later phases)
+    repositories/           one file per entity: exerciseRepository
+  exercises/                pure exercise logic with tests: validation, A–Z grouping, filtering, selection
+  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, plus useExerciseForm
+  stores/                   exercisePickerStore for returning picks between screens, with tests
   nuggies/                  nuggie selection and image system
   dates/                    pure date/duration helpers with tests
   types/                    shared domain types (Exercise, Workout, Session, etc.)
