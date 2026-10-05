@@ -35,6 +35,9 @@ export function calculateWeightChange(
   }
 
   const latest = weighIns[weighIns.length - 1];
+  if (latest.measuredOn < windowStart) {
+    return null;
+  }
   const earlierWeighIns = weighIns.slice(0, -1);
   const onOrBeforeWindowStart = earlierWeighIns.filter((weighIn) => weighIn.measuredOn <= windowStart);
   const baseline =

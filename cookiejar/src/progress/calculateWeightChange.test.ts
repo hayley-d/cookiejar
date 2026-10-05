@@ -33,6 +33,16 @@ describe('calculateWeightChange', () => {
     expect(calculateWeightChange(measurements, 30, today)).toBe(-1.6);
   });
 
+  test('still computes when the latest weigh-in is exactly on the window start', () => {
+    const measurements = [weighIn('2026-09-05', 72), weighIn('2026-08-20', 74)];
+    expect(calculateWeightChange(measurements, 30, today)).toBe(-2);
+  });
+
+  test('is null when the latest weigh-in is before the window start', () => {
+    const measurements = [weighIn('2026-09-04', 72), weighIn('2026-08-20', 74)];
+    expect(calculateWeightChange(measurements, 30, today)).toBeNull();
+  });
+
   test('ignores measurements without a weight', () => {
     const measurements = [weighIn('2026-10-05', 72), weighIn('2026-09-20', null), weighIn('2026-09-05', 73)];
     expect(calculateWeightChange(measurements, 30, today)).toBe(-1);
