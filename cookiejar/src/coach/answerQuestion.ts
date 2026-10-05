@@ -1,4 +1,4 @@
-import { chooseGreeting } from '@/coach/chooseGreeting';
+import { coachGreeting } from '@/coach/coachGreeting';
 import type { CoachBubble } from '@/coach/CoachBubble';
 import type { CoachQuestion } from '@/coach/coachQuestions';
 import type { CoachSnapshot } from '@/coach/CoachSnapshot';
@@ -58,11 +58,10 @@ export function answerQuestion(
 }
 
 export function openingBubbles(snapshot: CoachSnapshot, rules: readonly InsightRule[] = insightRules): CoachBubble[] {
-  const greeting = chooseGreeting(snapshot.now, snapshot.profile?.displayName ?? null);
   const [topInsight] = collectInsights(snapshot, rules);
   if (topInsight === undefined || topInsight.messages.length === 0) {
-    return [{ text: `${greeting} ${openingFallback}`, nuggie: 'coach', action: null }];
+    return [{ text: `${coachGreeting} ${openingFallback}`, nuggie: 'coach', action: null }];
   }
   const [firstBubble, ...otherBubbles] = insightToBubbles(topInsight);
-  return [{ ...firstBubble, text: `${greeting} ${firstBubble.text}` }, ...otherBubbles];
+  return [{ ...firstBubble, text: `${coachGreeting} ${firstBubble.text}` }, ...otherBubbles];
 }

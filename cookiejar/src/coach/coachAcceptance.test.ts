@@ -103,7 +103,7 @@ describe('seeded acceptance fixture', () => {
     const [topInsight] = collectInsights(snapshot);
     expect(topInsight.ruleIdentifier).toBe('lowSleep');
     const bubbles = openingBubbles(snapshot);
-    expect(bubbles[0].text).toBe('Morning! Only 5h 40m sleep. Go lighter today.');
+    expect(bubbles[0].text).toBe('Good Noop! Only 5h 40m sleep. Go lighter today.');
     expect(bubbles[0].nuggie).toBe('tired');
   });
 
@@ -158,7 +158,7 @@ describe('priority ordering across all rules', () => {
   test('the greeting picks the highest priority across every topic', () => {
     const snapshot = createFullyLoadedCoachSnapshot();
     const bubbles = openingBubbles(snapshot);
-    expect(bubbles[0].text).toBe('Morning Hayley! Only 5h 40m sleep. Go lighter today.');
+    expect(bubbles[0].text).toBe('Good Noop! Only 5h 40m sleep. Go lighter today.');
     expect(bubbles[0].nuggie).toBe('tired');
     const withoutRecovery = { ...snapshot, healthLastFourteenDays: [] };
     expect(openingBubbles(withoutRecovery)[0].text).toContain('New record on Squat');
@@ -222,6 +222,6 @@ describe('fewer than 3 finished sessions', () => {
 
   test('the greeting leads with the noData message', () => {
     const newcomer = createCoachSnapshot({ finishedSessionCount: 2 });
-    expect(openingBubbles(newcomer)[0].text).toBe("Morning! Finish a few workouts and I'll start spotting trends!");
+    expect(openingBubbles(newcomer)[0].text).toBe("Good Noop! Finish a few workouts and I'll start spotting trends!");
   });
 });

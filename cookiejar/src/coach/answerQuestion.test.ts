@@ -205,19 +205,19 @@ describe('openingBubbles', () => {
     ];
     const snapshot = createCoachSnapshot({ profile: profileNamedHayley });
     expect(openingBubbles(snapshot, rules)).toEqual([
-      { text: 'Morning Hayley! Only 5h 40m sleep.', nuggie: 'coach', action: null },
+      { text: 'Good Noop! Only 5h 40m sleep.', nuggie: 'coach', action: null },
     ]);
   });
 
   test('greets without a name when there is no profile', () => {
     const rules = [ruleReturning(createInsight('weekAhead', 10, ['week'], 'Week text'))];
-    expect(openingBubbles(createCoachSnapshot(), rules)[0].text).toBe('Morning! Week text');
+    expect(openingBubbles(createCoachSnapshot(), rules)[0].text).toBe('Good Noop! Week text');
   });
 
   test('opens with the noData insight with fewer than 3 sessions', () => {
     const bubbles = openingBubbles(createCoachSnapshot({ finishedSessionCount: 1, profile: profileNamedHayley }));
     expect(bubbles.map((bubble) => bubble.text)).toEqual([
-      "Morning Hayley! Finish a few workouts and I'll start spotting trends!",
+      "Good Noop! Finish a few workouts and I'll start spotting trends!",
       '1 down, 2 to go.',
     ]);
     expect(bubbles[0].nuggie).toBe('coach');
@@ -225,7 +225,7 @@ describe('openingBubbles', () => {
 
   test('falls back to a friendly line when no rule fires', () => {
     expect(openingBubbles(createCoachSnapshot(), [])).toEqual([
-      { text: 'Morning! Everything looks on track — keep it up!', nuggie: 'coach', action: null },
+      { text: 'Good Noop! Everything looks on track — keep it up!', nuggie: 'coach', action: null },
     ]);
   });
 });
