@@ -87,6 +87,9 @@ export const sizes = {
   todayRingWidth: 2,
   dayMarkerSlot: 10,
   dayMarkerDot: 6,
+  headerCardImageHeight: 200,
+  headerCardNuggie: 140,
+  detailBottomBarClearance: 96,
 };
 
 export const durations = {

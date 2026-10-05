@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import type { BodyPart } from '@/types/BodyPart';
 import type { ClassType } from '@/types/ClassType';
 import type { TrackingType } from '@/types/TrackingType';
 import type { WorkoutKind } from '@/types/WorkoutKind';
@@ -34,6 +35,7 @@ type WorkoutItemRow = {
   notes: string | null;
   exercise_name: string;
   exercise_image_url: string | null;
+  exercise_body_part: BodyPart;
   exercise_default_tracking_type: TrackingType;
 };
 
@@ -161,7 +163,7 @@ export async function getWorkoutWithItems(
   const itemRows = await database.getAllAsync<WorkoutItemRow>(
     `SELECT workout_items.id, workout_items.workout_id, workout_items.exercise_id, workout_items.position,
       workout_items.superset_group, workout_items.tracking_type, workout_items.rest_seconds, workout_items.notes,
-      exercises.name AS exercise_name, exercises.image_url AS exercise_image_url,
+      exercises.name AS exercise_name, exercises.image_url AS exercise_image_url, exercises.body_part AS exercise_body_part,
       exercises.default_tracking_type AS exercise_default_tracking_type
     FROM workout_items
     JOIN exercises ON exercises.id = workout_items.exercise_id
@@ -193,6 +195,7 @@ export async function getWorkoutWithItems(
       id: itemRow.exercise_id,
       name: itemRow.exercise_name,
       imageUrl: itemRow.exercise_image_url,
+      bodyPart: itemRow.exercise_body_part,
       defaultTrackingType: itemRow.exercise_default_tracking_type,
     },
     targetSets: targetSetRows

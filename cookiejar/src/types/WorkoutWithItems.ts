@@ -4,7 +4,7 @@ import type { Workout } from '@/types/Workout';
 import type { WorkoutItem } from '@/types/WorkoutItem';
 
 export type WorkoutItemWithTargetSets = WorkoutItem & {
-  exercise: Pick<Exercise, 'id' | 'name' | 'imageUrl' | 'defaultTrackingType'>;
+  exercise: Pick<Exercise, 'id' | 'name' | 'bodyPart' | 'imageUrl' | 'defaultTrackingType'>;
   targetSets: TargetSet[];
 };
 
