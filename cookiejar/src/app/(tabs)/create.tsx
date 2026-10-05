@@ -8,10 +8,10 @@ import { useWorkoutActions } from '@/hooks/useWorkoutActions';
 import { useWorkouts } from '@/hooks/useWorkouts';
 import { useWorkoutSavedNoticeOnFocus } from '@/hooks/useWorkoutSavedNoticeOnFocus';
 import type { WorkoutSavedNotice } from '@/stores/workoutSavedStore';
-
-const coachButtonClearance = 96;
+import { useTheme } from '@/theme/useTheme';
 
 export default function CreateScreen() {
+  const theme = useTheme();
   const { workouts, reloadWorkouts } = useWorkouts();
   const { editWorkout, duplicateWorkout, confirmDeleteWorkout } = useWorkoutActions({ reloadWorkouts });
   const savedNotice = useWorkoutSavedNoticeOnFocus();
@@ -30,7 +30,7 @@ export default function CreateScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1 }}>
-      <Box flex={1} background="background" style={{ paddingBottom: coachButtonClearance }}>
+      <Box flex={1} background="background" style={{ paddingBottom: theme.sizes.coachButtonClearance }}>
         <CreateHub
           workouts={workouts}
           toast={toast}

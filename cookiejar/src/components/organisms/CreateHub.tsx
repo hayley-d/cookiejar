@@ -32,7 +32,6 @@ type CreateHubProperties = {
   onToastDismissed: () => void;
 };
 
-const chevronSize = 14;
 
 const workoutMenuOptions = ['Edit', 'Duplicate', 'Delete', 'Cancel'];
 const workoutMenuDeleteIndex = 2;
@@ -116,7 +115,7 @@ export function CreateHub({
               <Typography variant="label" color="accent">
                 Exercise library
               </Typography>
-              <Icon name="chevron.right" size={chevronSize} color="accent" weight="semibold" />
+              <Icon name="chevron.right" size={theme.sizes.createHubChevron} color="accent" weight="semibold" />
             </Stack>
           </Touchable>
         }

@@ -12,7 +12,6 @@ type ToastProperties = {
 };
 
 const visibleMilliseconds = 2500;
-const iconSize = 18;
 
 export function Toast({ message, onDismiss }: ToastProperties) {
   const theme = useTheme();
@@ -33,13 +32,13 @@ export function Toast({ message, onDismiss }: ToastProperties) {
           backgroundColor: theme.colors.accent,
           borderRadius: theme.radii.round,
           paddingHorizontal: theme.spacing.medium,
-          paddingVertical: theme.spacing.small + theme.spacing.extraSmall,
+          paddingVertical: theme.sizes.toastVerticalPadding,
         },
         theme.shadows.card,
       ]}
     >
       <Stack direction="horizontal" gap="small" align="center">
-        <Icon name="checkmark.circle.fill" size={iconSize} color="onAccent" />
+        <Icon name="checkmark.circle.fill" size={theme.sizes.toastIcon} color="onAccent" />
         <Typography variant="label" color="onAccent">
           {message}
         </Typography>

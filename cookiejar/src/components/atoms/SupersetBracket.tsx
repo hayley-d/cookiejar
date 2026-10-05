@@ -1,5 +1,4 @@
-import { View } from 'react-native';
-
+import { Box } from '@/components/primitives/Box';
 import { useTheme } from '@/theme/useTheme';
 import type { SupersetBracketPosition } from '@/workouts/supersetCardPositions';
 
@@ -13,7 +12,7 @@ export function SupersetBracket({ position }: SupersetBracketProperties) {
   const isEnd = position === 'end';
 
   return (
-    <View
+    <Box
       pointerEvents="none"
       style={{
         position: 'absolute',

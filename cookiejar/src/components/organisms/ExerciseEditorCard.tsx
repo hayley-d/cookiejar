@@ -34,7 +34,6 @@ type ExerciseEditorCardProperties = {
   onShowSupersetInfo: () => void;
 };
 
-const imageSize = 56;
 const menuOptions = ['Tracking type', 'Rest time', 'Replace exercise', 'Remove', 'Cancel'];
 const trackingTypeMenuIndex = 0;
 const restMenuIndex = 1;
@@ -142,11 +141,15 @@ export function ExerciseEditorCard({
                 <Image
                   source={{ uri: imageUrl }}
                   contentFit="cover"
-                  style={{ width: imageSize, height: imageSize, borderRadius: theme.radii.medium }}
+                  style={{
+                    width: theme.sizes.exerciseEditorImage,
+                    height: theme.sizes.exerciseEditorImage,
+                    borderRadius: theme.radii.medium,
+                  }}
                   onError={() => setFailedImageUrl(imageUrl)}
                 />
               ) : (
-                <NuggieImage name="workout" size={imageSize} shape="rounded" />
+                <NuggieImage name="workout" size={theme.sizes.exerciseEditorImage} shape="rounded" />
               )}
               <Box flex={1}>
                 <Typography variant="heading">

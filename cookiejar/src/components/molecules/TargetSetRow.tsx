@@ -3,6 +3,7 @@ import { NumberInput } from '@/components/atoms/NumberInput';
 import { Box } from '@/components/primitives/Box';
 import { SwipeableBox } from '@/components/primitives/SwipeableBox';
 import { Typography } from '@/components/primitives/Typography';
+import { useTheme } from '@/theme/useTheme';
 import {
   columnInputValue,
   targetSetChangeFromInput,
@@ -18,13 +19,13 @@ type TargetSetRowProperties = {
   onRemove: () => void;
 };
 
-export const setNumberColumnWidth = 40;
-
 export function TargetSetRow({ setNumber, columns, targetSet, onChangeTargetSet, onRemove }: TargetSetRowProperties) {
+  const theme = useTheme();
+
   return (
     <SwipeableBox actionLabel="Remove" onSwipeLeft={onRemove}>
       <Box direction="row" align="center" gap="small" paddingVertical="extraSmall" background="surface">
-        <Box style={{ width: setNumberColumnWidth }}>
+        <Box style={{ width: theme.sizes.setNumberColumn }}>
           <Typography variant="label" align="center">
             {setNumber}
           </Typography>

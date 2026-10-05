@@ -71,6 +71,14 @@ export const sizes = {
   reorderRow: 56,
   autoScrollEdge: 72,
   autoScrollStep: 8,
+  exerciseEditorImage: 56,
+  workoutRowImage: 72,
+  toastIcon: 18,
+  toastVerticalPadding: 12,
+  supersetInfoNuggie: 140,
+  coachButtonClearance: 96,
+  createHubChevron: 14,
+  setNumberColumn: 40,
 };
 
 export const durations = {

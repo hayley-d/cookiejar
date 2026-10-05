@@ -20,7 +20,6 @@ type WorkoutRowProperties = {
   onLongPress?: () => void;
 };
 
-const imageSize = 72;
 
 export function WorkoutRow({ name, summary, imageUrl, nuggie, badgeLabel, onLongPress }: WorkoutRowProperties) {
   const theme = useTheme();
@@ -39,11 +38,15 @@ export function WorkoutRow({ name, summary, imageUrl, nuggie, badgeLabel, onLong
             <Image
               source={{ uri: imageUrl }}
               contentFit="cover"
-              style={{ width: imageSize, height: imageSize, borderRadius: theme.radii.medium }}
+              style={{
+                width: theme.sizes.workoutRowImage,
+                height: theme.sizes.workoutRowImage,
+                borderRadius: theme.radii.medium,
+              }}
               onError={() => setFailedImageUrl(imageUrl)}
             />
           ) : (
-            <NuggieImage name={nuggie} size={imageSize} shape="rounded" />
+            <NuggieImage name={nuggie} size={theme.sizes.workoutRowImage} shape="rounded" />
           )}
           <Box flex={1} gap="extraSmall">
             <Typography variant="label">{name}</Typography>

@@ -1,7 +1,8 @@
 import { Button } from '@/components/atoms/Button';
-import { setNumberColumnWidth, TargetSetRow } from '@/components/molecules/TargetSetRow';
+import { TargetSetRow } from '@/components/molecules/TargetSetRow';
 import { Box } from '@/components/primitives/Box';
 import { Typography } from '@/components/primitives/Typography';
+import { useTheme } from '@/theme/useTheme';
 import type { TrackingType } from '@/types/TrackingType';
 import { targetSetColumns, type TargetSetValues } from '@/workouts/targetSetColumns';
 import type { EditorTargetSet } from '@/workouts/workoutEditorReducer';
@@ -21,12 +22,13 @@ export function TargetSetTable({
   onAddTargetSet,
   onRemoveTargetSet,
 }: TargetSetTableProperties) {
+  const theme = useTheme();
   const columns = targetSetColumns(trackingType);
 
   return (
     <Box gap="small">
       <Box direction="row" gap="small">
-        <Box style={{ width: setNumberColumnWidth }}>
+        <Box style={{ width: theme.sizes.setNumberColumn }}>
           <Typography variant="caption" color="textSecondary" align="center">
             SET
           </Typography>
