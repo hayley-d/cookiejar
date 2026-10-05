@@ -1,9 +1,13 @@
+import type { Ref } from 'react';
 import { ScrollView, type ScrollViewProps } from 'react-native';
 
 import type { SpacingName } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
+export type ScrollBoxHandle = ScrollView;
+
 type ScrollBoxProperties = Omit<ScrollViewProps, 'contentContainerStyle'> & {
+  ref?: Ref<ScrollView>;
   padding?: SpacingName;
   gap?: SpacingName;
   contentBottomPadding?: number;

@@ -149,6 +149,9 @@ export const sizes = {
   chartBarMaximumWidth: 24,
   chartBarWidthRatio: 0.7,
   chartBarCornerRadius: 4,
+  coachAvatar: 36,
+  typingDot: 8,
+  chatBubbleMaximumWidth: 300,
 };
 
 export const durations = {
@@ -158,6 +161,8 @@ export const durations = {
   timerTick: 1000,
   fastTimerTick: 250,
   bannerRefresh: 15000,
+  typingDotPulse: 400,
+  typingDotStagger: 150,
 };
 
 export const typography = {

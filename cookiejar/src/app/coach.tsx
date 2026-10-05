@@ -1,17 +1,68 @@
-import { NuggieImage } from '@/components/atoms/NuggieImage';
+import { router, type Href } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { coachQuestions } from '@/coach/coachQuestions';
+import type { CoachDestination, InsightAction } from '@/coach/Insight';
+import { EmptyState } from '@/components/molecules/EmptyState';
+import { CoachConversation } from '@/components/organisms/CoachConversation';
+import { PromptChipBar } from '@/components/organisms/PromptChipBar';
 import { Box } from '@/components/primitives/Box';
-import { Typography } from '@/components/primitives/Typography';
+import { useCoachConversation } from '@/hooks/useCoachConversation';
+import { useCoachSnapshot } from '@/hooks/useCoachSnapshot';
+
+function hrefForDestination(destination: CoachDestination): Href {
+  switch (destination.screen) {
+    case 'exerciseHistory':
+      return { pathname: '/progress/exercises/[exerciseId]', params: { exerciseId: destination.exerciseId } };
+    case 'planEditor':
+      return { pathname: '/plans/[planId]', params: { planId: destination.planId } };
+    case 'addMeasurement':
+      return '/profile/measurements/new';
+    case 'calendar':
+      return '/calendar';
+    case 'exerciseLibrary':
+      return { pathname: '/exercises', params: { bodyPart: destination.bodyPart } };
+  }
+}
+
+function openAction(action: InsightAction) {
+  router.dismiss();
+  router.navigate(hrefForDestination(action.destination));
+}
 
 export default function CoachScreen() {
+  const snapshotLookup = useCoachSnapshot();
+  const snapshot = snapshotLookup.status === 'ready' ? snapshotLookup.snapshot : null;
+  const { messages, isTyping, typingNuggie, askQuestion } = useCoachConversation(snapshot);
+
+  if (snapshotLookup.status === 'failed') {
+    return (
+      <Box flex={1} background="background">
+        <EmptyState
+          nuggie="tired"
+          title="Coach Nuggie is stuck"
+          message="I couldn't read your training just now. Close the coach and try again."
+          actionLabel="Close"
+          onAction={() => router.dismiss()}
+        />
+      </Box>
+    );
+  }
+
   return (
-    <Box flex={1} background="background" align="center" justify="center" gap="medium" padding="large">
-      <NuggieImage name="coach" size={180} />
-      <Typography variant="title" align="center">
-        Coach Nuggie is warming up
-      </Typography>
-      <Typography color="textSecondary" align="center">
-        Your coach arrives in phase 09.
-      </Typography>
-    </Box>
+    <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
+      <Box flex={1} background="background">
+        <Box flex={1}>
+          <CoachConversation
+            messages={messages}
+            typingNuggie={snapshot === null ? 'coach' : typingNuggie}
+            onActionPress={openAction}
+          />
+        </Box>
+        <Box borderColor="border" style={{ borderWidth: 0, borderTopWidth: 1 }}>
+          <PromptChipBar questions={coachQuestions} isLocked={snapshot === null || isTyping} onAsk={askQuestion} />
+        </Box>
+      </Box>
+    </SafeAreaView>
   );
 }
