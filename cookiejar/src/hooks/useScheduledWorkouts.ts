@@ -1,10 +1,10 @@
-import { useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { getActivePlanWithEntries } from '@/database/repositories/planRepository';
 import { listSessionsBetween } from '@/database/repositories/scheduleRepository';
 import { buildScheduledWorkouts } from '@/plans/buildScheduledWorkouts';
+import { useFocusReloadKey } from '@/hooks/useFocusReloadKey';
 import { useDataVersion } from '@/stores/dataVersionStore';
 import type { ScheduledWorkout } from '@/types/ScheduledWorkout';
 
@@ -35,19 +35,8 @@ type LoadedRange = {
 export function useScheduledWorkouts(startDate: string, endDate: string): ScheduledWorkoutsLookup {
   const database = useSQLiteContext();
   const dataVersion = useDataVersion();
-  const [focusCount, setFocusCount] = useState(0);
+  const focusCount = useFocusReloadKey();
   const [loadedRange, setLoadedRange] = useState<LoadedRange | null>(null);
-  const hasFocusedBefore = useRef(false);
-
-  useFocusEffect(
-    useCallback(() => {
-      if (!hasFocusedBefore.current) {
-        hasFocusedBefore.current = true;
-        return;
-      }
-      setFocusCount((previousFocusCount) => previousFocusCount + 1);
-    }, []),
-  );
 
   useEffect(() => {
     let isActive = true;

@@ -1,8 +1,8 @@
-import { useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { getWorkoutWithItems } from '@/database/repositories/workoutRepository';
+import { useFocusReloadKey } from '@/hooks/useFocusReloadKey';
 import { useDataVersion } from '@/stores/dataVersionStore';
 import type { WorkoutWithItems } from '@/types/WorkoutWithItems';
 
@@ -20,19 +20,8 @@ type LoadedWorkout = {
 export function useWorkoutWithItems(workoutId: number): WorkoutLookup {
   const database = useSQLiteContext();
   const dataVersion = useDataVersion();
-  const [focusCount, setFocusCount] = useState(0);
+  const focusCount = useFocusReloadKey();
   const [loadedWorkout, setLoadedWorkout] = useState<LoadedWorkout | null>(null);
-  const hasFocusedBefore = useRef(false);
-
-  useFocusEffect(
-    useCallback(() => {
-      if (!hasFocusedBefore.current) {
-        hasFocusedBefore.current = true;
-        return;
-      }
-      setFocusCount((previousFocusCount) => previousFocusCount + 1);
-    }, []),
-  );
 
   useEffect(() => {
     let isActive = true;

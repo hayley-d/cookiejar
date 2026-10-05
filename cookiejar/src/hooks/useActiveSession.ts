@@ -1,8 +1,8 @@
-import { useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { getActiveSession } from '@/database/repositories/sessionRepository';
+import { useFocusReloadKey } from '@/hooks/useFocusReloadKey';
 import { useDataVersion } from '@/stores/dataVersionStore';
 import type { ActiveSession } from '@/types/ActiveSession';
 
@@ -15,19 +15,8 @@ export type ActiveSessionLookup =
 export function useActiveSession(): ActiveSessionLookup {
   const database = useSQLiteContext();
   const dataVersion = useDataVersion();
-  const [focusCount, setFocusCount] = useState(0);
+  const focusCount = useFocusReloadKey();
   const [lookup, setLookup] = useState<ActiveSessionLookup>({ status: 'loading' });
-  const hasFocusedBefore = useRef(false);
-
-  useFocusEffect(
-    useCallback(() => {
-      if (!hasFocusedBefore.current) {
-        hasFocusedBefore.current = true;
-        return;
-      }
-      setFocusCount((previousFocusCount) => previousFocusCount + 1);
-    }, []),
-  );
 
   useEffect(() => {
     let isActive = true;

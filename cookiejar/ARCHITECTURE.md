@@ -110,7 +110,7 @@ Read the versioned docs at https://docs.expo.dev/versions/v57.0.0/ before using 
 
 Phase 07 only reads the profile. Nothing writes it yet; Phase 08 adds the form that sets the name.
 
-`useProfile()` (in `src/hooks/useProfile.ts`) returns a `ProfileSummary` of `displayName`, `dailyStepGoal` and `weeklyWorkoutTarget`. It starts from the defaults `displayName: null`, `dailyStepGoal: 10000` and `weeklyWorkoutTarget: 4`, and keeps them when the row is missing or the read fails. It reloads on focus (not the first one) and when `dataVersion` changes.
+`useProfile()` (in `src/hooks/useProfile.ts`) returns a `ProfileSummary` of `displayName`, `dailyStepGoal` and `weeklyWorkoutTarget`. It starts from the defaults `displayName: null`, `dailyStepGoal: 10000` and `weeklyWorkoutTarget: 4`, and keeps them when the row is missing or the read fails. It reloads on focus (not the first one, through `useFocusReloadKey`) and when `dataVersion` changes.
 
 ### Migrations
 
@@ -344,7 +344,7 @@ The `ScheduledWorkout` type holds `date`, `timeOfDay` (null for unplanned), `pla
 
 ### Hooks
 
-Plan-specific hooks reload on focus. Their write functions call repository functions, then call `bumpDataVersion()`, which triggers `useScheduledWorkouts` to recompute:
+Plan-specific hooks reload on focus. `useFocusReloadKey()` (in `src/hooks/useFocusReloadKey.ts`) holds the shared focus-reload logic: it returns a count that skips the first focus and adds 1 on each later one. `useWorkoutWithItems`, `useActiveSession`, `useScheduledWeeks`, `useProfile` and `useScheduledWorkouts` use it as a reload dependency. Their write functions call repository functions, then call `bumpDataVersion()`, which triggers `useScheduledWorkouts` to recompute:
 
 | Hook | Behaviour |
 | --- | --- |
@@ -866,7 +866,7 @@ src/
     migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2), addSessionExerciseRestSeconds (v3)
     repositories/           one file per entity: exerciseRepository, workoutRepository, planRepository, scheduleRepository, sessionRepository, appSettingsRepository, healthSnapshotRepository, profileRepository
   exercises/                pure exercise logic with tests: validation, A–Z grouping, filtering, selection
-  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan, usePlanActions, useScheduledWorkouts, useWeekPages, useSelectedDate, useScheduledWeeks, useSession, useStartSession, useActiveSession, useFinishedSession, useRestTimer, useSessionExercisePicks, useHealthAuthorization, useDailyHealth, useOverlappingHealthWorkouts, useUnlinkHealthWorkout, useProfile, useWeeklyStreak, useHealthRange
+  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan, usePlanActions, useScheduledWorkouts, useWeekPages, useSelectedDate, useScheduledWeeks, useSession, useStartSession, useActiveSession, useFinishedSession, useRestTimer, useSessionExercisePicks, useHealthAuthorization, useDailyHealth, useOverlappingHealthWorkouts, useUnlinkHealthWorkout, useProfile, useWeeklyStreak, useHealthRange, useFocusReloadKey
   stores/                   exercisePickerStore, workoutSavedStore for returning values between screens; dataVersionStore, restTimerStore for module-level state; with tests
   plans/                    pure plan logic with tests: build scheduled workouts, time of day, summaries, copy day, weekday grouping, day marker state, week cache
   workouts/                 pure builder logic with tests: reducer, normalisation, grouping blocks, target set columns, save rows, drag maths, rest presets, class type nuggies, editor context and provider, duration estimation, target set descriptions

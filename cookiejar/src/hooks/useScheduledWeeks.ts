@@ -1,4 +1,3 @@
-import { useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -15,6 +14,7 @@ import {
   type ScheduledWeekCache,
   type ScheduledWorkoutsForDateLookup,
 } from '@/plans/scheduledWeekCache';
+import { useFocusReloadKey } from '@/hooks/useFocusReloadKey';
 import { useDataVersion } from '@/stores/dataVersionStore';
 import type { PlanWithEntries } from '@/types/PlanWithEntries';
 
@@ -32,24 +32,13 @@ const failedWeek: ScheduledWeek = { outcome: 'failed' };
 export function useScheduledWeeks(visibleWeekStart: string): ScheduledWeeks {
   const database = useSQLiteContext();
   const dataVersion = useDataVersion();
-  const [focusCount, setFocusCount] = useState(0);
+  const focusCount = useFocusReloadKey();
   const [snapshot, setSnapshot] = useState<CacheSnapshot>({ resetKey: '0:0', cache: emptyScheduledWeekCache });
-  const hasFocusedBefore = useRef(false);
   const latestResetKey = useRef('');
   const loadingWeekKeys = useRef(new Set<string>());
 
   const resetKey = `${dataVersion}:${focusCount}`;
   const cache = snapshot.resetKey === resetKey ? snapshot.cache : emptyScheduledWeekCache;
-
-  useFocusEffect(
-    useCallback(() => {
-      if (!hasFocusedBefore.current) {
-        hasFocusedBefore.current = true;
-        return;
-      }
-      setFocusCount((previousFocusCount) => previousFocusCount + 1);
-    }, []),
-  );
 
   useEffect(() => {
     latestResetKey.current = resetKey;
