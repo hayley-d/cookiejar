@@ -34,7 +34,7 @@ This app is built in phases. See [docs/README.md](docs/README.md) for the full p
 | Animations & gestures | `react-native-gesture-handler`, `react-native-reanimated`, `react-native-worklets` |
 | Haptics | `expo-haptics` for button feedback |
 | Icons | `expo-symbols` for SF Symbols in tabs and buttons |
-| SVG | `react-native-svg` for the progress ring in class session view (used only in the `ProgressRingBox` primitive) |
+| SVG | `react-native-svg` for the progress ring in the class session view and the steps stat tile (used only in the `ProgressRingBox` primitive) |
 | Date/time picker | `@react-native-community/datetimepicker` (native platform pickers for time and date selection) |
 | Apple Health | `@kingstinct/react-native-healthkit`, pinned exactly at `15.1.0`, with `react-native-nitro-modules` (`0.37.1`) as its native bridge |
 | Splash screen | `expo-splash-screen` |
@@ -100,6 +100,18 @@ Read the versioned docs at https://docs.expo.dev/versions/v57.0.0/ before using 
 | `getHealthSnapshotsBetween(database, startDate, endDate)` | Snapshots for a date range (inclusive), ordered by date |
 | `upsertHealthSnapshot(database, dailyHealth)` | Inserts or updates a snapshot with `steps`, `sleepMinutes`, `restingHeartRate` and `fetchedAt` |
 
+### Profile Repository
+
+`src/database/repositories/profileRepository.ts` holds the profile SQL. The `profile` table holds one row with `id = 1`. expo-sqlite can't run under bun, so it is checked on the device, not with `bun test`.
+
+| Function | Behaviour |
+| --- | --- |
+| `getProfile(database)` | The profile row mapped to a `Profile` (`displayName`, `birthDate`, `sex`, `heightCentimetres`, `goal`, `weeklyWorkoutTarget`, `dailyStepGoal`, `updatedAt`), or `null` when the row is missing. It reads with a bound `id` parameter |
+
+Phase 07 only reads the profile. Nothing writes it yet; Phase 08 adds the form that sets the name.
+
+`useProfile()` (in `src/hooks/useProfile.ts`) returns a `ProfileSummary` of `displayName`, `dailyStepGoal` and `weeklyWorkoutTarget`. It starts from the defaults `displayName: null`, `dailyStepGoal: 10000` and `weeklyWorkoutTarget: 4`, and keeps them when the row is missing or the read fails. It reloads on focus (not the first one) and when `dataVersion` changes.
+
 ### Migrations
 
 Migrations run in order through `src/database/migrations/migrations.ts` array: `[createInitialSchema, createTrainingSchema, addSessionExerciseRestSeconds]`. The `user_version` PRAGMA tracks which migrations have run.
@@ -145,11 +157,11 @@ routes (src/app)  →  organisms  →  molecules  →  atoms  →  primitives  �
 
 | Layer | Responsibility | Examples |
 | --- | --- | --- |
-| **primitives** | Thin themed wrappers over React Native elements. The only layer that touches raw `View`, `Text`, `Pressable`, `TextInput`, `ScrollView`, `FlatList`, `SectionList`, `expo-image`, `expo-symbols`, `react-native-svg` and `@react-native-community/datetimepicker`. They apply theme tokens and nothing else. | `Box`, `Typography`, `Touchable`, `TextField`, `Stack`, `Image`, `Icon`, `List`, `SectionedList`, `ScrollBox`, `AnimatedBox`, `SwipeableBox`, `LongPressDragBox`, `WindowMeasuredBox`, `TimePickerBox`, `ProgressRingBox`, `ShakeBox` |
-| **atoms** | The smallest pieces of UI with meaning, built from primitives. No data access. | `Button`, `TextButton`, `IconButton`, `Badge`, `Chip`, `Checkbox`, `NuggieImage`, `Card`, `NumberInput`, `DurationInput`, `DragHandle`, `SupersetBracket`, `Toast`, `TimeLabel`, `StatusChip`, `DayMarker`, `CountdownButton`, `ElapsedTimer` |
-| **molecules** | Small groups of atoms that work as a unit. Hold local UI state at most. | `CoachFloatingButton`, `ScreenHeader`, `EmptyState`, `ChipGroup`, `SegmentedControl`, `SearchBar`, `AlphabetIndex`, `ExerciseRow`, `FormField`, `ImageUrlField`, `Stepper`, `KindChoiceCard`, `ActionCard`, `TargetSetRow`, `TargetSetTable`, `WorkoutRow`, `WorkoutNameField`, `PlanEntryRow`, `DaySectionHeader`, `PlanRow`, `RestDay`, `ActivePlanBanner`, `DayChip`, `ScheduledWorkoutCard`, `HeaderImageCard`, `WorkoutDetailExerciseRow`, `ActiveSessionBanner`, `PersonalRecordRow`, `RestTimerBar`, `SessionSetRow`, `SessionTopBar`, `StatTile` |
-| **organisms** | Self-contained sections of a screen. Receive data and callbacks through props. | `NuggieLoadingScreen`, `ExerciseForm`, `ExercisePicker`, `ExerciseEditorCard`, `ReorderableExerciseList`, `ClassDetailsForm`, `CreateHub`, `WorkoutEditorFooter`, `PlanWeekEditor`, `AddPlanEntrySheet`, `ActivatePlanSheet`, `EntryTimeSheet`, `CopyDaySheet`, `WeekStrip`, `DayWorkoutList`, `IndividualWorkoutDetail`, `ClassWorkoutDetail`, `SessionLogger`, `ClassSessionView`, `SessionExerciseCard`, `SessionSummary` |
-| **routes** | Expo Router screens. Load data through repositories and hooks, then compose organisms. | `src/app/(tabs)/index.tsx`, `src/app/(tabs)/_layout.tsx`, `src/app/coach.tsx`, `src/app/exercises/*`, `src/app/workouts/*`, `src/app/plans/*`, `src/app/workout/[workoutId].tsx`, `src/app/sessions/[sessionId]/index.tsx`, `src/app/sessions/[sessionId]/finishing.tsx`, `src/app/sessions/[sessionId]/summary.tsx` |
+| **primitives** | Thin themed wrappers over React Native elements. The only layer that touches raw `View`, `Text`, `Pressable`, `TextInput`, `ScrollView`, `FlatList`, `SectionList`, `expo-image`, `expo-symbols`, `react-native-svg` and `@react-native-community/datetimepicker`. They apply theme tokens and nothing else. | `Box`, `Typography`, `Touchable`, `TextField`, `Stack`, `Image`, `Icon`, `List`, `SectionedList`, `ScrollBox`, `AnimatedBox`, `SwipeableBox`, `LongPressDragBox`, `WindowMeasuredBox`, `TimePickerBox`, `ProgressRingBox`, `ShakeBox`, `SnapList` |
+| **atoms** | The smallest pieces of UI with meaning, built from primitives. No data access. | `Button`, `TextButton`, `IconButton`, `Badge`, `Chip`, `Checkbox`, `NuggieImage`, `Card`, `NumberInput`, `DurationInput`, `DragHandle`, `SupersetBracket`, `Toast`, `TimeLabel`, `StatusChip`, `DayMarker`, `CountdownButton`, `ElapsedTimer`, `PageDots`, `StreakDots`, `TrendArrow` |
+| **molecules** | Small groups of atoms that work as a unit. Hold local UI state at most. | `CoachFloatingButton`, `ScreenHeader`, `EmptyState`, `ChipGroup`, `SegmentedControl`, `SearchBar`, `AlphabetIndex`, `ExerciseRow`, `FormField`, `ImageUrlField`, `Stepper`, `KindChoiceCard`, `ActionCard`, `TargetSetRow`, `TargetSetTable`, `WorkoutRow`, `WorkoutNameField`, `PlanEntryRow`, `DaySectionHeader`, `PlanRow`, `RestDay`, `ActivePlanBanner`, `DayChip`, `ScheduledWorkoutCard`, `HeaderImageCard`, `WorkoutDetailExerciseRow`, `ActiveSessionBanner`, `PersonalRecordRow`, `RestTimerBar`, `SessionSetRow`, `SessionTopBar`, `StatTile`, `GreetingHeader`, `TodayWorkoutCard`, `RestDayCard`, `NoPlanCard`, `WeeklyStreakTile`, `StatBarRow` |
+| **organisms** | Self-contained sections of a screen. Receive data and callbacks through props. | `NuggieLoadingScreen`, `ExerciseForm`, `ExercisePicker`, `ExerciseEditorCard`, `ReorderableExerciseList`, `ClassDetailsForm`, `CreateHub`, `WorkoutEditorFooter`, `PlanWeekEditor`, `AddPlanEntrySheet`, `ActivatePlanSheet`, `EntryTimeSheet`, `CopyDaySheet`, `WeekStrip`, `DayWorkoutList`, `IndividualWorkoutDetail`, `ClassWorkoutDetail`, `SessionLogger`, `ClassSessionView`, `SessionExerciseCard`, `SessionSummary`, `TodayCarousel`, `StatTileGrid`, `StatBarList`, `HealthMetricBarList`, `StreakBarList` |
+| **routes** | Expo Router screens. Load data through repositories and hooks, then compose organisms. | `src/app/(tabs)/index.tsx`, `src/app/(tabs)/_layout.tsx`, `src/app/coach.tsx`, `src/app/exercises/*`, `src/app/workouts/*`, `src/app/plans/*`, `src/app/workout/[workoutId].tsx`, `src/app/sessions/[sessionId]/index.tsx`, `src/app/sessions/[sessionId]/finishing.tsx`, `src/app/sessions/[sessionId]/summary.tsx`, `src/app/stats/[metric].tsx` |
 
 Rules:
 
@@ -610,7 +622,24 @@ Session-specific hooks manage the logger state and rest timer:
 | `previousColumn` | 72 | Width of the previous set column in session set rows |
 | `shakeDistance` | 8 | Horizontal distance for the shake animation |
 | `statTileMinimumHeight` | 88 | Minimum height of a stat tile in the summary |
-| `healthPermissionNuggie` | 72 | Size of the nuggie in the health permission card on Home |
+| `healthPermissionNuggie` | 72 | Size of the nuggie in the health permission card on Home. The rest-day and no-plan cards use it too |
+| `coachButtonClearance` | 96 | Bottom padding that scrolling Home content needs to clear the floating Coach button (see Home Dashboard) |
+| `todayCardWidthRatio` | 0.82 | Width of a today workout card as a share of the window width |
+| `todayCardImageHeight` | 180 | Height of the image area on a today workout card |
+| `todayCardNuggie` | 120 | Size of the fallback nuggie on a today workout card |
+| `todayCardActiveBorderWidth` | 2 | Accent border on the card of an in-progress workout |
+| `pageDot` | 8 | Diameter of a carousel page dot |
+| `statTileIcon` | 16 | Icon size in a detailed stat tile and in the trend arrow |
+| `statTileRing` | 28 | Diameter of the steps ring in its tile |
+| `statTileRingStroke` | 4 | Stroke width of the steps ring in its tile |
+| `statTileNuggie` | 32 | Size of the nuggie in the corner of a stat tile |
+| `streakDot` | 12 | Size of a day dot on the weekly streak tile |
+| `streakDotOutlineWidth` | 2 | Outline width of a pending streak dot |
+| `statBarHeight` | 12 | Height of a bar on the detail screens |
+| `statBarDateColumn` | 88 | Width of the date column in a detail bar row |
+| `statBarValueColumn` | 72 | Width of the value column in a detail bar row |
+
+Phase 07 also adds the `attention` and `attentionSoft` colours, in both the light and the dark palette. A stat tile in the `attention` tone uses them.
 
 ## Apple Health Integration
 
@@ -644,6 +673,11 @@ These hold Apple Health logic and are covered by `bun test`:
 - `formatSteps.ts`, `formatSleepMinutes.ts`, `formatRestingHeartRate.ts`: format health values for display
 - `formatWorkoutValues.ts`: format workout duration, kilocalories and heart rate ranges for display
 - `healthWorkoutSearchWindow.ts`: search window from 30 minutes before the session starts to 30 minutes after it finishes (using `now` if the session is not finished)
+- `healthRefreshThrottle.ts`: module-level memory of when each date's refresh last started (`getLastRefreshStartedAt`, `markRefreshStarted`, `clearRefreshStarted`). `useDailyHealth` and `useHealthRange` share it, so the 5-minute throttle in `shouldRefreshHealth` applies per date across both
+- `healthRangeDatesToBackfill.ts`: from a list of dates and the cached snapshots, the dates that have no snapshot or whose snapshot is not final
+- `mergeHealthSnapshots.ts`: merges incoming snapshots into a map by date. An incoming snapshot replaces the existing one when its `fetchedAt` is the same or later
+- `compareToAverage.ts`: compares today's value to the mean of the previous values that are present. Returns `null` when today's value is null or no previous value is present. Otherwise it returns the average, the difference rounded with `Math.round`, a `direction` (`up`, `down`, `level`) and a `tone`: `positive` for down or level, `attention` for up by 5 or more, `default` for any other rise
+- `describeStepProgress.ts`: percentage of the step goal (rounded down), a caption such as "42% of 10k", the ring progress clamped at 1, and whether the goal is reached. A goal of 0 or less gives 0%. It also exports `formatCompactStepGoal`
 - `healthSettingKeys.ts`: `healthAuthorizationRequestedAtSettingKey` for the authorization request timestamp
 - `isGarminSource.ts`: detect Garmin workouts by checking whether bundle identifier contains "garmin" (case-insensitive) or source name contains "Garmin"
 
@@ -657,6 +691,8 @@ Health-specific hooks manage data loading and caching:
 | `useDailyHealth(date)` | Returns `{ snapshot, isLoading, refresh }`. Loads the snapshot from the database cache. Per-date refresh timestamps are held in module-level memory; the snapshot cache is the database. On mount it loads the cached snapshot. On focus and when the app returns to the foreground, only queries HealthKit if the `healthAuthorizationRequestedAtSettingKey` setting exists, then checks if a refresh is needed: skips refresh if the cached snapshot is final or if the 5-minute throttle per date blocks it. When a refresh runs, reads through `readDailyHealth` and upserts the snapshot. A snapshot is final when its `fetchedAt` is after noon on the day after its date; final snapshots do not refresh. `isLoading` is true until a snapshot has been loaded for the requested date |
 | `useOverlappingHealthWorkouts(sessionId)` | Returns `{ lookup, refresh, link, isLinking }` where lookup is `{ status: 'loading' | 'unavailable' | 'failed' | 'ready' }`. On mount loads the session and its time window, then finds overlapping workouts and groups them. Returns `unavailable` when Apple Health access was never requested and `failed` when the session or the read fails. Reloads on focus. `refresh()` forces a reload. `link(workout)` reads the workout's heart rate range, updates the session with `linkHealthWorkout`, bumps dataVersion and returns `'linked'`, `'busy'` (another link is already in flight, nothing was changed) or `'failed'`. Callers alert only on `'failed'` |
 | `useUnlinkHealthWorkout(sessionId)` | Returns an async callback that calls `unlinkHealthWorkout(database, sessionId)` and bumps dataVersion. Used by the session summary to unlink a previously linked health workout |
+
+`useHealthRange(startDate, endDate)` (Phase 07) is described in the Home Dashboard section.
 
 ### Components
 
@@ -676,16 +712,119 @@ Phase 06 adds molecules and an organism for health data on the Home tab and on t
 | --- | --- | --- |
 | `/sessions/[sessionId]/link-health-workout` | Form sheet | `LinkHealthWorkoutSheet` allowing manual selection of an overlapping workout to link. Opened from the session summary |
 
-### Home Health Section
+## Home Dashboard
 
-The Home tab (`src/app/(tabs)/index.tsx`) shows health data and access controls based on authorization state:
+Phase 07 turns the Home tab (`src/app/(tabs)/index.tsx`) into a dashboard. It uses the profile repository above and the Phase 06 health data.
 
-1. When `hasRequestedAuthorization` is `false` (authorization not yet requested): `HealthPermissionCard` with a coach nuggie, description and Connect button
-2. When `hasRequestedAuthorization` is `true` (authorization has been requested or granted): three stat tiles in a row for Steps, Sleep and Resting HR. The tiles show formatted values from today's snapshot, or dashes (null formatted) before the first read
-3. When authorization was requested but today has no steps, sleep or resting heart rate data: `EmptyState` shows the tired nuggie, "No data yet — check Health access", a "Connect Apple Health" button, and an Alert with instructions "Settings → Health → Data Access & Devices → Cookiejar → Turn On All"
-4. Fallback: `EmptyState` with "Coming soon" message
+### Home Layout
 
-The page uses `useDailyHealth(today)` to load today's snapshot and `useHealthAuthorization` to manage the request state.
+From top to bottom, inside a `ScrollBox` on a `SafeAreaView` with only the top edge:
+
+1. `GreetingHeader`: the line from `chooseGreeting(now, displayName)` and the full date from `formatFullDate`.
+2. The today section, shown once `useScheduledWorkoutsForDate(today)` is `ready` (nothing while it loads or fails):
+   - one or more workouts: `TodayCarousel`
+   - none, and `hasActivePlan` is true: `RestDayCard`, whose button opens `/create`
+   - none, and no active plan: `NoPlanCard`, whose button opens `/plans/new`
+3. `StatTileGrid`, with `WeeklyStreakTile` passed in through its `weeklyTile` slot.
+4. The no-data hint `EmptyState`, when `shouldShowHealthAccessHint` is true. It sits below the grid.
+
+Tapping a tile calls `router.navigate({ pathname: '/stats/[metric]', params: { metric } })`.
+
+### Permission Card Rule
+
+`StatTileGrid` takes `hasRequestedAuthorization`:
+
+| Value | What the grid shows |
+| --- | --- |
+| `null` (still loading) | Only the weekly streak tile, in a half-width row |
+| `false` (access not yet asked for) | `HealthPermissionCard` replaces the three health tiles. The weekly streak tile shows below it in a half-width row |
+| `true` | A 2 × 2 grid: Steps and Sleep on the first row, Resting HR and the weekly streak tile on the second |
+
+Once access has been asked for, the grid shows whether it was granted or denied. Without data, each health tile reads "No data yet". When today's snapshot has no steps, sleep or resting heart rate at all, `shouldShowHealthAccessHint` is true and the hint shows below the grid.
+
+### Greeting
+
+`chooseGreeting(now, displayName)` returns "Hi there" when the name is null or blank. With a name it returns "Good morning, {name}" before 12:00, "Good afternoon, {name}" before 17:00 and "Good evening, {name}" after that. Until Phase 08 adds the profile form, no name is set, so Home shows "Hi there".
+
+### Today Carousel
+
+`TodayCarousel` shows a "TODAY'S WORKOUTS" header with the count, a `SnapList` of `TodayWorkoutCard`, and `PageDots` when there is more than one workout. The card width is `todayCardWidthRatio` of the window width, and the list snaps every card width plus the medium gap. The active dot comes from `carouselPageIndex` on the scroll offset. The list bleeds to the screen edges with a negative horizontal margin on its wrapper.
+
+`TodayWorkoutCard` shows the workout image (or the workout's nuggie when it has none or the image fails to load), the kind line, the name and the summary. The kind line and the summary come from `describeScheduledWorkoutKind` and `describeScheduledWorkoutSummary` in `src/workouts/describeScheduledWorkout.ts`, which `ScheduledWorkoutCard` on the Calendar now uses too. The action button label comes from `todayWorkoutActionLabel`: "▶ Start" for planned, "Resume" for in progress and "✓ Done" for completed. Pressing it on a planned workout calls `onStart`, which Home wires to `useStartSession`. For the other statuses it calls `onPress`, which opens the route from `resolveScheduledWorkoutRoute`. The button is a separate accessible element beside the text block, and the card's outer touchable is hidden from VoiceOver. A planned workout whose workout was deleted has no button and cannot be opened.
+
+### Stat Tiles
+
+`StatTile` keeps its compact layout when none of `icon`, `caption`, `accessory` or `nuggie` is passed, so `SessionSummary` looks as before. With any of them it draws the detailed layout: icon and label, an optional nuggie in the corner, the value, and a row of accessory and caption. Its `tone` is `default`, `positive` or `attention`, which picks the text and background colours. With `onPress` it is a button.
+
+| Tile | Value and caption | Accessory and tone |
+| --- | --- | --- |
+| Steps | `formatSteps`, and the `describeStepProgress` caption, or "No data yet" | A `ProgressRingBox` at `statTileRing`. `positive` and the `stepGoalReached` nuggie when the goal is reached |
+| Sleep | `formatSleepMinutes`, with caption "Last night", or "No data yet" | `attention` and the `lowSleep` nuggie below 360 minutes |
+| Resting HR | `formatRestingHeartRate`, with caption "vs 7-day avg" when a trend exists, or "No data yet" | A `TrendArrow`, and the trend's tone |
+| This week | `{completed} / {planned}`, or a dash and "No data yet" before the week loads | `StreakDots`. `positive` and the `weeklyTargetMet` nuggie (`goodJob`) when the target is met |
+
+Home passes the resting HR trend from `compareToAverage(today, previous 7 days)`, where the previous days are read with `useHealthRange` and a missing day counts as no value. `TrendArrow` shows an up, down or equals symbol and the absolute difference. `StreakDots` shows one dot per day: filled for `completed` and `unplanned`, an outline for `pending`, a grey fill for `missed` and a small dot for `rest`.
+
+### ProgressRingBox and SnapList
+
+`ProgressRingBox` has two optional props, `size` and `strokeWidth`. Without them it uses `sizes.classRing` and `sizes.classRingStroke`, so the class session view is unchanged. The steps tile passes `statTileRing` and `statTileRingStroke`. There is no separate `ProgressRing` atom.
+
+`SnapList` (in `src/components/primitives/SnapList.tsx`) is a horizontal `FlatList` with `snapToInterval` taken from its required `snapInterval` prop, `decelerationRate="fast"` and no scroll indicator. It exists because `PagedList` forces `pagingEnabled`, which cannot snap at a card width smaller than the screen. The other `FlatList` props are passed through, except `horizontal`, `pagingEnabled`, `snapToInterval` and `decelerationRate`.
+
+### Weekly Streak
+
+`useWeeklyStreak(now)` returns `{ status: 'loading' }`, `{ status: 'failed' }` or `{ status: 'ready', streak, isTargetMet }`. It builds the seven dates of the current week from `startOfWeek` (Monday to Sunday), reads them with `useScheduledWorkouts`, and passes them with the `weeklyWorkoutTarget` from `useProfile` to `calculateWeeklyStreak` and `isWeeklyTargetMet`.
+
+`calculateWeeklyStreak` (in `src/progress/calculateWeeklyStreak.ts`) is pure. A workout counts as planned when it has a `planEntryId`, and as completed when its status is `completed`. `countScheduledWorkouts` counts per list of workouts: a completed workout adds 1 to both counts, an unfinished planned one adds 1 to the planned count only, and an unfinished unplanned one adds to neither. Each day gets the first state that applies:
+
+1. `rest`, when nothing is scheduled that day
+2. `missed` (a past day) or `pending` (today or later), when a planned workout is not completed
+3. `completed`, when a completed workout is planned, or `unplanned`, when the completed ones are all unplanned
+4. `rest` (a past day) or `pending` (today or later), for anything left, such as an unfinished unplanned session
+
+`isWeeklyTargetMet` is true when completed is at least the weekly target, or when planned is above 0 and completed is at least planned.
+
+### Health Range
+
+`useHealthRange(startDate, endDate)` returns `{ snapshotsByDate, isLoading }`. It reads the cached snapshots for the range from the database and shows them at once. If the `healthAuthorizationRequestedAtSettingKey` setting exists, it then backfills, in sequence: for each date from `healthRangeDatesToBackfill`, if the shared `healthRefreshThrottle` allows it, it marks the refresh started, reads `readDailyHealth`, upserts the snapshot and merges it into state. A failed read clears that date's throttle mark. Every merge into state uses `mergeHealthSnapshots` in a functional update, so overlapping runs cannot drop each other's days. A run requested while one is running queues exactly one rerun. It runs on focus and when the app returns to the foreground. `useDailyHealth` uses the same throttle module and behaves as before.
+
+### Stats Detail Route
+
+`/stats/[metric]` is registered flat on the root `Stack` with an empty title and no large title (the screen sets its own title). `parseStatsMetric` (in `src/stats/parseStatsMetric.ts`) accepts `steps`, `sleep`, `restingHeartRate` and `streak`. Any other value shows an `EmptyState` titled "Nothing to show". Otherwise the route builds the last 14 days, today included, newest first with `datesBetween`, and renders one of two organisms:
+
+- `HealthMetricBarList` (for `steps`, `sleep` and `restingHeartRate`): reads the range with `useHealthRange`, formats each value with the matching formatter, and sizes each bar against the largest value in the 14 days
+- `StreakBarList` (for `streak`): reads the range with `useScheduledWorkouts`, and shows completed / planned for each day. The bar is the completed share of the planned count
+
+Both pass rows to `StatBarList`, a `Card` of `StatBarRow` rows (date label, bar, value). The date label comes from `formatShortDate` and the bar width from `barFraction`. This is a plain bar list. Phase 08 adds a chart.
+
+### Layout Clearance
+
+The floating Coach button is 64 points (`sizes.coachButton`) and sits 16 points above the tab bar. `ActiveSessionBanner` is also `sizes.coachButton` tall and sits on the same baseline, to the left of the button, so it adds no extra height. `sizes.coachButtonClearance` (96 = 16 + 64 + 16) is therefore enough for both. Home passes it to `ScrollBox` as `contentBottomPadding`, which replaces the bottom padding of the scroll content. The last tile scrolls clear of the button and of the banner, instead of stopping above them.
+
+### Pure Modules
+
+These import no React Native and are covered by `bun test`:
+
+- `src/home/chooseGreeting.ts`: the greeting line
+- `src/home/carouselPageIndex.ts`: the active page from the scroll offset and the snap interval
+- `src/home/todayWorkoutAction.ts`: the action button label for a workout status
+- `src/stats/parseStatsMetric.ts`: the allowed metric values and the parser for the route parameter
+- `src/stats/barFraction.ts`: `barFraction` (a value over a maximum, clamped to 0 to 1) and `largestValue`
+- `src/progress/calculateWeeklyStreak.ts`: the weekly counts, the day states and the target rule
+- `src/health/compareToAverage.ts`, `describeStepProgress.ts`, `healthRangeDatesToBackfill.ts`, `mergeHealthSnapshots.ts`: see Apple Health Integration
+- `src/dates/datesBetween.ts`: every local date from a start to an end date, inclusive
+- `src/dates/formatShortDate.ts`: a date as, for example, "Mon 5 Oct". `calendarNames.ts` gains the short month and weekday names it uses
+
+`src/workouts/describeScheduledWorkout.ts` is also pure but has no test.
+
+### Hooks
+
+| Hook | Behaviour |
+| --- | --- |
+| `useProfile()` | See Profile Repository |
+| `useWeeklyStreak(now)` | See Weekly Streak |
+| `useHealthRange(startDate, endDate)` | See Health Range |
+| `useScheduledWorkouts(startDate, endDate)` | Phase 07 adds `hasActivePlan` (whether an active plan exists, even one that starts in the future) to its ready state. `useScheduledWorkoutsForDate` returns its own ready type with `scheduledWorkouts` and `hasActivePlan`. The Calendar still uses the lookup type from `scheduledWeekCache` |
 
 ## App Start
 
@@ -711,29 +850,32 @@ src/
     workouts/               builder: _layout with WorkoutEditorProvider, new, class-details, editor, [workoutId]/edit, superset-info
     plans/                  new, [planId] editor, [planId]/add-entry, entry-time, activate, copy-day
     workout/                [workoutId] detail screen
+    stats/                  [metric] 14-day detail screen
     sessions/               [sessionId] logger, finishing, summary screens, [sessionId]/link-health-workout sheet
   components/
-    primitives/             themed wrappers: Box, Typography, Touchable, TextField, Stack, Image, Icon, List, SectionedList, ScrollBox, AnimatedBox, SwipeableBox, LongPressDragBox, WindowMeasuredBox, TimePickerBox, PagedList, ProgressRingBox, ShakeBox
-    atoms/                  smallest UI pieces: Button, TextButton, IconButton, Badge, Chip, Checkbox, NuggieImage, Card, NumberInput, DurationInput, DragHandle, SupersetBracket, Toast, TimeLabel, StatusChip, DayMarker
-    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField, PlanEntryRow, DaySectionHeader, PlanRow, RestDay, ActivePlanBanner, DayChip, ScheduledWorkoutCard, HeaderImageCard, WorkoutDetailExerciseRow, ActiveSessionBanner, PersonalRecordRow, RestTimerBar, SessionSetRow, SessionTopBar, StatTile (used by Phase 06 on Home), HealthPermissionCard, HealthWorkoutRow, LinkedHealthWorkoutRow, HealthSuggestionBanner
-    organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter, PlanWeekEditor, AddPlanEntrySheet, ActivatePlanSheet, EntryTimeSheet, CopyDaySheet, WeekStrip, DayWorkoutList, IndividualWorkoutDetail, ClassWorkoutDetail, SessionLogger, ClassSessionView, SessionExerciseCard, SessionSummary, LinkHealthWorkoutSheet
+    primitives/             themed wrappers: Box, Typography, Touchable, TextField, Stack, Image, Icon, List, SectionedList, ScrollBox, AnimatedBox, SwipeableBox, LongPressDragBox, WindowMeasuredBox, TimePickerBox, PagedList, SnapList, ProgressRingBox, ShakeBox
+    atoms/                  smallest UI pieces: Button, TextButton, IconButton, Badge, Chip, Checkbox, NuggieImage, Card, NumberInput, DurationInput, DragHandle, SupersetBracket, Toast, TimeLabel, StatusChip, DayMarker, PageDots, StreakDots, TrendArrow
+    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField, PlanEntryRow, DaySectionHeader, PlanRow, RestDay, ActivePlanBanner, DayChip, ScheduledWorkoutCard, HeaderImageCard, WorkoutDetailExerciseRow, ActiveSessionBanner, PersonalRecordRow, RestTimerBar, SessionSetRow, SessionTopBar, StatTile, HealthPermissionCard, HealthWorkoutRow, LinkedHealthWorkoutRow, HealthSuggestionBanner, GreetingHeader, TodayWorkoutCard, RestDayCard, NoPlanCard, WeeklyStreakTile, StatBarRow
+    organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter, PlanWeekEditor, AddPlanEntrySheet, ActivatePlanSheet, EntryTimeSheet, CopyDaySheet, WeekStrip, DayWorkoutList, IndividualWorkoutDetail, ClassWorkoutDetail, SessionLogger, ClassSessionView, SessionExerciseCard, SessionSummary, LinkHealthWorkoutSheet, TodayCarousel, StatTileGrid, StatBarList, HealthMetricBarList, StreakBarList
   database/
     migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2), addSessionExerciseRestSeconds (v3)
-    repositories/           one file per entity: exerciseRepository, workoutRepository, planRepository, scheduleRepository, sessionRepository, appSettingsRepository, healthSnapshotRepository
+    repositories/           one file per entity: exerciseRepository, workoutRepository, planRepository, scheduleRepository, sessionRepository, appSettingsRepository, healthSnapshotRepository, profileRepository
   exercises/                pure exercise logic with tests: validation, A–Z grouping, filtering, selection
-  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan, usePlanActions, useScheduledWorkouts, useWeekPages, useSelectedDate, useScheduledWeeks, useSession, useStartSession, useActiveSession, useFinishedSession, useRestTimer, useSessionExercisePicks, useHealthAuthorization, useDailyHealth, useOverlappingHealthWorkouts, useUnlinkHealthWorkout
+  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan, usePlanActions, useScheduledWorkouts, useWeekPages, useSelectedDate, useScheduledWeeks, useSession, useStartSession, useActiveSession, useFinishedSession, useRestTimer, useSessionExercisePicks, useHealthAuthorization, useDailyHealth, useOverlappingHealthWorkouts, useUnlinkHealthWorkout, useProfile, useWeeklyStreak, useHealthRange
   stores/                   exercisePickerStore, workoutSavedStore for returning values between screens; dataVersionStore, restTimerStore for module-level state; with tests
   plans/                    pure plan logic with tests: build scheduled workouts, time of day, summaries, copy day, weekday grouping, day marker state, week cache
   workouts/                 pure builder logic with tests: reducer, normalisation, grouping blocks, target set columns, save rows, drag maths, rest presets, class type nuggies, editor context and provider, duration estimation, target set descriptions
   sessions/                 pure session logic with tests: start and resume rules, fill and change operations, rest timer control, finishing and discard logic, personal record detection
-  progress/                 personal record detection: record types, first-time rule, tie handling, superset and best-set logic
+  progress/                 personal record detection (record types, first-time rule, tie handling, superset and best-set logic) and the weekly streak (phase 07)
+  home/                     pure Home logic with tests: greeting, carousel page index, today workout action label (phase 07)
+  stats/                    pure detail screen logic with tests: metric parsing, bar fractions (phase 07)
   numbers/                  pure number parsing with tests: textual input rules
   images/                   pure image URL validation with tests: error messages
   nuggies/                  nuggie selection and image system
-  dates/                    pure date/duration helpers with tests: week paging, calendar names, formatted dates
+  dates/                    pure date/duration helpers with tests: week paging, calendar names, formatted dates, date ranges
   types/                    shared domain types (Exercise, Workout, Session, Plan, ScheduledWorkout, etc.)
   theme/                    design tokens and theme provider
-  health/                   Apple Health integration (phase 06)
+  health/                   Apple Health integration (phase 06); range backfill, trend and step progress helpers (phase 07)
   coach/                    Coach logic and screens (phase 09)
 ```
 
