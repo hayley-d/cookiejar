@@ -1,18 +1,18 @@
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
 
-import { HealthPermissionCard } from "@/components/molecules/HealthPermissionCard";
-import { StatTile } from "@/components/molecules/StatTile";
-import { Box } from "@/components/primitives/Box";
-import { ProgressRingBox } from "@/components/primitives/ProgressRingBox";
-import { describeStepProgress } from "@/health/describeStepProgress";
-import { formatRestingHeartRate } from "@/health/formatRestingHeartRate";
-import { formatSleepMinutes } from "@/health/formatSleepMinutes";
-import { formatSteps } from "@/health/formatSteps";
-import { chooseNuggie } from "@/nuggies/chooseNuggie";
-import { useTheme } from "@/theme/useTheme";
+import { HealthPermissionCard } from '@/components/molecules/HealthPermissionCard';
+import { StatTile } from '@/components/molecules/StatTile';
+import { Box } from '@/components/primitives/Box';
+import { ProgressRingBox } from '@/components/primitives/ProgressRingBox';
+import { describeStepProgress } from '@/health/describeStepProgress';
+import { formatRestingHeartRate } from '@/health/formatRestingHeartRate';
+import { formatSleepMinutes } from '@/health/formatSleepMinutes';
+import { formatSteps } from '@/health/formatSteps';
+import { chooseNuggie } from '@/nuggies/chooseNuggie';
+import { useTheme } from '@/theme/useTheme';
 
 const lowSleepMinutes = 360;
-const noDataCaption = "No data yet";
+const noDataCaption = 'No data yet';
 
 type StatTileGridProperties = {
   hasRequestedAuthorization: boolean | null;
@@ -46,8 +46,7 @@ export function StatTileGrid({
     </Box>
   );
 
-  const renderWeeklySlot = () =>
-    weeklyTile === undefined ? null : renderHalfWidthRow(weeklyTile);
+  const renderWeeklySlot = () => (weeklyTile === undefined ? null : renderHalfWidthRow(weeklyTile));
 
   if (hasRequestedAuthorization === null) {
     return renderWeeklySlot();
@@ -56,17 +55,13 @@ export function StatTileGrid({
   if (hasRequestedAuthorization === false) {
     return (
       <Box gap="small">
-        <HealthPermissionCard
-          onConnect={onConnect}
-          isConnecting={isConnecting}
-        />
+        <HealthPermissionCard onConnect={onConnect} isConnecting={isConnecting} />
         {renderWeeklySlot()}
       </Box>
     );
   }
 
-  const stepProgress =
-    steps === null ? null : describeStepProgress(steps, dailyStepGoal);
+  const stepProgress = steps === null ? null : describeStepProgress(steps, dailyStepGoal);
   const isSleepLow = sleepMinutes !== null && sleepMinutes < lowSleepMinutes;
 
   const stepsTile = (
@@ -84,12 +79,8 @@ export function StatTileGrid({
           />
         )
       }
-      tone={stepProgress?.isGoalReached ? "positive" : "default"}
-      nuggie={
-        stepProgress?.isGoalReached
-          ? chooseNuggie({ kind: "stepGoalReached" }, now)
-          : undefined
-      }
+      tone={stepProgress?.isGoalReached ? 'positive' : 'default'}
+      nuggie={stepProgress?.isGoalReached ? chooseNuggie({ kind: 'stepGoalReached' }, now) : undefined}
     />
   );
 
@@ -98,9 +89,9 @@ export function StatTileGrid({
       icon="moon.fill"
       label="Sleep"
       value={formatSleepMinutes(sleepMinutes)}
-      caption={sleepMinutes === null ? noDataCaption : "Last night"}
-      tone={isSleepLow ? "attention" : "default"}
-      nuggie={isSleepLow ? chooseNuggie({ kind: "lowSleep" }, now) : undefined}
+      caption={sleepMinutes === null ? noDataCaption : 'Last night'}
+      tone={isSleepLow ? 'attention' : 'default'}
+      nuggie={isSleepLow ? chooseNuggie({ kind: 'lowSleep' }, now) : undefined}
     />
   );
 

@@ -1,16 +1,16 @@
-import type { SFSymbol } from "expo-symbols";
-import type { ReactNode } from "react";
+import type { SFSymbol } from 'expo-symbols';
+import type { ReactNode } from 'react';
 
-import { Card } from "@/components/atoms/Card";
-import { NuggieImage } from "@/components/atoms/NuggieImage";
-import { Box } from "@/components/primitives/Box";
-import { Icon } from "@/components/primitives/Icon";
-import { Typography } from "@/components/primitives/Typography";
-import type { NuggieName } from "@/nuggies/NuggieName";
-import type { ColorName } from "@/theme/tokens";
-import { useTheme } from "@/theme/useTheme";
+import { Card } from '@/components/atoms/Card';
+import { NuggieImage } from '@/components/atoms/NuggieImage';
+import { Box } from '@/components/primitives/Box';
+import { Icon } from '@/components/primitives/Icon';
+import { Typography } from '@/components/primitives/Typography';
+import type { NuggieName } from '@/nuggies/NuggieName';
+import type { ColorName } from '@/theme/tokens';
+import { useTheme } from '@/theme/useTheme';
 
-export type StatTileTone = "default" | "positive" | "attention";
+export type StatTileTone = 'default' | 'positive' | 'attention';
 
 type StatTileProperties = {
   value: string;
@@ -22,35 +22,17 @@ type StatTileProperties = {
   nuggie?: NuggieName;
 };
 
-const toneColors: Record<
-  StatTileTone,
-  { text: ColorName; background: ColorName }
-> = {
-  default: { text: "textPrimary", background: "surface" },
-  positive: { text: "success", background: "successSoft" },
-  attention: { text: "attention", background: "attentionSoft" },
+const toneColors: Record<StatTileTone, { text: ColorName; background: ColorName }> = {
+  default: { text: 'textPrimary', background: 'surface' },
+  positive: { text: 'success', background: 'successSoft' },
+  attention: { text: 'attention', background: 'attentionSoft' },
 };
 
-export function StatTile({
-  value,
-  label,
-  icon,
-  caption,
-  accessory,
-  tone = "default",
-  nuggie,
-}: StatTileProperties) {
+export function StatTile({ value, label, icon, caption, accessory, tone = 'default', nuggie }: StatTileProperties) {
   const theme = useTheme();
   const colors = toneColors[tone];
-  const isDetailed =
-    icon !== undefined ||
-    caption !== undefined ||
-    accessory !== undefined ||
-    nuggie !== undefined;
-  const accessibilityLabel =
-    caption === undefined
-      ? `${label} ${value}`
-      : `${label} ${value}, ${caption}`;
+  const isDetailed = icon !== undefined || caption !== undefined || accessory !== undefined || nuggie !== undefined;
+  const accessibilityLabel = caption === undefined ? `${label} ${value}` : `${label} ${value}, ${caption}`;
 
   if (!isDetailed) {
     return (
@@ -61,7 +43,7 @@ export function StatTile({
         style={{
           flex: 1,
           minHeight: theme.sizes.statTileMinimumHeight,
-          justifyContent: "center",
+          justifyContent: 'center',
         }}
       >
         <Typography variant="heading" align="center">
@@ -82,27 +64,20 @@ export function StatTile({
       style={{
         flex: 1,
         minHeight: theme.sizes.statTileMinimumHeight,
-        justifyContent: "space-between",
+        justifyContent: 'space-between',
         backgroundColor: theme.colors[colors.background],
       }}
     >
       <Box direction="row" align="center" justify="space-between" gap="small">
         <Box direction="row" align="center" gap="extraSmall" flex={1}>
           {icon === undefined ? null : (
-            <Icon
-              name={icon}
-              size={theme.sizes.statTileIcon}
-              color="textSecondary"
-              weight="semibold"
-            />
+            <Icon name={icon} size={theme.sizes.statTileIcon} color="textSecondary" weight="semibold" />
           )}
           <Typography variant="caption" color="textSecondary">
             {label}
           </Typography>
         </Box>
-        {nuggie === undefined ? null : (
-          <NuggieImage name={nuggie} size={theme.sizes.statTileNuggie} />
-        )}
+        {nuggie === undefined ? null : <NuggieImage name={nuggie} size={theme.sizes.statTileNuggie} />}
       </Box>
       <Typography variant="heading" color={colors.text}>
         {value}
@@ -110,11 +85,7 @@ export function StatTile({
       <Box direction="row" align="center" gap="extraSmall">
         {accessory}
         {caption === undefined ? null : (
-          <Typography
-            variant="caption"
-            color="textSecondary"
-            style={{ flexShrink: 1 }}
-          >
+          <Typography variant="caption" color="textSecondary" style={{ flexShrink: 1 }}>
             {caption}
           </Typography>
         )}

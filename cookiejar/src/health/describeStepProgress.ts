@@ -13,15 +13,10 @@ export function formatCompactStepGoal(goal: number): string {
   return `${thousands}k`;
 }
 
-export function describeStepProgress(
-  steps: number,
-  goal: number,
-): StepProgress {
+export function describeStepProgress(steps: number, goal: number): StepProgress {
   const hasGoal = goal > 0;
   const ratio = hasGoal ? Math.max(0, steps) / goal : 0;
-  const percentage = hasGoal
-    ? Math.floor((Math.max(0, steps) * 100) / goal)
-    : 0;
+  const percentage = hasGoal ? Math.floor((Math.max(0, steps) * 100) / goal) : 0;
   return {
     percentage,
     caption: `${percentage}% of ${formatCompactStepGoal(goal)}`,

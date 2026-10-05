@@ -1,39 +1,37 @@
-import { router } from "expo-router";
-import { useCallback } from "react";
-import { Alert } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from 'expo-router';
+import { useCallback } from 'react';
+import { Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { EmptyState } from "@/components/molecules/EmptyState";
-import { GreetingHeader } from "@/components/molecules/GreetingHeader";
-import { NoPlanCard } from "@/components/molecules/NoPlanCard";
-import { RestDayCard } from "@/components/molecules/RestDayCard";
-import { StatTileGrid } from "@/components/organisms/StatTileGrid";
-import { TodayCarousel } from "@/components/organisms/TodayCarousel";
-import { Box } from "@/components/primitives/Box";
-import { ScrollBox } from "@/components/primitives/ScrollBox";
-import { toLocalDateString } from "@/dates/toLocalDateString";
-import { shouldShowHealthAccessHint } from "@/health/shouldShowHealthAccessHint";
-import { useDailyHealth } from "@/hooks/useDailyHealth";
-import { useHealthAuthorization } from "@/hooks/useHealthAuthorization";
-import { useProfile } from "@/hooks/useProfile";
-import { useScheduledWorkoutsForDate } from "@/hooks/useScheduledWorkouts";
-import { useStartSession } from "@/hooks/useStartSession";
-import type { ScheduledWorkout } from "@/types/ScheduledWorkout";
+import { EmptyState } from '@/components/molecules/EmptyState';
+import { GreetingHeader } from '@/components/molecules/GreetingHeader';
+import { NoPlanCard } from '@/components/molecules/NoPlanCard';
+import { RestDayCard } from '@/components/molecules/RestDayCard';
+import { StatTileGrid } from '@/components/organisms/StatTileGrid';
+import { TodayCarousel } from '@/components/organisms/TodayCarousel';
+import { Box } from '@/components/primitives/Box';
+import { ScrollBox } from '@/components/primitives/ScrollBox';
+import { toLocalDateString } from '@/dates/toLocalDateString';
+import { shouldShowHealthAccessHint } from '@/health/shouldShowHealthAccessHint';
+import { useDailyHealth } from '@/hooks/useDailyHealth';
+import { useHealthAuthorization } from '@/hooks/useHealthAuthorization';
+import { useProfile } from '@/hooks/useProfile';
+import { useScheduledWorkoutsForDate } from '@/hooks/useScheduledWorkouts';
+import { useStartSession } from '@/hooks/useStartSession';
+import type { ScheduledWorkout } from '@/types/ScheduledWorkout';
 
 const coachButtonClearance = 96;
-const healthAccessInstructions =
-  "Settings → Health → Data Access & Devices → Cookiejar → Turn On All";
+const healthAccessInstructions = 'Settings → Health → Data Access & Devices → Cookiejar → Turn On All';
 
 const showHealthAccessInstructions = () => {
-  Alert.alert("Connect Apple Health", healthAccessInstructions);
+  Alert.alert('Connect Apple Health', healthAccessInstructions);
 };
 
 export default function HomeScreen() {
   const now = new Date();
   const today = toLocalDateString(now);
   const { displayName, dailyStepGoal } = useProfile();
-  const { hasRequestedAuthorization, isRequesting, requestAuthorization } =
-    useHealthAuthorization();
+  const { hasRequestedAuthorization, isRequesting, requestAuthorization } = useHealthAuthorization();
   const { snapshot, refresh } = useDailyHealth(today);
   const todayWorkouts = useScheduledWorkoutsForDate(today);
   const { startSession } = useStartSession();
@@ -44,11 +42,7 @@ export default function HomeScreen() {
       if (workoutId === null) {
         return;
       }
-      void startSession({
-        workoutId,
-        date: scheduledWorkout.date,
-        planEntryId: scheduledWorkout.planEntryId,
-      });
+      void startSession({ workoutId, date: scheduledWorkout.date, planEntryId: scheduledWorkout.planEntryId });
     },
     [startSession],
   );
@@ -59,28 +53,21 @@ export default function HomeScreen() {
   };
 
   const navigateToCreate = () => {
-    router.navigate("/create");
+    router.navigate('/create');
   };
 
   const navigateToPlanNew = () => {
-    router.navigate("/plans/new");
+    router.navigate('/plans/new');
   };
 
-  const shouldShowHint = shouldShowHealthAccessHint(
-    hasRequestedAuthorization,
-    snapshot,
-  );
+  const shouldShowHint = shouldShowHealthAccessHint(hasRequestedAuthorization, snapshot);
 
   return (
-    <SafeAreaView edges={["top"]} style={{ flex: 1 }}>
-      <Box
-        flex={1}
-        background="background"
-        style={{ paddingBottom: coachButtonClearance }}
-      >
+    <SafeAreaView edges={['top']} style={{ flex: 1 }}>
+      <Box flex={1} background="background" style={{ paddingBottom: coachButtonClearance }}>
         <ScrollBox showsVerticalScrollIndicator={false}>
           <GreetingHeader displayName={displayName} now={now} />
-          {todayWorkouts.status === "ready" ? (
+          {todayWorkouts.status === 'ready' ? (
             todayWorkouts.scheduledWorkouts.length > 0 ? (
               <TodayCarousel
                 scheduledWorkouts={todayWorkouts.scheduledWorkouts}
