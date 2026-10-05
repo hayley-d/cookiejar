@@ -22,9 +22,18 @@ describe('resolveRestTimerStart', () => {
     expect(resolveRestTimerStart(exercises, 1)).toEqual({ shouldStart: true, restSeconds: 120 });
   });
 
-  test('a null rest time falls back to 90 seconds', () => {
+  test('a null rest time means no rest', () => {
     const exercises = [makeExercise(null, null, [{ id: 1, isDone: true }])];
-    expect(resolveRestTimerStart(exercises, 1)).toEqual({ shouldStart: true, restSeconds: 90 });
+    expect(resolveRestTimerStart(exercises, 1)).toEqual({ shouldStart: false });
+  });
+
+  test('a superset whose last member has a null rest time gives no rest', () => {
+    const exercises = [
+      makeExercise('A', 45, [{ id: 1, isDone: true }]),
+      makeExercise('A', null, [{ id: 2, isDone: true }]),
+    ];
+    expect(resolveRestTimerStart(exercises, 2)).toEqual({ shouldStart: false });
+    expect(resolveRestTimerStart(exercises, 1)).toEqual({ shouldStart: false });
   });
 
   test('an unknown set or a set that is not ticked does not start rest', () => {
@@ -81,12 +90,12 @@ describe('resolveRestTimerStart', () => {
   test('members lacking a set at that position count as done', () => {
     const exercises = [
       makeExercise('A', 45, [{ id: 1, isDone: true }]),
-      makeExercise('A', null, [
+      makeExercise('A', 60, [
         { id: 2, isDone: true },
         { id: 3, isDone: true },
       ]),
     ];
-    expect(resolveRestTimerStart(exercises, 3)).toEqual({ shouldStart: true, restSeconds: 90 });
+    expect(resolveRestTimerStart(exercises, 3)).toEqual({ shouldStart: true, restSeconds: 60 });
   });
 
   test('ticking the first member after the last one completes the round with the last members rest time', () => {

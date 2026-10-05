@@ -1,5 +1,3 @@
-export const defaultRestSeconds = 90;
-
 type RestSet = {
   id: number;
   completedAt: string | null;
@@ -15,6 +13,10 @@ export type RestTimerStart = { shouldStart: false } | { shouldStart: true; restS
 
 const doesNotStart: RestTimerStart = { shouldStart: false };
 
+function restTimerStartFor(restSeconds: number | null): RestTimerStart {
+  return restSeconds === null ? doesNotStart : { shouldStart: true, restSeconds };
+}
+
 export function resolveRestTimerStart(exercises: readonly RestExercise[], tickedSessionSetId: number): RestTimerStart {
   const tickedExercise = exercises.find((exercise) => exercise.sets.some((set) => set.id === tickedSessionSetId));
   if (tickedExercise === undefined) {
@@ -27,7 +29,7 @@ export function resolveRestTimerStart(exercises: readonly RestExercise[], ticked
   }
 
   if (tickedExercise.supersetGroup === null) {
-    return { shouldStart: true, restSeconds: tickedExercise.restSeconds ?? defaultRestSeconds };
+    return restTimerStartFor(tickedExercise.restSeconds);
   }
 
   const groupMembers = exercises.filter((exercise) => exercise.supersetGroup === tickedExercise.supersetGroup);
@@ -40,5 +42,5 @@ export function resolveRestTimerStart(exercises: readonly RestExercise[], ticked
   if (!isRoundComplete) {
     return doesNotStart;
   }
-  return { shouldStart: true, restSeconds: lastMember.restSeconds ?? defaultRestSeconds };
+  return restTimerStartFor(lastMember.restSeconds);
 }
