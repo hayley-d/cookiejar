@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/molecules/EmptyState';
 import { GreetingHeader } from '@/components/molecules/GreetingHeader';
 import { NoPlanCard } from '@/components/molecules/NoPlanCard';
 import { RestDayCard } from '@/components/molecules/RestDayCard';
+import { WeeklyStreakTile } from '@/components/molecules/WeeklyStreakTile';
 import { StatTileGrid } from '@/components/organisms/StatTileGrid';
 import { TodayCarousel } from '@/components/organisms/TodayCarousel';
 import { Box } from '@/components/primitives/Box';
@@ -18,6 +19,7 @@ import { useHealthAuthorization } from '@/hooks/useHealthAuthorization';
 import { useProfile } from '@/hooks/useProfile';
 import { useScheduledWorkoutsForDate } from '@/hooks/useScheduledWorkouts';
 import { useStartSession } from '@/hooks/useStartSession';
+import { useWeeklyStreak } from '@/hooks/useWeeklyStreak';
 import type { ScheduledWorkout } from '@/types/ScheduledWorkout';
 
 const coachButtonClearance = 96;
@@ -35,6 +37,7 @@ export default function HomeScreen() {
   const { snapshot, refresh } = useDailyHealth(today);
   const todayWorkouts = useScheduledWorkoutsForDate(today);
   const { startSession } = useStartSession();
+  const weeklyStreak = useWeeklyStreak(now);
 
   const startScheduledWorkout = useCallback(
     (scheduledWorkout: ScheduledWorkout) => {
@@ -88,6 +91,13 @@ export default function HomeScreen() {
             restingHeartRate={snapshot?.restingHeartRate ?? null}
             dailyStepGoal={dailyStepGoal}
             now={now}
+            weeklyTile={
+              <WeeklyStreakTile
+                streak={weeklyStreak.status === 'ready' ? weeklyStreak.streak : null}
+                isTargetMet={weeklyStreak.status === 'ready' && weeklyStreak.isTargetMet}
+                now={now}
+              />
+            }
           />
           {shouldShowHint ? (
             <EmptyState

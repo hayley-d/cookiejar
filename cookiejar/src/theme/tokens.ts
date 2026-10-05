@@ -123,6 +123,8 @@ export const sizes = {
   statTileRing: 28,
   statTileRingStroke: 4,
   statTileNuggie: 32,
+  streakDot: 12,
+  streakDotOutlineWidth: 2,
 };
 
 export const durations = {
