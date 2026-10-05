@@ -14,6 +14,7 @@ import { Typography } from '@/components/primitives/Typography';
 import { useTheme } from '@/theme/useTheme';
 import { trackingTypeLabels, trackingTypes, type TrackingType } from '@/types/TrackingType';
 import { trackingTypeChangeClearsValues, type TargetSetValues } from '@/workouts/targetSetColumns';
+import { formatRestSeconds, restPresetOptions, restSecondsForPresetIndex } from '@/workouts/restPresets';
 import type { SupersetCardPosition } from '@/workouts/supersetCardPositions';
 import type { EditorItem } from '@/workouts/workoutEditorReducer';
 
@@ -24,6 +25,8 @@ type ExerciseEditorCardProperties = {
   onChangeTargetSet: (targetSetKey: string, changes: Partial<TargetSetValues>) => void;
   onAddTargetSet: () => void;
   onRemoveTargetSet: (targetSetKey: string) => void;
+  onChangeRest: (restSeconds: number | null) => void;
+  onReplace: () => void;
   onRemove: () => void;
   onCreateSuperset: () => void;
   onRemoveSuperset: () => void;
@@ -31,9 +34,12 @@ type ExerciseEditorCardProperties = {
 };
 
 const imageSize = 56;
-const menuOptions = ['Tracking type', 'Remove', 'Cancel'];
+const menuOptions = ['Tracking type', 'Rest time', 'Replace exercise', 'Remove', 'Cancel'];
 const trackingTypeMenuIndex = 0;
-const removeMenuIndex = 1;
+const restMenuIndex = 1;
+const replaceMenuIndex = 2;
+const removeMenuIndex = 3;
+const restMenuOptions = [...restPresetOptions, 'Cancel'];
 const trackingTypeMenuOptions = [...trackingTypes.map((trackingType) => trackingTypeLabels[trackingType]), 'Cancel'];
 
 export function ExerciseEditorCard({
@@ -43,6 +49,8 @@ export function ExerciseEditorCard({
   onChangeTargetSet,
   onAddTargetSet,
   onRemoveTargetSet,
+  onChangeRest,
+  onReplace,
   onRemove,
   onCreateSuperset,
   onRemoveSuperset,
@@ -86,6 +94,18 @@ export function ExerciseEditorCard({
     );
   };
 
+  const openRestMenu = () => {
+    ActionSheetIOS.showActionSheetWithOptions(
+      { title: 'Rest time', options: restMenuOptions, cancelButtonIndex: restPresetOptions.length },
+      (optionIndex) => {
+        const restSeconds = restSecondsForPresetIndex(optionIndex);
+        if (restSeconds !== undefined) {
+          onChangeRest(restSeconds);
+        }
+      },
+    );
+  };
+
   const openMenu = () => {
     ActionSheetIOS.showActionSheetWithOptions(
       {
@@ -97,6 +117,10 @@ export function ExerciseEditorCard({
       (optionIndex) => {
         if (optionIndex === trackingTypeMenuIndex) {
           openTrackingTypeMenu();
+        } else if (optionIndex === restMenuIndex) {
+          openRestMenu();
+        } else if (optionIndex === replaceMenuIndex) {
+          onReplace();
         } else if (optionIndex === removeMenuIndex) {
           onRemove();
         }
@@ -126,7 +150,9 @@ export function ExerciseEditorCard({
                   {label === null ? exercise.name.toUpperCase() : `${label}  ${exercise.name.toUpperCase()}`}
                 </Typography>
                 <Typography variant="caption" color="textSecondary">
-                  {trackingTypeLabels[item.trackingType]}
+                  {item.restSeconds === null
+                    ? trackingTypeLabels[item.trackingType]
+                    : `${trackingTypeLabels[item.trackingType]} · Rest ${formatRestSeconds(item.restSeconds)}`}
                 </Typography>
               </Box>
               <IconButton icon="ellipsis" accessibilityLabel={`More options for ${exercise.name}`} onPress={openMenu} />

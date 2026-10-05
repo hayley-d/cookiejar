@@ -24,12 +24,7 @@ export type EditorItem = {
   targetSets: EditorTargetSet[];
 };
 
-export type ClassDetails = {
-  classType: ClassType;
-  durationMinutes: number;
-  description: string;
-  imageUrl: string;
-};
+export type ClassDetails = { classType: ClassType; durationMinutes: number; description: string; imageUrl: string };
 
 export type WorkoutEditorState = {
   workoutId: number | null;
@@ -42,9 +37,7 @@ export type WorkoutEditorState = {
 
 export type LoadedTargetSet = Omit<EditorTargetSet, 'key'>;
 
-export type LoadedItem = Omit<EditorItem, 'key' | 'targetSets'> & {
-  targetSets: LoadedTargetSet[];
-};
+export type LoadedItem = Omit<EditorItem, 'key' | 'targetSets'> & { targetSets: LoadedTargetSet[] };
 
 export type LoadedWorkout = {
   workoutId: number;
@@ -62,6 +55,8 @@ export type WorkoutEditorAction =
   | { type: 'itemRemoved'; itemKey: string }
   | { type: 'supersetCreated'; itemKey: string }
   | { type: 'supersetRemoved'; itemKey: string }
+  | { type: 'exerciseReplaced'; itemKey: string; exercise: EditorExercise }
+  | { type: 'restChanged'; itemKey: string; restSeconds: number | null }
   | { type: 'trackingTypeChanged'; itemKey: string; trackingType: TrackingType }
   | { type: 'targetSetAdded'; itemKey: string }
   | { type: 'targetSetRemoved'; itemKey: string; targetSetKey: string }
@@ -106,6 +101,15 @@ function updateItem(
   };
 }
 
+function toEditorExercise(exercise: EditorExercise): EditorExercise {
+  return {
+    id: exercise.id,
+    name: exercise.name,
+    imageUrl: exercise.imageUrl,
+    defaultTrackingType: exercise.defaultTrackingType,
+  };
+}
+
 export function createWorkoutEditorReducer(createKey: CreateKey) {
   function loadItem(loadedItem: LoadedItem): EditorItem {
     return {
@@ -118,12 +122,7 @@ export function createWorkoutEditorReducer(createKey: CreateKey) {
   function createItem(exercise: EditorExercise): EditorItem {
     return {
       key: createKey(),
-      exercise: {
-        id: exercise.id,
-        name: exercise.name,
-        imageUrl: exercise.imageUrl,
-        defaultTrackingType: exercise.defaultTrackingType,
-      },
+      exercise: toEditorExercise(exercise),
       trackingType: exercise.defaultTrackingType,
       supersetGroup: null,
       restSeconds: null,
@@ -161,11 +160,7 @@ export function createWorkoutEditorReducer(createKey: CreateKey) {
         };
       }
       case 'itemRemoved':
-        return {
-          ...state,
-          items: state.items.filter((item) => item.key !== action.itemKey),
-          hasUnsavedChanges: true,
-        };
+        return { ...state, items: state.items.filter((item) => item.key !== action.itemKey), hasUnsavedChanges: true };
       case 'supersetCreated': {
         const itemIndex = state.items.findIndex((item) => item.key === action.itemKey);
         const nextItem = state.items[itemIndex + 1];
@@ -208,6 +203,20 @@ export function createWorkoutEditorReducer(createKey: CreateKey) {
           }),
           hasUnsavedChanges: true,
         };
+      }
+      case 'exerciseReplaced': {
+        const replacedItem = state.items.find((item) => item.key === action.itemKey);
+        if (replacedItem === undefined || replacedItem.exercise.id === action.exercise.id) {
+          return state;
+        }
+        return updateItem(state, action.itemKey, (item) => ({ ...item, exercise: toEditorExercise(action.exercise) }));
+      }
+      case 'restChanged': {
+        const restItem = state.items.find((item) => item.key === action.itemKey);
+        if (restItem === undefined || restItem.restSeconds === action.restSeconds) {
+          return state;
+        }
+        return updateItem(state, action.itemKey, (item) => ({ ...item, restSeconds: action.restSeconds }));
       }
       case 'trackingTypeChanged':
         return updateItem(state, action.itemKey, (item) => ({

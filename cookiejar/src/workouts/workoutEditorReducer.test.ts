@@ -113,11 +113,7 @@ describe('workoutEditorReducer', () => {
   });
 
   test('loaded replaces the state and starts with no unsaved changes', () => {
-    const changedState: WorkoutEditorState = {
-      ...initialWorkoutEditorState,
-      name: 'Draft',
-      hasUnsavedChanges: true,
-    };
+    const changedState: WorkoutEditorState = { ...initialWorkoutEditorState, name: 'Draft', hasUnsavedChanges: true };
     const state = createReducer()(changedState, {
       type: 'loaded',
       workout: {
@@ -427,11 +423,7 @@ describe('supersetCreated', () => {
 
   test('linking into a group below merges the two groups', () => {
     const { reducer, state, keys } = stateWithThreeItems();
-    const withFourth = reducer(state, {
-      type: 'exercisesAdded',
-      exercises: [{ ...plank, id: 11 }],
-      asSuperset: false,
-    });
+    const withFourth = reducer(state, { type: 'exercisesAdded', exercises: [{ ...plank, id: 11 }], asSuperset: false });
     const linkedLowerState = reducer(withFourth, { type: 'supersetCreated', itemKey: keys[1] });
     const nextState = reducer(linkedLowerState, { type: 'supersetCreated', itemKey: keys[0] });
     expect(groupsOf(nextState)).toEqual(['A', 'A', 'A', null]);
@@ -530,5 +522,66 @@ describe('loaded supersets', () => {
     });
     expect(groupsOf(state)).toEqual(['A', 'A']);
     expect(state.hasUnsavedChanges).toBe(false);
+  });
+});
+
+describe('exerciseReplaced', () => {
+  test('swaps the exercise and keeps the key, position, sets and tracking type', () => {
+    const { reducer, state, keys } = stateWithThreeItems();
+    const filledState = reducer(state, {
+      type: 'targetSetChanged',
+      itemKey: keys[1],
+      targetSetKey: state.items[1].targetSets[0].key,
+      changes: { durationSeconds: 45 },
+    });
+    const nextState = reducer(filledState, {
+      type: 'exerciseReplaced',
+      itemKey: keys[1],
+      exercise: { ...rowing, id: 40 },
+    });
+    expect(nextState.items.map((item) => item.key)).toEqual(keys);
+    expect(nextState.items.map((item) => item.exercise.id)).toEqual([benchPress.id, 40, rowing.id]);
+    expect(nextState.items[1].targetSets).toEqual(filledState.items[1].targetSets);
+    expect(nextState.items[1].trackingType).toBe(filledState.items[1].trackingType);
+    expect(nextState.hasUnsavedChanges).toBe(true);
+  });
+
+  test('keeps the superset group', () => {
+    const { reducer, state, keys } = stateWithThreeItems();
+    const linkedState = reducer(state, { type: 'supersetCreated', itemKey: keys[0] });
+    const nextState = reducer(linkedState, {
+      type: 'exerciseReplaced',
+      itemKey: keys[1],
+      exercise: { ...rowing, id: 40 },
+    });
+    expect(groupsOf(nextState)).toEqual(['A', 'A', null]);
+  });
+
+  test('replacing with the same exercise or an unknown card changes nothing', () => {
+    const { reducer, state, keys } = stateWithThreeItems();
+    expect(reducer(state, { type: 'exerciseReplaced', itemKey: keys[0], exercise: benchPress })).toBe(state);
+    expect(reducer(state, { type: 'exerciseReplaced', itemKey: 'missing', exercise: rowing })).toBe(state);
+  });
+});
+
+describe('restChanged', () => {
+  test('sets the rest on the named card only', () => {
+    const { reducer, state, keys } = stateWithThreeItems();
+    const nextState = reducer(state, { type: 'restChanged', itemKey: keys[1], restSeconds: 90 });
+    expect(nextState.items.map((item) => item.restSeconds)).toEqual([null, 90, null]);
+    expect(nextState.hasUnsavedChanges).toBe(true);
+  });
+
+  test('null turns the rest off', () => {
+    const { reducer, state, keys } = stateWithThreeItems();
+    const restingState = reducer(state, { type: 'restChanged', itemKey: keys[0], restSeconds: 120 });
+    const nextState = reducer(restingState, { type: 'restChanged', itemKey: keys[0], restSeconds: null });
+    expect(nextState.items[0].restSeconds).toBeNull();
+  });
+
+  test('an unchanged rest or unknown card changes nothing', () => {
+    const { reducer, state, keys } = stateWithThreeItems();
+    expect(reducer(state, { type: 'restChanged', itemKey: keys[0], restSeconds: null })).toBe(state);
+    expect(reducer(state, { type: 'restChanged', itemKey: 'missing', restSeconds: 60 })).toBe(state);
   });
 });

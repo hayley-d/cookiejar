@@ -1,102 +1,31 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
-import { useEffect, useRef, useState } from 'react';
 
 import { EmptyState } from '@/components/molecules/EmptyState';
 import { ExerciseEditorCard } from '@/components/organisms/ExerciseEditorCard';
 import { WorkoutEditorFooter } from '@/components/organisms/WorkoutEditorFooter';
 import { Box } from '@/components/primitives/Box';
 import { ScrollBox } from '@/components/primitives/ScrollBox';
-import { getExercise } from '@/database/repositories/exerciseRepository';
+import { useExercisePicks } from '@/hooks/useExercisePicks';
 import { useSaveWorkout } from '@/hooks/useSaveWorkout';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useWorkoutEditor } from '@/hooks/useWorkoutEditor';
-import {
-  beginExercisePick,
-  createExercisePickRequestIdentifier,
-  useExercisePickResult,
-  type ExercisePickResult,
-} from '@/stores/exercisePickerStore';
-import type { Exercise } from '@/types/Exercise';
 import { toSupersetCardPositions } from '@/workouts/supersetCardPositions';
 import { workoutNameError } from '@/workouts/workoutNameError';
 
-type WorkoutEditorParameters = {
-  pickOnOpen?: string;
-};
-
-function startExercisePick() {
-  const requestIdentifier = createExercisePickRequestIdentifier();
-  beginExercisePick(requestIdentifier);
-  return requestIdentifier;
-}
-
-function openExercisePicker(requestIdentifier: string, excludedExerciseIds: number[]) {
-  router.push({
-    pathname: '/exercises/picker',
-    params: { requestIdentifier, mode: 'multiple', excludeExerciseIds: excludedExerciseIds.join(',') },
-  });
-}
-
-function isExercise(exercise: Exercise | null): exercise is Exercise {
-  return exercise !== null;
-}
+type WorkoutEditorParameters = { pickOnOpen?: string };
 
 export default function WorkoutEditorScreen() {
-  const database = useSQLiteContext();
   const { pickOnOpen } = useLocalSearchParams<WorkoutEditorParameters>();
   const { state, dispatch } = useWorkoutEditor();
   const { isSaving, save: saveEditorState } = useSaveWorkout();
   useUnsavedChangesGuard(state.hasUnsavedChanges);
-  const [openingRequestIdentifier] = useState(() =>
-    pickOnOpen === 'true' && state.items.length === 0 ? startExercisePick() : null,
-  );
-  const [pickRequestIdentifier, setPickRequestIdentifier] = useState(openingRequestIdentifier);
-  const pickResult = useExercisePickResult(pickRequestIdentifier);
-  const [lastPickResult, setLastPickResult] = useState<ExercisePickResult | null>(null);
-  const [pickedExerciseIds, setPickedExerciseIds] = useState<number[]>([]);
-  const [pickedAsSuperset, setPickedAsSuperset] = useState(false);
-  const hasOpenedPickerOnOpen = useRef(false);
+  const { isLoadingPick, addExercises, replaceExercise } = useExercisePicks({
+    shouldPickOnOpen: pickOnOpen === 'true' && state.items.length === 0,
+    dispatch,
+  });
 
-  if (pickResult !== null && pickResult !== lastPickResult) {
-    setLastPickResult(pickResult);
-    setPickedExerciseIds((currentExerciseIds) => [...currentExerciseIds, ...pickResult.exerciseIds]);
-    setPickedAsSuperset(pickResult.asSuperset);
-  }
-
-  useEffect(() => {
-    if (openingRequestIdentifier === null || hasOpenedPickerOnOpen.current) {
-      return;
-    }
-    hasOpenedPickerOnOpen.current = true;
-    openExercisePicker(openingRequestIdentifier, []);
-  }, [openingRequestIdentifier]);
-
-  useEffect(() => {
-    if (pickedExerciseIds.length === 0) {
-      return;
-    }
-    let isActive = true;
-    Promise.all(pickedExerciseIds.map((exerciseId) => getExercise(database, exerciseId))).then((exercises) => {
-      if (isActive) {
-        dispatch({ type: 'exercisesAdded', exercises: exercises.filter(isExercise), asSuperset: pickedAsSuperset });
-        setPickedExerciseIds([]);
-        setPickedAsSuperset(false);
-      }
-    });
-    return () => {
-      isActive = false;
-    };
-  }, [database, dispatch, pickedAsSuperset, pickedExerciseIds]);
-
-  const addExercises = () => {
-    const requestIdentifier = startExercisePick();
-    setPickRequestIdentifier(requestIdentifier);
-    openExercisePicker(
-      requestIdentifier,
-      state.items.map((item) => item.exercise.id),
-    );
-  };
+  const exerciseIdsExcluding = (itemKey?: string) =>
+    state.items.filter((item) => item.key !== itemKey).map((item) => item.exercise.id);
 
   const supersetPositions = toSupersetCardPositions(state.items);
   const canSave = state.items.length > 0 && !isSaving;
@@ -113,13 +42,13 @@ export default function WorkoutEditorScreen() {
       <Stack.Screen options={{ title: state.name.trim() }} />
       <Box flex={1}>
         {state.items.length === 0 ? (
-          pickedExerciseIds.length > 0 ? null : (
+          isLoadingPick ? null : (
             <EmptyState
               nuggie="workout"
               title="No exercises yet"
               message="Pick the exercises for this workout, then set the target for each set."
               actionLabel="Add exercises"
-              onAction={addExercises}
+              onAction={() => addExercises(exerciseIdsExcluding())}
             />
           )
         ) : (
@@ -139,6 +68,8 @@ export default function WorkoutEditorScreen() {
                 onRemoveTargetSet={(targetSetKey) =>
                   dispatch({ type: 'targetSetRemoved', itemKey: item.key, targetSetKey })
                 }
+                onChangeRest={(restSeconds) => dispatch({ type: 'restChanged', itemKey: item.key, restSeconds })}
+                onReplace={() => replaceExercise(item.key, exerciseIdsExcluding(item.key))}
                 onRemove={() => dispatch({ type: 'itemRemoved', itemKey: item.key })}
                 onCreateSuperset={() => dispatch({ type: 'supersetCreated', itemKey: item.key })}
                 onRemoveSuperset={() => dispatch({ type: 'supersetRemoved', itemKey: item.key })}
@@ -147,7 +78,11 @@ export default function WorkoutEditorScreen() {
             ))}
           </ScrollBox>
         )}
-        <WorkoutEditorFooter canSave={canSave} onAddExercises={addExercises} onSave={save} />
+        <WorkoutEditorFooter
+          canSave={canSave}
+          onAddExercises={() => addExercises(exerciseIdsExcluding())}
+          onSave={save}
+        />
       </Box>
     </>
   );
