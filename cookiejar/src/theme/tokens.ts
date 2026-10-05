@@ -86,6 +86,7 @@ export const sizes = {
   dayChipCircle: 36,
   todayRingWidth: 2,
   dayMarkerSlot: 10,
+  dayMarkerDot: 6,
 };
 
 export const durations = {

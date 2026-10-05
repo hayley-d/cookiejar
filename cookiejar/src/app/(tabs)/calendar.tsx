@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/atoms/Button';
+import { DayMarker } from '@/components/atoms/DayMarker';
 import { ScreenHeader } from '@/components/molecules/ScreenHeader';
 import { DayWorkoutList } from '@/components/organisms/DayWorkoutList';
 import { WeekStrip, type WeekStripHandle } from '@/components/organisms/WeekStrip';
@@ -14,6 +15,7 @@ import { monthLabelForWeek } from '@/dates/weekPages';
 import { useScheduledWeeks } from '@/hooks/useScheduledWeeks';
 import { useSelectedDate } from '@/hooks/useSelectedDate';
 import { useWeekPages } from '@/hooks/useWeekPages';
+import { dayMarkerState } from '@/plans/dayMarkerState';
 import { useTheme } from '@/theme/useTheme';
 
 export default function CalendarScreen() {
@@ -42,6 +44,21 @@ export default function CalendarScreen() {
     [showWeek, followVisibleWeek],
   );
 
+  const renderMarker = useCallback(
+    (date: string) => {
+      const lookup = lookupDate(date);
+      if (lookup.status !== 'ready') {
+        return null;
+      }
+      return (
+        <DayMarker
+          state={dayMarkerState({ date, today: todayDate, scheduledWorkouts: lookup.scheduledWorkouts })}
+        />
+      );
+    },
+    [lookupDate, todayDate],
+  );
+
   const returnToToday = useCallback(() => {
     showWeek(currentWeekStart);
     selectDate(todayDate);
@@ -67,6 +84,7 @@ export default function CalendarScreen() {
           onVisibleWeekChange={changeVisibleWeek}
           onReachEarliestWeeks={prependWeeks}
           onReachLatestWeeks={appendWeeks}
+          renderMarker={renderMarker}
         />
         <Box paddingHorizontal="medium" paddingVertical="small">
           <Typography variant="title" accessibilityRole="header">
