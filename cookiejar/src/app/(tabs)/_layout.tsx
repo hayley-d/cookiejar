@@ -1,17 +1,50 @@
+import { router, useSegments } from 'expo-router';
 import { BottomTabBar, Tabs } from 'expo-router/js-tabs';
 import { SymbolView } from 'expo-symbols';
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { View } from 'react-native';
 
+import { ActiveSessionBanner } from '@/components/molecules/ActiveSessionBanner';
 import { CoachFloatingButton } from '@/components/molecules/CoachFloatingButton';
+import { useActiveSession } from '@/hooks/useActiveSession';
 import { useTheme } from '@/theme/useTheme';
 
 const tabIconSize = 24;
 const coachButtonMargin = 16;
+const resumeSettleMilliseconds = 1000;
+const tabsWithBanner = ['index', 'calendar'];
+
+function useFocusedTabName(): string | null {
+  const segments: string[] = useSegments();
+  if (segments[0] !== '(tabs)') {
+    return null;
+  }
+  return segments[1] ?? 'index';
+}
 
 export default function TabsLayout() {
   const theme = useTheme();
   const [tabBarHeight, setTabBarHeight] = useState<number | null>(null);
+  const activeSessionLookup = useActiveSession();
+  const focusedTabName = useFocusedTabName();
+  const isResuming = useRef(false);
+
+  const resumeActiveSession = useCallback(() => {
+    if (isResuming.current || activeSessionLookup.status !== 'active') {
+      return;
+    }
+    isResuming.current = true;
+    setTimeout(() => {
+      isResuming.current = false;
+    }, resumeSettleMilliseconds);
+    router.push({
+      pathname: '/sessions/[sessionId]',
+      params: { sessionId: String(activeSessionLookup.activeSession.id) },
+    });
+  }, [activeSessionLookup]);
+
+  const isBannerVisible =
+    activeSessionLookup.status === 'active' && focusedTabName !== null && tabsWithBanner.includes(focusedTabName);
 
   return (
     <View style={{ flex: 1 }}>
@@ -57,6 +90,18 @@ export default function TabsLayout() {
           }}
         />
       </Tabs>
+      {tabBarHeight === null || !isBannerVisible || activeSessionLookup.status !== 'active' ? null : (
+        <View
+          style={{
+            position: 'absolute',
+            left: coachButtonMargin,
+            right: coachButtonMargin + theme.sizes.coachButton + theme.spacing.small,
+            bottom: tabBarHeight + coachButtonMargin,
+          }}
+        >
+          <ActiveSessionBanner startedAt={activeSessionLookup.activeSession.startedAt} onPress={resumeActiveSession} />
+        </View>
+      )}
       {tabBarHeight === null ? null : (
         <View style={{ position: 'absolute', right: coachButtonMargin, bottom: tabBarHeight + coachButtonMargin }}>
           <CoachFloatingButton />

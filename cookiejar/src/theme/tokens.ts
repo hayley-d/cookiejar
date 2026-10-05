@@ -102,6 +102,7 @@ export const sizes = {
   countdownButtonHeight: 36,
   countdownButtonIcon: 14,
   previousColumn: 72,
+  coachButton: 64,
 };
 
 export const durations = {
@@ -110,6 +111,7 @@ export const durations = {
   shakeStep: 50,
   timerTick: 1000,
   fastTimerTick: 250,
+  bannerRefresh: 15000,
 };
 
 export const typography = {

@@ -11,11 +11,11 @@ type CoachFloatingButtonProperties = {
   tipText?: string;
 };
 
-const buttonSize = 64;
 const ringWidth = 3;
 
 export function CoachFloatingButton({ tipText }: CoachFloatingButtonProperties) {
   const theme = useTheme();
+  const buttonSize = theme.sizes.coachButton;
 
   const openCoach = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
