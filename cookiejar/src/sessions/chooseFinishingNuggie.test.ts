@@ -4,7 +4,6 @@ import {
   chooseFinishingPresentation,
   chooseStableFinishingPresentation,
   describeFinishingCaption,
-  parseFinishingNuggie,
   randomFromSessionId,
 } from '@/sessions/chooseFinishingNuggie';
 
@@ -71,16 +70,16 @@ describe('stable choice by session id', () => {
     }
   });
 
+  test('the finishing screen and a later summary choose the same nuggie for a session', () => {
+    const classInput = { workoutKind: 'class', classType: 'spin', personalRecordCount: 0 } as const;
+    for (const input of [individual, classInput]) {
+      const onFinishing = chooseStableFinishingPresentation(42, input);
+      const onLaterSummary = chooseStableFinishingPresentation(42, input);
+      expect(onLaterSummary.nuggie).toBe(onFinishing.nuggie);
+    }
+  });
+
   test('a record still gives beast', () => {
     expect(chooseStableFinishingPresentation(3, { ...individual, personalRecordCount: 1 }).nuggie).toBe('beast');
-  });
-});
-
-describe('parseFinishingNuggie', () => {
-  test('accepts finishing nuggies only', () => {
-    expect(parseFinishingNuggie('beast')).toBe('beast');
-    expect(parseFinishingNuggie('goodJob')).toBe('goodJob');
-    expect(parseFinishingNuggie('coach')).toBeNull();
-    expect(parseFinishingNuggie(undefined)).toBeNull();
   });
 });

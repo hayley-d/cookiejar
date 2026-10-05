@@ -3,14 +3,6 @@ import type { NuggieName } from '@/nuggies/NuggieName';
 import type { ClassType } from '@/types/ClassType';
 import type { WorkoutKind } from '@/types/WorkoutKind';
 
-export const finishingNuggieNames: readonly NuggieName[] = [
-  'beast',
-  'celebrate',
-  'celebrateAlternate',
-  'celebrateThird',
-  'goodJob',
-];
-
 export type FinishingPresentationInput = {
   workoutKind: WorkoutKind;
   classType: ClassType | null;
@@ -65,8 +57,4 @@ export function chooseStableFinishingPresentation(
   input: FinishingPresentationInput,
 ): FinishingPresentation {
   return chooseFinishingPresentation(input, randomFromSessionId(sessionId));
-}
-
-export function parseFinishingNuggie(value: string | undefined): NuggieName | null {
-  return finishingNuggieNames.find((name) => name === value) ?? null;
 }

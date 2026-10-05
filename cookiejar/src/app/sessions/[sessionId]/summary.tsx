@@ -5,15 +5,14 @@ import { EmptyState } from '@/components/molecules/EmptyState';
 import { SessionSummary } from '@/components/organisms/SessionSummary';
 import { useFinishedSession } from '@/hooks/useFinishedSession';
 import { countExercisesWithRecords } from '@/progress/detectPersonalRecords';
-import { chooseStableFinishingPresentation, parseFinishingNuggie } from '@/sessions/chooseFinishingNuggie';
+import { chooseStableFinishingPresentation } from '@/sessions/chooseFinishingNuggie';
 
 type SessionSummaryParameters = {
   sessionId: string;
-  nuggie?: string;
 };
 
 export default function SessionSummaryScreen() {
-  const { sessionId: sessionIdParameter, nuggie: nuggieParameter } = useLocalSearchParams<SessionSummaryParameters>();
+  const { sessionId: sessionIdParameter } = useLocalSearchParams<SessionSummaryParameters>();
   const sessionId = Number(sessionIdParameter);
   const lookup = useFinishedSession(sessionId);
   const [openedAt] = useState(() => new Date());
@@ -38,13 +37,11 @@ export default function SessionSummaryScreen() {
     return null;
   }
 
-  const nuggie =
-    parseFinishingNuggie(nuggieParameter) ??
-    chooseStableFinishingPresentation(sessionId, {
-      workoutKind: lookup.session.workoutKind,
-      classType: lookup.session.classType,
-      personalRecordCount: countExercisesWithRecords(lookup.personalRecords),
-    }).nuggie;
+  const nuggie = chooseStableFinishingPresentation(sessionId, {
+    workoutKind: lookup.session.workoutKind,
+    classType: lookup.session.classType,
+    personalRecordCount: countExercisesWithRecords(lookup.personalRecords),
+  }).nuggie;
 
   return (
     <SessionSummary
