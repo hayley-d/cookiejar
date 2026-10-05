@@ -44,6 +44,23 @@ describe('chooseTipOfTheDay', () => {
     expect(chooseTipOfTheDay(snapshot, [rule])).toBe(chooseGeneralTip(snapshot.now));
     expect(chooseTipOfTheDay(snapshot, [])).toBe(chooseGeneralTip(snapshot.now));
   });
+
+  test('returns the general tip when noData applies (fewer than 3 finished sessions)', () => {
+    const snapshot = createCoachSnapshot({ finishedSessionCount: 1 });
+    const noDataInsight: Insight = {
+      ruleIdentifier: 'noData',
+      topics: ['recovery', 'changeItUp', 'progress'],
+      priority: 100,
+      nuggie: 'coach',
+      messages: ['Finish a few workouts and I\'ll start spotting trends!', '1 down, 2 to go.'],
+      action: null,
+    };
+    const otherInsight = createInsight(['recovery'], 50, 'recovery tip');
+    const rule = ruleReturning(noDataInsight, otherInsight);
+    const result = chooseTipOfTheDay(snapshot, [rule]);
+    expect(result).toBe(chooseGeneralTip(snapshot.now));
+    expect(result).not.toBe(noDataInsight.messages[0]);
+  });
 });
 
 describe('chooseGeneralTip', () => {
