@@ -76,7 +76,7 @@ Read the versioned docs at https://docs.expo.dev/versions/v57.0.0/ before using 
 | `saveWorkout(database, editorState)` | One `withTransactionAsync`. Inserts a new workout row or updates an existing one, setting `updated_at`. Deletes and re-inserts items and target sets (which cascades). Returns the workout id |
 | `duplicateWorkout(database, workoutId)` | Copies the workout row, its items and its target sets in one transaction, named "(copy)". The copy has `updated_at` set to now so it sorts to the top |
 | `deleteWorkout(database, workoutId)` | Deletes the workout |
-| `countPlansUsingWorkout(database, workoutId)` | Counts `plan_entries` rows that reference the workout, for the delete warning |
+| `countPlansUsingWorkout(database, workoutId)` | Counts the distinct plans that reference the workout in their `plan_entries`, for the delete warning |
 
 ### Migrations
 
@@ -174,14 +174,14 @@ The picker uses the same pattern in both directions. Callers open the picker wit
 
 ### Routes
 
-All routes are nested under `src/app/workouts/_layout.tsx`, which wraps them in `WorkoutEditorProvider` and presents them as a modal stack from the root Stack.
+All routes are nested under `src/app/workouts/_layout.tsx`, which wraps them in `WorkoutEditorProvider`. The entire `workouts` group is presented as a modal from the root Stack. Within the builder Stack:
 
 | Route | Presentation | Purpose |
 | --- | --- | --- |
 | `/workouts/new` | Stack push (first) | Name and kind choice (Individual or Class) |
 | `/workouts/class-details` | Stack push | Step 2 for class workouts: class type, duration, description, image URL |
 | `/workouts/editor` | Stack push | Step 2 for individual workouts: exercise picker on open (if `pickOnOpen`), then exercise editor with target sets, superset grouping, and drag to reorder |
-| `/workouts/[workoutId]/edit` | Modal | Loads an existing workout into the editor or the class form after `loaded` |
+| `/workouts/[workoutId]/edit` | Stack push | Loads an existing workout into the editor or the class form after `loaded` |
 | `/workouts/superset-info` | Form sheet | Info about supersets with the `coach` nuggie and a tip |
 
 ### Builder Modal Stack and Editor Context
@@ -208,9 +208,11 @@ Drag to reorder is implemented in the custom `ReorderableExerciseList` organism 
 
 ### Unsaved Changes Guard and Save Flow
 
-`useUnsavedChangesGuard(hasUnsavedChanges)` uses `expo-router/react-navigation`'s `usePreventRemove` to ask "Discard changes?" when leaving with unsaved changes. It is active on every builder screen but only prevents on the first route of the stack, so stepping back between builder steps does not ask.
+`useUnsavedChangesGuard(hasUnsavedChanges)` uses `expo-router/react-navigation`'s `usePreventRemove` to show an Alert asking "Discard changes?" when leaving with unsaved changes. It is active on every builder screen but only prevents on the first route of the stack, so stepping back between builder steps does not ask. When Discard is tapped, the Alert calls `leaveWithoutPrompt(() => navigation.dispatch(data.action))` to bypass the guard and execute the navigation action.
 
-`useSaveWorkout()` is called by Save and Discard buttons; it runs `saveWorkout(database, editorState)` through the repository, catches errors, closes the modal with `router.back()`, and sets `leaveWithoutPrompt` context to bypass the guard on the way out.
+`useSaveWorkout()` is called by the Save button; it runs `saveWorkout(database, editorState)` through the repository, calls `announceWorkoutSaved(name)` into the saved-notice store, shows an Alert if the save fails, and calls `leaveWithoutPrompt(() => router.dismissTo('/create'))` to bypass the guard and close the modal.
+
+`leaveWithoutPrompt` is a function from the editor context that stores a pending callback and sets `isLeavingPermitted` to true, which triggers an effect that runs the callback. This allows Save and Discard to exit without prompting.
 
 ### Saved Notice Store and Toast
 
@@ -225,10 +227,14 @@ The exercise picker is opened from inside the builder by calling `beginExerciseP
 These hold the builder's logic, import no React Native, and are covered by `bun test`:
 
 - `src/workouts/workoutEditorReducer.ts`: all actions with deterministic keys
+- `src/workouts/createKeyCounter`: factory function that produces a key generator for deterministic test fixtures
 - `src/workouts/normaliseSupersets.ts`: relettering groups and clearing single members
 - `src/workouts/groupIntoBlocks.ts`: grouping items into superset blocks and applying block-key order back
 - `src/workouts/targetSetColumns.ts`: columns and input rules by tracking type, empty values for each type
 - `src/workouts/workoutSaveRows.ts`: mapping from editor state to database rows (positions, superset letters, class vs individual fields)
+- `src/workouts/toLoadedWorkout.ts`: conversion from `WorkoutWithItems` (database) to `LoadedWorkout` (reducer input) for opening edit
+- `src/workouts/describeWorkout.ts`: text description of a workout kind (Class or Individual with exercise count)
+- `src/workouts/workoutNameError.ts`: validation that workout name is not empty
 - `src/workouts/supersetCardPositions.ts`: Y-coordinates of superset cards for scroll-to-offset during drag
 - `src/workouts/reorderDrag.ts`: slot and scroll maths for the custom sortable list
 - `src/workouts/restPresets.ts`: preset rest times and formatting
