@@ -3,6 +3,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import { resolveSessionStart, type ExistingPlanEntrySession } from '@/sessions/resolveSessionStart';
 import type { PreviousSessionSet } from '@/sessions/describePreviousSet';
 import type { SetValues } from '@/sessions/fillSetForTick';
+import { normaliseSessionExercises } from '@/sessions/normaliseSessionExercises';
 import { actualValuesAfterReplace, resolveReplacedExerciseId } from '@/sessions/replaceExercise';
 import type { ClassType } from '@/types/ClassType';
 import type { SessionSet } from '@/types/SessionSet';
@@ -372,6 +373,11 @@ type TrackingTypeRow = {
   default_tracking_type: TrackingType;
 };
 
+type RemainingSessionExerciseRow = {
+  id: number;
+  superset_group: string | null;
+};
+
 type SessionSetIdentifierRow = {
   id: number;
 };
@@ -518,11 +524,29 @@ export async function removeSessionExercise(
   sessionId: number,
   sessionExerciseId: number,
 ): Promise<void> {
-  await database.runAsync(
-    'DELETE FROM session_exercises WHERE id = ? AND session_id = ?',
-    sessionExerciseId,
-    sessionId,
-  );
+  await database.withTransactionAsync(async () => {
+    await database.runAsync(
+      'DELETE FROM session_exercises WHERE id = ? AND session_id = ?',
+      sessionExerciseId,
+      sessionId,
+    );
+    const remainingExercises = await database.getAllAsync<RemainingSessionExerciseRow>(
+      'SELECT id, superset_group FROM session_exercises WHERE session_id = ? ORDER BY position, id',
+      sessionId,
+    );
+    const normalisedExercises = normaliseSessionExercises(
+      remainingExercises.map((row) => ({ id: row.id, supersetGroup: row.superset_group })),
+    );
+    for (const normalisedExercise of normalisedExercises) {
+      await database.runAsync(
+        'UPDATE session_exercises SET position = ?, superset_group = ? WHERE id = ? AND session_id = ?',
+        normalisedExercise.position,
+        normalisedExercise.supersetGroup,
+        normalisedExercise.id,
+        sessionId,
+      );
+    }
+  });
 }
 
 export async function updateSessionExerciseRest(
