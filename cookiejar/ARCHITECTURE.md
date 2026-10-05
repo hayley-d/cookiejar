@@ -124,14 +124,14 @@ routes (src/app)  →  organisms  →  molecules  →  atoms  →  primitives  �
 | --- | --- | --- |
 | **primitives** | Thin themed wrappers over React Native elements. The only layer that touches raw `View`, `Text`, `Pressable`, `TextInput`, `ScrollView`, `FlatList`, `SectionList`, `expo-image` and `expo-symbols`. They apply theme tokens and nothing else. | `Box`, `Typography`, `Touchable`, `TextField`, `Stack`, `Image`, `Icon`, `List`, `SectionedList`, `ScrollBox`, `AnimatedBox`, `SwipeableBox`, `LongPressDragBox`, `WindowMeasuredBox` |
 | **atoms** | The smallest pieces of UI with meaning, built from primitives. No data access. | `Button`, `TextButton`, `IconButton`, `Badge`, `Chip`, `Checkbox`, `NuggieImage`, `Card`, `NumberInput`, `DurationInput`, `DragHandle`, `SupersetBracket`, `Toast` |
-| **molecules** | Small groups of atoms that work as a unit. Hold local UI state at most. | `CoachFloatingButton`, `ScreenHeader`, `EmptyState`, `ChipGroup`, `SegmentedControl`, `SearchBar`, `AlphabetIndex`, `ExerciseRow`, `FormField`, `ImageUrlField`, `Stepper`, `KindChoiceCard`, `ActionCard`, `TargetSetRow`, `TargetSetTable`, `WorkoutRow` |
+| **molecules** | Small groups of atoms that work as a unit. Hold local UI state at most. | `CoachFloatingButton`, `ScreenHeader`, `EmptyState`, `ChipGroup`, `SegmentedControl`, `SearchBar`, `AlphabetIndex`, `ExerciseRow`, `FormField`, `ImageUrlField`, `Stepper`, `KindChoiceCard`, `ActionCard`, `TargetSetRow`, `TargetSetTable`, `WorkoutRow`, `WorkoutNameField` |
 | **organisms** | Self-contained sections of a screen. Receive data and callbacks through props. | `NuggieLoadingScreen`, `ExerciseForm`, `ExercisePicker`, `ExerciseEditorCard`, `ReorderableExerciseList`, `ClassDetailsForm`, `CreateHub`, `WorkoutEditorFooter` |
 | **routes** | Expo Router screens. Load data through repositories and hooks, then compose organisms. | `src/app/(tabs)/index.tsx`, `src/app/(tabs)/_layout.tsx`, `src/app/coach.tsx`, `src/app/exercises/*`, `src/app/workouts/*` |
 
 Rules:
 
 - Only routes and hooks talk to the database. Components below routes are given data through props, which keeps them easy to reuse and preview.
-- Colours, spacing, radii and typography come from `src/theme` tokens. No hard-coded values in components.
+- Colours, spacing, radii, sizes, durations and typography come from `src/theme` tokens. No hard-coded values in components. Fixed dimensions (image and icon sizes, column widths, clearances, drag geometry) live in `theme.sizes`.
 - Light and dark mode are both supported through the theme.
 
 ## Exercise Library
@@ -181,24 +181,24 @@ All routes are nested under `src/app/workouts/_layout.tsx`, which wraps them in 
 | `/workouts/new` | Stack push (first) | Name and kind choice (Individual or Class) |
 | `/workouts/class-details` | Stack push | Step 2 for class workouts: class type, duration, description, image URL |
 | `/workouts/editor` | Stack push | Step 2 for individual workouts: exercise picker on open (if `pickOnOpen`), then exercise editor with target sets, superset grouping, and drag to reorder |
-| `/workouts/[workoutId]/edit` | Stack push | Loads an existing workout into the editor or the class form after `loaded` |
+| `/workouts/[workoutId]/edit` | Stack push (first, no anchor) | Loads an existing workout into the editor or the class form after `loaded`. Both show a Name field at the top (only when `workoutId` is set), so a saved workout or a duplicate can be renamed; Save is disabled and the error shows inline while the name is empty. It is pushed from the Create hub without `withAnchor`, and `workouts/_layout.tsx` sets no `unstable_settings.anchor`, so the builder stack opens as `[edit]` and never stacks it on `new` |
 | `/workouts/superset-info` | Form sheet | Info about supersets with the `coach` nuggie and a tip |
 
 ### Builder Modal Stack and Editor Context
 
 `src/app/workouts/_layout.tsx` nests a `Stack` inside `WorkoutEditorProvider`, so all builder screens share one editor state through the context. The state is never passed through route params.
 
-`WorkoutEditorProvider` (in `src/workouts/WorkoutEditorProvider.tsx`) wraps `useReducer(workoutEditorReducer)` and exposes the context via `useWorkoutEditor()` hook.
+`WorkoutEditorProvider` (in `src/workouts/WorkoutEditorProvider.tsx`) wraps `useReducer(workoutEditorReducer)` and exposes the context via `useWorkoutEditor()` hook. The context also holds `isLeavingPermitted` and `leaveWithoutPrompt` (see the guard below) and `isReordering` with `setIsReordering`, which the editor sets while a block is being dragged.
 
 ### Editor State and Reducer
 
-`src/workouts/workoutEditorReducer.ts` is pure with no React Native imports and is tested. It is built by `createWorkoutEditorReducer(createKey)`, a factory that injects a key counter for deterministic test fixtures.
+`src/workouts/workoutEditorReducer.ts` is pure with no React Native imports and is tested. It is built by `createWorkoutEditorReducer(createKey)`, a factory that injects the key function. Production (`WorkoutEditorProvider`) and the tests both pass `createKeyCounter(prefix)`, which keeps keys deterministic in the tests.
 
 The `WorkoutEditorState` shape holds `workoutId` (null for new), `name`, `kind` (individual or class), `classDetails` (only for class), `items` (exercises with tracking type, rest time, superset group and target sets), and `hasUnsavedChanges`.
 
 The actions are `renamed`, `kindChosen`, `classDetailsChanged`, `exercisesAdded`, `itemRemoved`, `supersetCreated`, `supersetRemoved`, `exerciseReplaced`, `restChanged`, `trackingTypeChanged`, `targetSetAdded`, `targetSetRemoved`, `targetSetChanged`, `itemsReordered` (takes block keys), and `loaded`.
 
-After every action, `normaliseSupersets` reletters groups A, B, C… from top to bottom and clears any group with a single member.
+Actions that would change nothing return the same state, so they never mark it unsaved: an empty `exercisesAdded`, `itemRemoved` with an unknown key, `exerciseReplaced` with the same exercise or an unknown key, an unchanged `restChanged` or `itemsReordered`, and superset actions that do not apply. After every other action, `normaliseSupersets` reletters groups A, B, C… from top to bottom and clears any group with a single member.
 
 ### Superset Blocks and Drag
 
@@ -206,11 +206,13 @@ Exercises are grouped into superset blocks by `groupIntoBlocks` (in `src/workout
 
 Drag to reorder is implemented in the custom `ReorderableExerciseList` organism (in `src/components/organisms/ReorderableExerciseList.tsx`), built from `react-native-gesture-handler` and `react-native-reanimated` with the `LongPressDragBox` primitive. `react-native-draggable-flatlist` was not installed because it has no stable release for Reanimated 4.
 
+The builder is a page-sheet modal, so a downward block drag could also drive UIKit's swipe-to-dismiss. `ReorderableExerciseList` reports `onDraggingChange(true)` when a drag starts and `false` on drop or cancel. The editor passes that to `setIsReordering` from `useReorderingSheetLock()`, which, while reordering, calls `navigation.getParent()?.setOptions({ gestureEnabled: false })` on the root `workouts` screen and restores `gestureEnabled: true` on drop, cancel or unmount (it also clears `isReordering` on unmount). While reordering, the unsaved changes guard is suspended too: with `gestureEnabled: false` UIKit still reports a dismiss attempt, and an active `usePreventRemove` would turn that into a Discard prompt mid-drag.
+
 ### Unsaved Changes Guard and Save Flow
 
-`useUnsavedChangesGuard(hasUnsavedChanges)` uses `expo-router/react-navigation`'s `usePreventRemove` to show an Alert asking "Discard changes?" when leaving with unsaved changes. It is active on every builder screen but only prevents on the first route of the stack, so stepping back between builder steps does not ask. When Discard is tapped, the Alert calls `leaveWithoutPrompt(() => navigation.dispatch(data.action))` to bypass the guard and execute the navigation action.
+`useUnsavedChangesGuard(hasUnsavedChanges)` uses `expo-router/react-navigation`'s `usePreventRemove` to show an Alert asking "Discard changes?" when leaving with unsaved changes. It is active on every builder screen. Whether a screen prevents removal is decided by the pure `shouldGuardLeavingBuilder` (in `src/workouts/shouldGuardLeavingBuilder.ts`): only with unsaved changes, not after `leaveWithoutPrompt`, not while reordering, and only for the route whose removal leaves the builder: the root of the builder stack (removing it, or the `workouts` modal itself, dismisses the builder) or the `[workoutId]/edit` route wherever it sits. Later steps (`editor`, `class-details` after `new`) and `superset-info` do not prevent, so stepping back between steps, closing the superset info sheet, and opening or closing the picker (a push on the root stack, which removes nothing) do not ask. `usePreventRemove` also sets `preventNativeDismiss` on the modal, so a swipe-down prompts too. When Discard is tapped, the Alert calls `leaveWithoutPrompt(() => navigation.dispatch(data.action))` to bypass the guard and execute the navigation action.
 
-`useSaveWorkout()` is called by the Save button; it runs `saveWorkout(database, editorState)` through the repository, calls `announceWorkoutSaved(name)` into the saved-notice store, shows an Alert if the save fails, and calls `leaveWithoutPrompt(() => router.dismissTo('/create'))` to bypass the guard and close the modal.
+`useSaveWorkout()` is called by the Save button; an in-flight ref ignores a second tap while a save is running. It runs `saveWorkout(database, editorState)` through the repository, calls `announceWorkoutSaved(name)` into the saved-notice store, shows an Alert if the save fails, and calls `leaveWithoutPrompt(() => router.dismissTo('/create'))` to bypass the guard and close the modal.
 
 `leaveWithoutPrompt` is a function from the editor context that stores a pending callback and sets `isLeavingPermitted` to true, which triggers an effect that runs the callback. This allows Save and Discard to exit without prompting.
 
@@ -220,13 +222,14 @@ When a workout is saved, the route calls `announceWorkoutSaved(workoutName)` int
 
 ### Picker Reuse
 
-The exercise picker is opened from inside the builder by calling `beginExercisePick()` into the existing `exercisePickerStore`, then pushing `/exercises/picker` with `mode: 'multiple'` (for Add exercises) or `mode: 'single'` (for Replace). The picker pushes back with results to the same store, so the builder gets them through `useExercisePickResult()`.
+The exercise picker is opened from inside the builder by calling `beginExercisePick()` into the existing `exercisePickerStore`, then pushing `/exercises/picker` with `mode: 'multiple'` (for Add exercises) or `mode: 'single'` (for Replace). The picker pushes back with results to the same store, so the builder gets them through `useExercisePickResult()`. `useExercisePicks` loads the picked exercises; if that fails it clears the pending pick (ending `isLoadingPick`) and shows an Alert.
 
 ### Pure Modules
 
 These hold the builder's logic, import no React Native, and are covered by `bun test`:
 
-- `src/workouts/workoutEditorReducer.ts`: reducer factory that injects a `createKeyCounter`-generated key function for deterministic test fixtures, plus all actions
+- `src/workouts/workoutEditorReducer.ts`: reducer factory that takes a key function, plus all actions, and `createKeyCounter`, the key function used by both `WorkoutEditorProvider` and the tests
+- `src/workouts/shouldGuardLeavingBuilder.ts`: which builder route prompts Discard before it is removed
 - `src/workouts/normaliseSupersets.ts`: relettering groups and clearing single members
 - `src/workouts/groupIntoBlocks.ts`: grouping items into superset blocks and applying block-key order back
 - `src/workouts/targetSetColumns.ts`: columns and input rules by tracking type, empty values for each type
@@ -266,13 +269,13 @@ src/
   components/
     primitives/             themed wrappers: Box, Typography, Touchable, TextField, Stack, Image, Icon, List, SectionedList, ScrollBox, AnimatedBox, SwipeableBox, LongPressDragBox, WindowMeasuredBox
     atoms/                  smallest UI pieces: Button, TextButton, IconButton, Badge, Chip, Checkbox, NuggieImage, Card, NumberInput, DurationInput, DragHandle, SupersetBracket, Toast
-    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow
+    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField
     organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter
   database/
     migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2)
     repositories/           one file per entity: exerciseRepository, workoutRepository
   exercises/                pure exercise logic with tests: validation, A–Z grouping, filtering, selection
-  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useWorkoutSavedNoticeOnFocus
+  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus
   stores/                   exercisePickerStore and workoutSavedStore for returning values between screens, with tests
   workouts/                 pure builder logic with tests: reducer, normalisation, grouping blocks, target set columns, save rows, drag maths, rest presets, class type nuggies, editor context and provider
   numbers/                  pure number parsing with tests: textual input rules
