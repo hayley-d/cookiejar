@@ -328,7 +328,7 @@ Plan-specific hooks reload on focus. Their write functions call repository funct
 
 ### Data Version Store
 
-`src/stores/dataVersionStore.ts` is a module-level counter with `bumpDataVersion()`, `subscribeToDataVersion(listener)`, `getDataVersion()`, `resetDataVersion()` and `useDataVersion()` hook. It is bumped after repository writes that change what is scheduled or shown on the calendar: `usePlans.createPlan`, `usePlan.addPlanEntry`, `usePlan.updatePlanEntryTime`, `usePlan.removePlanEntry`, `usePlan.copyDay`, `usePlan.renamePlan`, `usePlan.duplicatePlan`, `usePlan.deletePlan`, `usePlan.activatePlan`, `usePlan.deactivatePlan`, `useSaveWorkout`, `useWorkoutActions.deleteWorkout`, and `useSession.finish`, `useSession.discard`, and `useStartSession.discardAndStart` (when discard deletes a session). `useScheduledWorkouts` reads the version with `useDataVersion()` and recomputes the schedule when it bumps. `useActiveSession` reloads the active session when the version bumps.
+`src/stores/dataVersionStore.ts` is a module-level counter with `bumpDataVersion()`, `subscribeToDataVersion(listener)`, `getDataVersion()`, `resetDataVersion()` and `useDataVersion()` hook. It is bumped after writes that change the schedule or sessions: `usePlans.createPlan`, `usePlan.addPlanEntry`, `usePlan.updatePlanEntryTime`, `usePlan.removePlanEntry`, `usePlan.copyDay`, `usePlan.renamePlan`, `usePlan.duplicatePlan`, `usePlan.deletePlan`, `usePlan.activatePlan`, `usePlan.deactivatePlan`, `useSaveWorkout`, `useWorkoutActions.deleteWorkout`, `useSession` (after every queued set or notes write, and after finish and discard), and `useStartSession` (after insertAndOpen and after discardAndStart). `useScheduledWorkouts` reads the version with `useDataVersion()` and recomputes the schedule when it bumps. `useActiveSession` reloads the active session when the version bumps.
 
 ### Time Picker
 
@@ -452,7 +452,7 @@ Three routes handle sessions and summaries:
 
 | Route | Presentation | Purpose |
 | --- | --- | --- |
-| `/sessions/[sessionId]` | Full-screen modal (`gestureEnabled: false`) | Session logger for active or resumed sessions. For individual workouts, displays exercise cards with set rows and controls for editing values, adding sets, and marking completion. For class sessions, shows `ClassSessionView` with a progress ring, notes field, and "MARK COMPLETE" button. Shows a rest timer bar when active. Sticky header with elapsed time and Discard button for individual workouts, or just a Discard button for class sessions |
+| `/sessions/[sessionId]` | Full-screen modal (`gestureEnabled: false`) | Session logger for active or resumed sessions. For individual workouts, displays exercise cards with set rows and controls for editing values, adding sets, and marking completion. Shows a rest timer bar when active. Sticky header with elapsed time, Discard and Finish buttons. For class sessions, shows `ClassSessionView` with a progress ring, notes field, Discard and "MARK COMPLETE" buttons |
 | `/sessions/[sessionId]/finishing` | Full-screen modal (`gestureEnabled: false`) | Runs after `finish()` succeeds. A `NuggieLoadingScreen` that picks the finishing nuggie and caption, then `router.replace`s to the summary with a `nuggie` param |
 | `/sessions/[sessionId]/summary` | Stack push (titled "Summary") | Finished session summary with a large nuggie, personal record list (one row per exercise, best record by priority), and elapsed time. Opens from calendar cards that tap completed sessions or from the finishing screen |
 
@@ -492,7 +492,7 @@ When Finish is tapped, `resolveFinishPrompt` counts unticked sets and returns on
 
 ### Finishing Nuggie and Caption
 
-The finishing screen picks a nuggie and caption with `chooseFinishingPresentation(input)`, which calls `chooseNuggie` with `kind: 'sessionFinished'`. Input includes `workoutKind`, `classType` and `personalRecordCount`. The caption is "New personal record!" if records exist, "Workout complete!" for individual workouts, or "Namaste — class complete!" for yoga or "Class complete!" for other classes. The nuggie is passed as a param to the summary route.
+The finishing screen picks a nuggie and caption with `chooseFinishingPresentation(input)`, which calls `chooseNuggie` with `kind: 'sessionFinished'`. Input includes `workoutKind`, `classType` and `personalRecordCount` (from `countExercisesWithRecords`, which counts exercises with at least one record). The nuggie rule: beast if `personalRecordCount > 0`; goodJob if `workoutKind` is class; otherwise a random celebrate variant. The caption is "New personal record!" if records exist, "Workout complete!" for individual workouts, or "Namaste — class complete!" for yoga or "Class complete!" for other classes. The nuggie is passed as a param to the summary route.
 
 The summary can open with a `nuggie` param from the finishing screen or without one. When the param is present, `parseFinishingNuggie` allowlists it. When absent, the summary calls `chooseStableFinishingPresentation(sessionId, input)`, which uses `randomFromSessionId(sessionId)` to seed a deterministic PRNG so the same session always shows the same nuggie no matter when it is opened.
 
@@ -519,7 +519,7 @@ These hold the session logic, import no React Native, and are covered by `bun te
 - `src/sessions/fillSetForTick.ts`: set value filling on first tick and validation rules
 - `src/sessions/valuesForAddedSet.ts`: copying last set's actual or target values when adding a set
 - `src/sessions/replaceExercise.ts`: which actual values are cleared when changing an exercise
-- `src/sessions/describePreviousSet.ts`: format text for the previous set row in each exercise
+- `src/sessions/describePreviousSet.ts`: format text for the previous set row in each exercise, plus `matchPreviousSets` which matches sets by position
 - `src/sessions/describeExerciseBestSet.ts`: best set text for an exercise in a finished session
 - `src/sessions/mergeReloadedSession.ts`: merge reloaded structure and values with pending writes
 - `src/sessions/normaliseSessionExercises.ts`: clear superset groups for single exercises on reload
@@ -546,7 +546,7 @@ Session-specific hooks manage the logger state and rest timer:
 | `useRestTimer()` | Returns `{ remainingSeconds: number | null, isPaused: boolean, pause, resume }`. Reads the module-level rest timer store with `useSyncExternalStore`. The hook's effect checks for timer end every 250 ms (`fastTimerTick`), gives a haptic at zero, and clears the timer |
 | `useActiveSession()` | Returns `{ status: 'loading' } \| { status: 'failed' } \| { status: 'active', activeSession } \| { status: 'none' }`. Loads on mount with `getActiveSession` and reloads on focus and on `dataVersion` change. Used by the resume banner |
 | `useFinishedSession(sessionId)` | Returns `{ status: 'loading' } \| { status: 'missing' } \| { status: 'failed' } \| { status: 'found', session, personalRecords }`. Loads once per sessionId with `getSessionWithExercises`, calls `listCompletedSetsForExercises` to load earlier sets, then detects records with `detectPersonalRecords`. Does not reload on focus |
-| `useStartSession()` | Returns `{ startSession }`. Starts a new session or shows the single-open-session prompt. See above for details |
+| `useStartSession()` | Returns `{ startSession }`. Starts a new session or shows the single-open-session prompt. Uses an in-flight ref to prevent concurrent start attempts. See above for details |
 | `useSessionExercisePicks()` | Returns `{ exerciseIds, clearExerciseIds }` for the exercise picker opened from the logger. Uses the same pick store pattern as the builder |
 
 ### Session Repository
@@ -555,7 +555,7 @@ Session-specific hooks manage the logger state and rest timer:
 
 | Function | Behaviour |
 | --- | --- |
-| `startSession(database, request)` | Inserts a new session row with snapshot fields copied from the workout. Inserts session_exercises rows from the workout with their rest_seconds and target_sets rows. For class workouts, no exercises are inserted. Applies the redo rule: if the plan entry has a finished session on the same date, links to it (with `planEntryId = null`); if only finished sessions exist, links with `planEntryId = null`; otherwise links with the entry. Runs in one transaction. Returns the new session id |
+| `startSession(database, request)` | Throws `ActiveSessionExistsError` if a different unfinished session is open. If the matching open session exists, returns that session's id without inserting. Otherwise: if the plan entry has an unfinished session on that date, resumes it; if only finished sessions exist on that date, inserts a new session with `plan_entry_id = NULL`; otherwise inserts with the entry. Inserts copy the workout snapshot fields. For individual workouts, inserts session_exercises rows from the workout with rest_seconds and target_sets rows; classes get no exercises. Returns the session id. Runs in one transaction |
 | `getActiveSession(database)` | The first unfinished session, or null. Returns an `ActiveSession` summary with `{ id, workoutId, planEntryId, workoutName, scheduledDate, startedAt }` |
 | `getSessionWithExercises(database, sessionId)` | One session with all exercises and sets, or null. Returns a `SessionWithExercises` with exercises, each with sets. Joins to exercises and workouts for metadata |
 | `updateSessionSet(database, sessionSetId, values)` | Updates value fields (repetitions, weight_kilograms, duration_seconds, distance_meters) for a session set |
@@ -568,7 +568,7 @@ Session-specific hooks manage the logger state and rest timer:
 | `removeSessionExercise(database, sessionId, sessionExerciseId)` | Deletes the exercise and all its sets, then renormalises remaining exercises (positions and superset groups) in one transaction |
 | `updateSessionExerciseRest(database, sessionId, sessionExerciseId, restSeconds)` | Updates rest_seconds for the exercise. The hook bumps dataVersion |
 | `updateSessionNotes(database, sessionId, notes)` | Updates session notes |
-| `getPreviousSessionSets(database, exerciseId, beforeSessionId)` | Returns completed sets from the most recent finished session where the exercise appeared and `started_at` is earlier than `beforeSessionId`. Each set includes `position` and the value fields. Returns empty array if no earlier session has that exercise |
+| `getPreviousSessionSets(database, exerciseId, beforeSessionId)` | Returns completed sets from the most recent finished session where the exercise appeared and started before the session `beforeSessionId`. Each set includes `position` and the value fields. Returns empty array if no earlier session has that exercise |
 | `finishSession(database, sessionId)` | Deletes all unticked session sets and any exercises left with no sets, then sets `finished_at` to now. The hook bumps dataVersion |
 | `discardSession(database, sessionId)` | Deletes the session row (cascades delete exercises, sets). The hook bumps dataVersion |
 | `listCompletedSetsForExercises(database, exerciseIds, beforeStartedAt)` | Returns completed sets from finished sessions that started before the given timestamp, for any of the exercise ids. No ordering |
