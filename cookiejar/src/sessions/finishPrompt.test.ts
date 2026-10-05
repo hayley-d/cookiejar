@@ -21,9 +21,9 @@ describe('resolveFinishPrompt', () => {
     expect(resolveFinishPrompt([{ sets: [unticked] }, { sets: [unticked] }])).toEqual({ kind: 'offerDiscard' });
   });
 
-  test('a session with no sets at all finishes straight away', () => {
-    expect(resolveFinishPrompt([])).toEqual({ kind: 'finish' });
-    expect(resolveFinishPrompt([{ sets: [] }])).toEqual({ kind: 'finish' });
+  test('a session with no sets at all offers discard', () => {
+    expect(resolveFinishPrompt([])).toEqual({ kind: 'offerDiscard' });
+    expect(resolveFinishPrompt([{ sets: [] }])).toEqual({ kind: 'offerDiscard' });
   });
 });
 

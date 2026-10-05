@@ -9,9 +9,6 @@ export type FinishPrompt =
 
 export function resolveFinishPrompt(exercises: readonly { sets: readonly PromptSet[] }[]): FinishPrompt {
   const sets = exercises.flatMap((exercise) => exercise.sets);
-  if (sets.length === 0) {
-    return { kind: 'finish' };
-  }
   const untickedSetCount = sets.filter((set) => set.completedAt === null).length;
   if (untickedSetCount === sets.length) {
     return { kind: 'offerDiscard' };
