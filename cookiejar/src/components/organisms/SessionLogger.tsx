@@ -5,6 +5,7 @@ import { RestTimerBar } from '@/components/molecules/RestTimerBar';
 import { SessionExerciseCard } from '@/components/organisms/SessionExerciseCard';
 import { Box } from '@/components/primitives/Box';
 import { ScrollBox } from '@/components/primitives/ScrollBox';
+import { TextField } from '@/components/primitives/TextField';
 import { Typography } from '@/components/primitives/Typography';
 import { useRestTimer } from '@/hooks/useRestTimer';
 import type { PreviousSessionSet } from '@/sessions/describePreviousSet';
@@ -19,6 +20,13 @@ type SessionLoggerProperties = {
   previousSetsByExerciseId: Map<number, PreviousSessionSet[]>;
   onChangeSetValues: (sessionSetId: number, changes: Partial<SetValues>) => void;
   onToggleSetCompletion: (sessionSetId: number) => SetCompletionOutcome;
+  onAddSet: (sessionExerciseId: number) => void;
+  onRemoveSet: (sessionExerciseId: number, sessionSetId: number) => void;
+  onChangeRest: (sessionExerciseId: number, restSeconds: number | null) => void;
+  onReplaceExercise: (sessionExerciseId: number) => void;
+  onRemoveExercise: (sessionExerciseId: number) => void;
+  onAddExercises: () => void;
+  onChangeNotes: (notes: string) => void;
   onFinish: () => void;
 };
 
@@ -28,6 +36,13 @@ export function SessionLogger({
   previousSetsByExerciseId,
   onChangeSetValues,
   onToggleSetCompletion,
+  onAddSet,
+  onRemoveSet,
+  onChangeRest,
+  onReplaceExercise,
+  onRemoveExercise,
+  onAddExercises,
+  onChangeNotes,
   onFinish,
 }: SessionLoggerProperties) {
   const theme = useTheme();
@@ -75,9 +90,26 @@ export function SessionLogger({
                 previousSets={previousSetsByExerciseId.get(sessionExercise.exerciseId) ?? []}
                 onChangeSetValues={onChangeSetValues}
                 onToggleSetCompletion={onToggleSetCompletion}
+                onAddSet={() => onAddSet(sessionExercise.id)}
+                onRemoveSet={(sessionSetId) => onRemoveSet(sessionExercise.id, sessionSetId)}
+                onChangeRest={(restSeconds) => onChangeRest(sessionExercise.id, restSeconds)}
+                onReplace={() => onReplaceExercise(sessionExercise.id)}
+                onRemove={() => onRemoveExercise(sessionExercise.id)}
               />
             ))
           )}
+          <Box align="center">
+            <TextButton label="+ ADD EXERCISE" onPress={onAddExercises} />
+          </Box>
+          <TextField
+            value={session.notes ?? ''}
+            onChangeText={onChangeNotes}
+            placeholder="Notes"
+            accessibilityLabel="Session notes"
+            multiline
+            textAlignVertical="top"
+            style={{ minHeight: theme.sizes.sessionNotesMinimumHeight }}
+          />
         </ScrollBox>
       )}
     </Box>

@@ -2,11 +2,21 @@ import { describe, expect, test } from 'bun:test';
 
 import { actualValuesAfterReplace, resolveReplacedExerciseId } from '@/sessions/replaceExercise';
 
-const filledValues = { repetitions: 8, weightKilograms: 60, durationSeconds: 30, distanceMeters: 500 };
+const filledValues = {
+  repetitions: 8,
+  weightKilograms: 60,
+  durationSeconds: 30,
+  distanceMeters: 500,
+};
 
 describe('actualValuesAfterReplace', () => {
   test('the same tracking type keeps every value', () => {
-    const values = { repetitions: 8, weightKilograms: 60, durationSeconds: null, distanceMeters: null };
+    const values = {
+      repetitions: 8,
+      weightKilograms: 60,
+      durationSeconds: null,
+      distanceMeters: null,
+    };
     expect(actualValuesAfterReplace(values, 'repetitions_and_weight')).toEqual(values);
   });
 
@@ -37,14 +47,32 @@ describe('actualValuesAfterReplace', () => {
 
 describe('resolveReplacedExerciseId', () => {
   test('the first replacement records the original exercise', () => {
-    expect(resolveReplacedExerciseId({ currentExerciseId: 1, currentReplacedExerciseId: null, newExerciseId: 2 })).toBe(1);
+    expect(
+      resolveReplacedExerciseId({
+        currentExerciseId: 1,
+        currentReplacedExerciseId: null,
+        newExerciseId: 2,
+      }),
+    ).toBe(1);
   });
 
   test('replacing again keeps the original, not the intermediate exercise', () => {
-    expect(resolveReplacedExerciseId({ currentExerciseId: 2, currentReplacedExerciseId: 1, newExerciseId: 3 })).toBe(1);
+    expect(
+      resolveReplacedExerciseId({
+        currentExerciseId: 2,
+        currentReplacedExerciseId: 1,
+        newExerciseId: 3,
+      }),
+    ).toBe(1);
   });
 
   test('replacing back to the original clears the record', () => {
-    expect(resolveReplacedExerciseId({ currentExerciseId: 2, currentReplacedExerciseId: 1, newExerciseId: 1 })).toBeNull();
+    expect(
+      resolveReplacedExerciseId({
+        currentExerciseId: 2,
+        currentReplacedExerciseId: 1,
+        newExerciseId: 1,
+      }),
+    ).toBeNull();
   });
 });

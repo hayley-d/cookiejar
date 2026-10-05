@@ -231,12 +231,15 @@ export function useSession(sessionId: number) {
         const unsavedSession = sessionReference.current;
         const mergedSession: SessionWithExercises = {
           ...reloadedSession,
-          notes: pendingNotesWrite.current === null || unsavedSession === null ? reloadedSession.notes : unsavedSession.notes,
+          notes:
+            pendingNotesWrite.current === null || unsavedSession === null
+              ? reloadedSession.notes
+              : unsavedSession.notes,
           exercises: reloadedSession.exercises.map((reloadedExercise) => ({
             ...reloadedExercise,
             sets: reloadedExercise.sets.map((reloadedSet) => {
               const unsavedSet =
-                unsavedSession === null ? null : findSessionSet(unsavedSession, reloadedSet.id)?.set ?? null;
+                unsavedSession === null ? null : (findSessionSet(unsavedSession, reloadedSet.id)?.set ?? null);
               return unsavedSet !== null && pendingValueWrites.current.has(reloadedSet.id)
                 ? { ...reloadedSet, ...actualValuesOf(unsavedSet) }
                 : reloadedSet;

@@ -17,7 +17,10 @@ export function useSessionExercisePicks({ onAddExercises, onReplaceExercise }: U
   const replacedSessionExerciseId = useRef<number | null>(null);
   const pickResult = useExercisePickResult(pickRequestIdentifier);
   const latestHandlers = useRef({ onAddExercises, onReplaceExercise });
-  latestHandlers.current = { onAddExercises, onReplaceExercise };
+
+  useEffect(() => {
+    latestHandlers.current = { onAddExercises, onReplaceExercise };
+  });
 
   useEffect(() => {
     if (pickResult === null || pickResult.exerciseIds.length === 0) {
@@ -37,7 +40,11 @@ export function useSessionExercisePicks({ onAddExercises, onReplaceExercise }: U
     setPickRequestIdentifier(requestIdentifier);
     router.push({
       pathname: '/exercises/picker',
-      params: { requestIdentifier, mode, excludeExerciseIds: excludedExerciseIds.join(',') },
+      params: {
+        requestIdentifier,
+        mode,
+        excludeExerciseIds: excludedExerciseIds.join(','),
+      },
     });
   };
 

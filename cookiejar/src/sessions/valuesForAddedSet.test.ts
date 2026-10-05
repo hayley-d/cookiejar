@@ -16,7 +16,13 @@ const emptySet: FillableSet = {
 
 describe('valuesForAddedSet', () => {
   test('copies the last set actual values', () => {
-    const lastSet = { ...emptySet, repetitions: 7, weightKilograms: 62.5, targetRepetitions: 8, targetWeightKilograms: 60 };
+    const lastSet = {
+      ...emptySet,
+      repetitions: 7,
+      weightKilograms: 62.5,
+      targetRepetitions: 8,
+      targetWeightKilograms: 60,
+    };
     expect(valuesForAddedSet(lastSet)).toEqual({
       repetitions: 7,
       weightKilograms: 62.5,
@@ -26,7 +32,11 @@ describe('valuesForAddedSet', () => {
   });
 
   test('copies the last set targets when it has no actual values', () => {
-    const lastSet = { ...emptySet, targetRepetitions: 8, targetWeightKilograms: 60 };
+    const lastSet = {
+      ...emptySet,
+      targetRepetitions: 8,
+      targetWeightKilograms: 60,
+    };
     expect(valuesForAddedSet(lastSet)).toEqual({
       repetitions: 8,
       weightKilograms: 60,

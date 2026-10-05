@@ -94,6 +94,7 @@ export const sizes = {
   headerCardNuggie: 140,
   detailBottomBarClearance: 96,
   setCompletionColumn: 44,
+  sessionNotesMinimumHeight: 96,
   shakeDistance: 8,
   statTileMinimumHeight: 88,
   sessionClassNuggie: 140,

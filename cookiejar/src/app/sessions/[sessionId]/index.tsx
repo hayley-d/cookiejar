@@ -8,6 +8,7 @@ import { NuggieLoadingScreen } from '@/components/organisms/NuggieLoadingScreen'
 import { SessionLogger } from '@/components/organisms/SessionLogger';
 import { Box } from '@/components/primitives/Box';
 import { useSession } from '@/hooks/useSession';
+import { useSessionExercisePicks } from '@/hooks/useSessionExercisePicks';
 import { chooseNuggie } from '@/nuggies/chooseNuggie';
 import type { NuggieName } from '@/nuggies/NuggieName';
 import { describeUntickedSets, resolveFinishPrompt } from '@/sessions/finishPrompt';
@@ -32,8 +33,25 @@ function chooseStartingNuggie() {
 export default function SessionLoggerScreen() {
   const { sessionId: sessionIdParameter, isStarting } = useLocalSearchParams<SessionLoggerParameters>();
   const sessionId = Number(sessionIdParameter);
-  const { sessionLookup, previousSetsByExerciseId, changeSetValues, toggleSetCompletion, finish, discard } =
-    useSession(sessionId);
+  const {
+    sessionLookup,
+    previousSetsByExerciseId,
+    changeSetValues,
+    toggleSetCompletion,
+    addSet,
+    removeSet,
+    addExercises,
+    replaceExercise,
+    removeExercise,
+    changeExerciseRest,
+    changeNotes,
+    finish,
+    discard,
+  } = useSession(sessionId);
+  const exercisePicks = useSessionExercisePicks({
+    onAddExercises: addExercises,
+    onReplaceExercise: replaceExercise,
+  });
   const [startingNuggie] = useState(chooseStartingNuggie);
   const [isLoadingScreenVisible, setIsLoadingScreenVisible] = useState(isStarting === 'true');
   const [isFinishing, setIsFinishing] = useState(false);
@@ -107,6 +125,22 @@ export default function SessionLoggerScreen() {
         previousSetsByExerciseId={previousSetsByExerciseId}
         onChangeSetValues={changeSetValues}
         onToggleSetCompletion={toggleSetCompletion}
+        onAddSet={addSet}
+        onRemoveSet={removeSet}
+        onChangeRest={changeExerciseRest}
+        onReplaceExercise={(sessionExerciseId) =>
+          exercisePicks.replaceExercise(
+            sessionExerciseId,
+            sessionLookup.session.exercises.map((sessionExercise) => sessionExercise.exerciseId),
+          )
+        }
+        onRemoveExercise={removeExercise}
+        onAddExercises={() =>
+          exercisePicks.addExercises(
+            sessionLookup.session.exercises.map((sessionExercise) => sessionExercise.exerciseId),
+          )
+        }
+        onChangeNotes={changeNotes}
         onFinish={requestFinish}
       />
     );
