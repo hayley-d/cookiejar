@@ -8,4 +8,5 @@ export type SessionExercise = {
   position: number;
   supersetGroup: string | null;
   trackingType: TrackingType;
+  restSeconds: number | null;
 };
