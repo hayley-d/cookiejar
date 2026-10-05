@@ -99,6 +99,8 @@ export const sizes = {
   statTileMinimumHeight: 88,
   sessionClassNuggie: 140,
   restBarNuggie: 36,
+  classRing: 220,
+  classRingStroke: 12,
   countdownButtonHeight: 36,
   countdownButtonIcon: 14,
   previousColumn: 72,
