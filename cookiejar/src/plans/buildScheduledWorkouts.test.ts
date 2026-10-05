@@ -64,7 +64,7 @@ function makeSession(
     scheduledDate,
     startedAt: `${scheduledDate}T08:00:00.000Z`,
     finishedAt,
-    workout: makeWorkout(workoutId ?? 0, name),
+    workout: { ...makeWorkout(0, name), id: workoutId },
   };
 }
 
@@ -230,5 +230,35 @@ describe('buildScheduledWorkouts', () => {
       result.get('2026-09-30')?.map((scheduled) => scheduled.planEntryId),
     ).toEqual([3]);
     expect(result.get('2026-10-01')).toEqual([]);
+  });
+
+  test('lets the earliest session claim an entry and lists the rest as unplanned', () => {
+    const laterSession = makeSession(21, '2026-10-05', 2, '2026-10-05T11:00:00.000Z');
+    const earlierSession = {
+      ...makeSession(22, '2026-10-05', 2, '2026-10-05T07:00:00.000Z'),
+      startedAt: '2026-10-05T06:00:00.000Z',
+    };
+    const result = buildScheduledWorkouts({
+      startDate: '2026-10-05',
+      endDate: '2026-10-05',
+      activePlan: makePlan('2026-10-01', [mondayEntryEarly]),
+      sessions: [laterSession, earlierSession],
+    });
+
+    const scheduledWorkouts = result.get('2026-10-05');
+    expect(scheduledWorkouts).toHaveLength(2);
+    expect(scheduledWorkouts?.[0]).toMatchObject({ planEntryId: 2, sessionId: 22, status: 'completed' });
+    expect(scheduledWorkouts?.[1]).toMatchObject({ planEntryId: null, sessionId: 21, timeOfDay: null });
+  });
+
+  test('returns an empty map when the start date is after the end date', () => {
+    const result = buildScheduledWorkouts({
+      startDate: '2026-10-07',
+      endDate: '2026-10-05',
+      activePlan: makePlan('2026-10-01', [mondayEntryEarly]),
+      sessions: [],
+    });
+
+    expect(result.size).toBe(0);
   });
 });
