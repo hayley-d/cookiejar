@@ -14,6 +14,12 @@ export function formatElapsedTime(elapsedSeconds: number): string {
   return `${padToTwoDigits(hours)}:${padToTwoDigits(minutes)}:${padToTwoDigits(seconds)}`;
 }
 
+export function formatRestCountdown(remainingSeconds: number): string {
+  const totalSeconds = Math.max(0, Math.ceil(remainingSeconds));
+  const minutes = Math.floor(totalSeconds / secondsPerMinute);
+  return `${padToTwoDigits(minutes)}:${padToTwoDigits(totalSeconds % secondsPerMinute)}`;
+}
+
 export function formatSessionDuration(durationSeconds: number): string {
   const totalMinutes = Math.max(0, Math.round(durationSeconds / secondsPerMinute));
   if (totalMinutes < minutesPerHour) {

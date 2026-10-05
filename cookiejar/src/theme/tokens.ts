@@ -97,6 +97,10 @@ export const sizes = {
   shakeDistance: 8,
   statTileMinimumHeight: 88,
   sessionClassNuggie: 140,
+  restBarNuggie: 36,
+  countdownButtonHeight: 36,
+  countdownButtonIcon: 14,
+  previousColumn: 72,
 };
 
 export const durations = {
@@ -104,6 +108,7 @@ export const durations = {
   autoScrollInterval: 16,
   shakeStep: 50,
   timerTick: 1000,
+  fastTimerTick: 250,
 };
 
 export const typography = {

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import {
   formatElapsedTime,
+  formatRestCountdown,
   formatSessionDuration,
   formatSetCount,
   formatVolume,
@@ -37,5 +38,17 @@ describe('formatSetCount', () => {
   test('uses the singular for one set', () => {
     expect(formatSetCount(1)).toBe('1 set');
     expect(formatSetCount(18)).toBe('18 sets');
+  });
+});
+
+describe('formatRestCountdown', () => {
+  test('shows minutes and seconds with two digits each', () => {
+    expect(formatRestCountdown(72)).toBe('01:12');
+    expect(formatRestCountdown(0)).toBe('00:00');
+    expect(formatRestCountdown(600)).toBe('10:00');
+  });
+
+  test('never shows a negative time', () => {
+    expect(formatRestCountdown(-5)).toBe('00:00');
   });
 });
