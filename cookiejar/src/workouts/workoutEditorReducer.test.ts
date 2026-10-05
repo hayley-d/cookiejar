@@ -5,6 +5,7 @@ import {
   createWorkoutEditorReducer,
   defaultClassDetails,
   initialWorkoutEditorState,
+  type EditorExercise,
   type LoadedWorkout,
   type WorkoutEditorState,
 } from '@/workouts/workoutEditorReducer';
@@ -161,5 +162,188 @@ describe('workoutEditorReducer', () => {
     reducer(classState, { type: 'classDetailsChanged', changes: { durationMinutes: 60 } });
     expect(classState.classDetails).toBe(classDetailsBefore);
     expect(classState.classDetails?.durationMinutes).toBe(45);
+  });
+});
+
+const benchPress: EditorExercise = {
+  id: 3,
+  name: 'Bench Press',
+  imageUrl: 'https://example.com/bench.jpg',
+  defaultTrackingType: 'repetitions_and_weight',
+};
+const plank: EditorExercise = { id: 5, name: 'Plank', imageUrl: null, defaultTrackingType: 'duration' };
+const rowing: EditorExercise = { id: 8, name: 'Rowing', imageUrl: null, defaultTrackingType: 'distance' };
+
+function stateWithBenchPress() {
+  const reducer = createReducer();
+  const state = reducer(initialWorkoutEditorState, { type: 'exercisesAdded', exercises: [benchPress] });
+  return { reducer, state, itemKey: state.items[0].key, targetSetKey: state.items[0].targetSets[0].key };
+}
+
+describe('exercisesAdded', () => {
+  test('adds one item per exercise in the order given', () => {
+    const state = createReducer()(initialWorkoutEditorState, {
+      type: 'exercisesAdded',
+      exercises: [plank, benchPress, rowing],
+    });
+    expect(state.items.map((item) => item.exercise.name)).toEqual(['Plank', 'Bench Press', 'Rowing']);
+    expect(state.hasUnsavedChanges).toBe(true);
+  });
+
+  test('a new item uses the default tracking type and starts with one empty set', () => {
+    const state = createReducer()(initialWorkoutEditorState, { type: 'exercisesAdded', exercises: [benchPress] });
+    expect(state.items[0]).toEqual({
+      key: 'test-1',
+      exercise: benchPress,
+      trackingType: 'repetitions_and_weight',
+      supersetGroup: null,
+      restSeconds: null,
+      targetSets: [
+        { key: 'test-2', repetitions: null, weightKilograms: null, durationSeconds: null, distanceMeters: null },
+      ],
+    });
+  });
+
+  test('keeps only the exercise fields the editor needs', () => {
+    const state = createReducer()(initialWorkoutEditorState, {
+      type: 'exercisesAdded',
+      exercises: [{ ...plank, bodyPart: 'core', createdAt: '2026-10-04T14:30:00Z' } as EditorExercise],
+    });
+    expect(state.items[0].exercise).toEqual(plank);
+  });
+
+  test('appends after the items already in the workout', () => {
+    const reducer = createReducer();
+    const firstState = reducer(initialWorkoutEditorState, { type: 'exercisesAdded', exercises: [benchPress] });
+    const state = reducer(firstState, { type: 'exercisesAdded', exercises: [plank, rowing] });
+    expect(state.items.map((item) => item.exercise.id)).toEqual([3, 5, 8]);
+    expect(state.items[0]).toBe(firstState.items[0]);
+  });
+});
+
+describe('trackingTypeChanged', () => {
+  test('keeps the number of sets and clears the fields the new type does not track', () => {
+    const { reducer, state, itemKey, targetSetKey } = stateWithBenchPress();
+    const filledState = reducer(
+      reducer(state, {
+        type: 'targetSetChanged',
+        itemKey,
+        targetSetKey,
+        changes: { weightKilograms: 60, repetitions: 10 },
+      }),
+      { type: 'targetSetAdded', itemKey },
+    );
+    const changedState = reducer(filledState, { type: 'trackingTypeChanged', itemKey, trackingType: 'duration' });
+    expect(changedState.items[0].trackingType).toBe('duration');
+    expect(changedState.items[0].targetSets).toHaveLength(2);
+    expect(changedState.items[0].targetSets[0]).toEqual({
+      key: targetSetKey,
+      repetitions: null,
+      weightKilograms: null,
+      durationSeconds: null,
+      distanceMeters: null,
+    });
+  });
+
+  test('keeps the fields both tracking types share', () => {
+    const { reducer, state, itemKey, targetSetKey } = stateWithBenchPress();
+    const filledState = reducer(state, {
+      type: 'targetSetChanged',
+      itemKey,
+      targetSetKey,
+      changes: { weightKilograms: 60, repetitions: 10 },
+    });
+    const changedState = reducer(filledState, { type: 'trackingTypeChanged', itemKey, trackingType: 'repetitions' });
+    expect(changedState.items[0].targetSets[0]).toMatchObject({ repetitions: 10, weightKilograms: null });
+  });
+
+  test('changes only the item it names', () => {
+    const reducer = createReducer();
+    const state = reducer(initialWorkoutEditorState, { type: 'exercisesAdded', exercises: [benchPress, plank] });
+    const changedState = reducer(state, {
+      type: 'trackingTypeChanged',
+      itemKey: state.items[1].key,
+      trackingType: 'repetitions',
+    });
+    expect(changedState.items[0]).toBe(state.items[0]);
+    expect(changedState.items[1].trackingType).toBe('repetitions');
+  });
+});
+
+describe('targetSetAdded', () => {
+  test('copies the previous set with a new key', () => {
+    const { reducer, state, itemKey, targetSetKey } = stateWithBenchPress();
+    const filledState = reducer(state, {
+      type: 'targetSetChanged',
+      itemKey,
+      targetSetKey,
+      changes: { weightKilograms: 60, repetitions: 12 },
+    });
+    const addedState = reducer(filledState, { type: 'targetSetAdded', itemKey });
+    expect(addedState.items[0].targetSets).toEqual([
+      { key: targetSetKey, repetitions: 12, weightKilograms: 60, durationSeconds: null, distanceMeters: null },
+      { key: 'test-3', repetitions: 12, weightKilograms: 60, durationSeconds: null, distanceMeters: null },
+    ]);
+  });
+
+  test('copies the last set when there are several', () => {
+    const { reducer, state, itemKey } = stateWithBenchPress();
+    const twoSetState = reducer(state, { type: 'targetSetAdded', itemKey });
+    const lastTargetSetKey = twoSetState.items[0].targetSets[1].key;
+    const changedState = reducer(twoSetState, {
+      type: 'targetSetChanged',
+      itemKey,
+      targetSetKey: lastTargetSetKey,
+      changes: { repetitions: 8 },
+    });
+    const addedState = reducer(changedState, { type: 'targetSetAdded', itemKey });
+    expect(addedState.items[0].targetSets.map((targetSet) => targetSet.repetitions)).toEqual([null, 8, 8]);
+  });
+
+  test('adds an empty set when the item has no sets', () => {
+    const { reducer, state, itemKey, targetSetKey } = stateWithBenchPress();
+    const emptyState = reducer(state, { type: 'targetSetRemoved', itemKey, targetSetKey });
+    const addedState = reducer(emptyState, { type: 'targetSetAdded', itemKey });
+    expect(addedState.items[0].targetSets).toEqual([
+      { key: 'test-3', repetitions: null, weightKilograms: null, durationSeconds: null, distanceMeters: null },
+    ]);
+  });
+});
+
+describe('targetSetRemoved', () => {
+  test('removes only the set it names', () => {
+    const { reducer, state, itemKey, targetSetKey } = stateWithBenchPress();
+    const twoSetState = reducer(state, { type: 'targetSetAdded', itemKey });
+    const removedState = reducer(twoSetState, { type: 'targetSetRemoved', itemKey, targetSetKey });
+    expect(removedState.items[0].targetSets.map((targetSet) => targetSet.key)).toEqual(['test-3']);
+    expect(removedState.hasUnsavedChanges).toBe(true);
+  });
+});
+
+describe('targetSetChanged', () => {
+  test('merges the changed fields into the set it names', () => {
+    const { reducer, state, itemKey } = stateWithBenchPress();
+    const twoSetState = reducer(state, { type: 'targetSetAdded', itemKey });
+    const secondTargetSetKey = twoSetState.items[0].targetSets[1].key;
+    const changedState = reducer(twoSetState, {
+      type: 'targetSetChanged',
+      itemKey,
+      targetSetKey: secondTargetSetKey,
+      changes: { weightKilograms: 62.5 },
+    });
+    expect(changedState.items[0].targetSets[0]).toBe(twoSetState.items[0].targetSets[0]);
+    expect(changedState.items[0].targetSets[1]).toMatchObject({ weightKilograms: 62.5, repetitions: null });
+  });
+
+  test('clearing a field stores null', () => {
+    const { reducer, state, itemKey, targetSetKey } = stateWithBenchPress();
+    const filledState = reducer(state, { type: 'targetSetChanged', itemKey, targetSetKey, changes: { repetitions: 10 } });
+    const clearedState = reducer(filledState, {
+      type: 'targetSetChanged',
+      itemKey,
+      targetSetKey,
+      changes: { repetitions: null },
+    });
+    expect(clearedState.items[0].targetSets[0].repetitions).toBeNull();
   });
 });

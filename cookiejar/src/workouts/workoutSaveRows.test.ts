@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 
-import { initialWorkoutEditorState, type WorkoutEditorState } from '@/workouts/workoutEditorReducer';
+import {
+  createKeyCounter,
+  createWorkoutEditorReducer,
+  initialWorkoutEditorState,
+  type WorkoutEditorState,
+} from '@/workouts/workoutEditorReducer';
 import { toWorkoutSaveRows } from '@/workouts/workoutSaveRows';
 
 const pilatesState: WorkoutEditorState = {
@@ -108,6 +113,69 @@ describe('toWorkoutSaveRows', () => {
         trackingType: 'duration',
         restSeconds: null,
         targetSets: [],
+      },
+    ]);
+  });
+
+  test('an individual workout built in the editor saves its items in tick order with their sets', () => {
+    const reducer = createWorkoutEditorReducer(createKeyCounter('test'));
+    const namedState = reducer(initialWorkoutEditorState, { type: 'renamed', name: 'Push Day' });
+    const addedState = reducer(namedState, {
+      type: 'exercisesAdded',
+      exercises: [
+        { id: 9, name: 'Squat', imageUrl: null, defaultTrackingType: 'repetitions_and_weight' },
+        { id: 2, name: 'Plank', imageUrl: null, defaultTrackingType: 'duration' },
+        { id: 4, name: 'Rowing', imageUrl: null, defaultTrackingType: 'distance' },
+      ],
+    });
+    const [squat, plank] = addedState.items;
+    const filledState = [
+      {
+        type: 'targetSetChanged' as const,
+        itemKey: squat.key,
+        targetSetKey: squat.targetSets[0].key,
+        changes: { weightKilograms: 80, repetitions: 5 },
+      },
+      { type: 'targetSetAdded' as const, itemKey: squat.key },
+      {
+        type: 'targetSetChanged' as const,
+        itemKey: plank.key,
+        targetSetKey: plank.targetSets[0].key,
+        changes: { durationSeconds: 90 },
+      },
+    ].reduce(reducer, addedState);
+
+    const rows = toWorkoutSaveRows(filledState);
+
+    expect(rows.workoutId).toBeNull();
+    expect(rows.workout.kind).toBe('individual');
+    expect(rows.items).toEqual([
+      {
+        exerciseId: 9,
+        position: 0,
+        supersetGroup: null,
+        trackingType: 'repetitions_and_weight',
+        restSeconds: null,
+        targetSets: [
+          { position: 0, repetitions: 5, weightKilograms: 80, durationSeconds: null, distanceMeters: null },
+          { position: 1, repetitions: 5, weightKilograms: 80, durationSeconds: null, distanceMeters: null },
+        ],
+      },
+      {
+        exerciseId: 2,
+        position: 1,
+        supersetGroup: null,
+        trackingType: 'duration',
+        restSeconds: null,
+        targetSets: [{ position: 0, repetitions: null, weightKilograms: null, durationSeconds: 90, distanceMeters: null }],
+      },
+      {
+        exerciseId: 4,
+        position: 2,
+        supersetGroup: null,
+        trackingType: 'distance',
+        restSeconds: null,
+        targetSets: [{ position: 0, repetitions: null, weightKilograms: null, durationSeconds: null, distanceMeters: null }],
       },
     ]);
   });

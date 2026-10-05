@@ -22,7 +22,11 @@ export default function NewWorkoutScreen() {
       return;
     }
     dispatch({ type: 'kindChosen', kind: selectedKind });
-    router.push(selectedKind === 'class' ? '/workouts/class-details' : '/workouts/editor');
+    if (selectedKind === 'class') {
+      router.push('/workouts/class-details');
+      return;
+    }
+    router.push({ pathname: '/workouts/editor', params: { pickOnOpen: 'true' } });
   };
 
   return (
