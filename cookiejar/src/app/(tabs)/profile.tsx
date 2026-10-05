@@ -11,8 +11,12 @@ import { toLocalDateString } from '@/dates/toLocalDateString';
 import { describeHealthAccessStatus } from '@/health/describeHealthAccessStatus';
 import { useHealthAuthorization } from '@/hooks/useHealthAuthorization';
 import { useBodyMeasurements } from '@/hooks/useBodyMeasurements';
+import { useNewRecordCount } from '@/hooks/useNewRecordCount';
 import { useProfile } from '@/hooks/useProfile';
+import { useTrainingTotals } from '@/hooks/useTrainingTotals';
+import { lifetimeRange } from '@/progress/currentMonthRange';
 import { describeWeightSummary } from '@/progress/describeWeightSummary';
+import { describeLifetimeTotals, describeNewRecordCount } from '@/progress/formatTrainingTotals';
 import { summarizeWeight } from '@/progress/summarizeWeight';
 
 const coachButtonClearance = 96;
@@ -34,6 +38,10 @@ function openNewMeasurement() {
   router.push('/profile/measurements/new');
 }
 
+function openProgress() {
+  router.push('/progress');
+}
+
 function openExerciseLibrary() {
   router.push('/exercises');
 }
@@ -42,6 +50,8 @@ export default function ProfileScreen() {
   const profile = useProfile();
   const { hasRequestedAuthorization } = useHealthAuthorization();
   const { measurements } = useBodyMeasurements();
+  const { totals: lifetimeTotals } = useTrainingTotals(lifetimeRange(new Date()));
+  const newRecordCount = useNewRecordCount();
   const weightSummary = measurements
     ? summarizeWeight(measurements, weightChangeDays, toLocalDateString(new Date()))
     : null;
@@ -71,6 +81,18 @@ export default function ProfileScreen() {
                 title="Body measurements"
                 subtitle={weightSummaryText ?? 'No weight recorded yet'}
                 onPress={openMeasurements}
+              />
+            )}
+          </Box>
+          <Box>
+            <Typography variant="caption" color="textSecondary">
+              Progress
+            </Typography>
+            {lifetimeTotals === null ? null : (
+              <SettingsRow
+                title={describeNewRecordCount(newRecordCount)}
+                subtitle={describeLifetimeTotals(lifetimeTotals)}
+                onPress={openProgress}
               />
             )}
           </Box>

@@ -100,6 +100,7 @@ export default function RootLayout() {
                   sheetGrabberVisible: true,
                 }}
               />
+              <Stack.Screen name="progress/index" options={{ title: 'Progress', headerLargeTitleEnabled: false }} />
               <Stack.Screen name="stats/[metric]" options={{ title: '', headerLargeTitleEnabled: false }} />
               <Stack.Screen name="workout/[workoutId]" options={{ title: '', headerLargeTitleEnabled: false }} />
               <Stack.Screen name="workouts" options={{ presentation: 'modal', headerShown: false }} />
