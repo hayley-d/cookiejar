@@ -6,27 +6,29 @@ import { useTheme } from '@/theme/useTheme';
 
 type ProgressRingBoxProperties = {
   progress: number;
+  size?: number;
+  strokeWidth?: number;
   children?: ReactNode;
 };
 
-export function ProgressRingBox({ progress, children }: ProgressRingBoxProperties) {
+export function ProgressRingBox({ progress, size, strokeWidth, children }: ProgressRingBoxProperties) {
   const theme = useTheme();
-  const size = theme.sizes.classRing;
-  const strokeWidth = theme.sizes.classRingStroke;
-  const radius = (size - strokeWidth) / 2;
+  const ringSize = size ?? theme.sizes.classRing;
+  const ringStrokeWidth = strokeWidth ?? theme.sizes.classRingStroke;
+  const radius = (ringSize - ringStrokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const clampedProgress = Math.min(1, Math.max(0, progress));
-  const center = size / 2;
+  const center = ringSize / 2;
 
   return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <Svg width={size} height={size} style={{ position: 'absolute' }}>
+    <View style={{ width: ringSize, height: ringSize, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={ringSize} height={ringSize} style={{ position: 'absolute' }}>
         <Circle
           cx={center}
           cy={center}
           r={radius}
           stroke={theme.colors.accentSoft}
-          strokeWidth={strokeWidth}
+          strokeWidth={ringStrokeWidth}
           fill="none"
         />
         <Circle
@@ -34,7 +36,7 @@ export function ProgressRingBox({ progress, children }: ProgressRingBoxPropertie
           cy={center}
           r={radius}
           stroke={theme.colors.accent}
-          strokeWidth={strokeWidth}
+          strokeWidth={ringStrokeWidth}
           strokeLinecap="round"
           fill="none"
           strokeDasharray={`${circumference} ${circumference}`}
