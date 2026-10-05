@@ -1,10 +1,12 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { isRequestForActiveSession } from '@/sessions/resolveStartAgainstActiveSession';
 import { resolveSessionStart, type ExistingPlanEntrySession } from '@/sessions/resolveSessionStart';
 import type { PreviousSessionSet } from '@/sessions/describePreviousSet';
 import type { SetValues } from '@/sessions/fillSetForTick';
 import { normaliseSessionExercises } from '@/sessions/normaliseSessionExercises';
 import { actualValuesAfterReplace, resolveReplacedExerciseId } from '@/sessions/replaceExercise';
+import type { ActiveSession } from '@/types/ActiveSession';
 import type { ClassType } from '@/types/ClassType';
 import type { SessionSet } from '@/types/SessionSet';
 import type { SessionExerciseWithSets, SessionWithExercises } from '@/types/SessionWithExercises';
@@ -22,6 +24,41 @@ type WorkoutSnapshotRow = {
   kind: WorkoutKind;
   class_type: ClassType | null;
 };
+
+export class ActiveSessionExistsError extends Error {
+  constructor() {
+    super('Another workout session is already open');
+    this.name = 'ActiveSessionExistsError';
+  }
+}
+
+type ActiveSessionRow = {
+  id: number;
+  workout_id: number | null;
+  plan_entry_id: number | null;
+  workout_name: string;
+  scheduled_date: string;
+  started_at: string;
+};
+
+function toActiveSession(row: ActiveSessionRow): ActiveSession {
+  return {
+    id: row.id,
+    workoutId: row.workout_id,
+    planEntryId: row.plan_entry_id,
+    workoutName: row.workout_name,
+    scheduledDate: row.scheduled_date,
+    startedAt: row.started_at,
+  };
+}
+
+const selectActiveSessionSql = `SELECT id, workout_id, plan_entry_id, workout_name, scheduled_date, started_at
+  FROM sessions WHERE finished_at IS NULL ORDER BY started_at, id LIMIT 1`;
+
+export async function getActiveSession(database: SQLiteDatabase): Promise<ActiveSession | null> {
+  const row = await database.getFirstAsync<ActiveSessionRow>(selectActiveSessionSql);
+  return row === null ? null : toActiveSession(row);
+}
 
 type ExistingSessionRow = {
   id: number;
@@ -97,6 +134,16 @@ export async function startSession(database: SQLiteDatabase, request: SessionSta
   let sessionId: number | null = null;
 
   await database.withTransactionAsync(async () => {
+    const openSessionRow = await database.getFirstAsync<ActiveSessionRow>(selectActiveSessionSql);
+    if (openSessionRow !== null) {
+      const openSession = toActiveSession(openSessionRow);
+      if (!isRequestForActiveSession(request, openSession)) {
+        throw new ActiveSessionExistsError();
+      }
+      sessionId = openSession.id;
+      return;
+    }
+
     const existingSessions: ExistingPlanEntrySession[] =
       request.planEntryId === null
         ? []
