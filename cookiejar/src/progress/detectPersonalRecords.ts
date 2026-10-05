@@ -50,10 +50,16 @@ function isWeightedSet(set: CompletedSet): set is WeightedSet {
   );
 }
 
-function estimateOf(set: WeightedSet): number | null {
-  return set.repetitions <= maximumRepetitionsForOneRepMaxEstimate
-    ? estimateOneRepMax(set.weightKilograms, set.repetitions)
-    : null;
+function oneRepMaxComparisonKey(weightKilograms: number, repetitions: number): number {
+  return weightKilograms * (epleyRepetitionsDivisor + repetitions);
+}
+
+type EstimatedSet = { set: WeightedSet; comparisonKey: number };
+
+function estimatedSetsOf(sets: readonly WeightedSet[]): EstimatedSet[] {
+  return sets
+    .filter((set) => set.repetitions <= maximumRepetitionsForOneRepMaxEstimate)
+    .map((set) => ({ set, comparisonKey: oneRepMaxComparisonKey(set.weightKilograms, set.repetitions) }));
 }
 
 function bestBy<Item>(items: readonly Item[], compare: (candidate: Item, current: Item) => boolean): Item | null {
@@ -94,16 +100,16 @@ function detectWeightedRecords(currentSets: readonly CompletedSet[], earlierSets
   }
 
   const bestEstimateCurrent = bestBy(
-    currentWeighted.filter((set) => estimateOf(set) !== null),
-    (candidate, current) => (estimateOf(candidate) as number) > (estimateOf(current) as number),
+    estimatedSetsOf(currentWeighted),
+    (candidate, current) => candidate.comparisonKey > current.comparisonKey,
   );
-  const bestEstimateEarlier = maximumOf(earlierWeighted.map(estimateOf));
+  const bestEstimateEarlier = maximumOf(estimatedSetsOf(earlierWeighted).map((estimated) => estimated.comparisonKey));
   if (
     bestEstimateCurrent !== null &&
     bestEstimateEarlier !== null &&
-    (estimateOf(bestEstimateCurrent) as number) > bestEstimateEarlier
+    bestEstimateCurrent.comparisonKey > bestEstimateEarlier
   ) {
-    records.push({ recordType: 'bestEstimatedOneRepMax', set: bestEstimateCurrent });
+    records.push({ recordType: 'bestEstimatedOneRepMax', set: bestEstimateCurrent.set });
   }
 
   const repetitionRecordSets = currentWeighted.filter((set) => {

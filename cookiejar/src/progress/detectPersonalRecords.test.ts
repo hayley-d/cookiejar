@@ -94,6 +94,37 @@ describe('weighted records', () => {
   test('a lighter weight is not a record', () => {
     expect(detectPersonalRecords([weightedSet(1, 40, 5)], [weightedSet(1, 60, 8)])).toEqual([]);
   });
+
+  test('twelve reps still produce an estimate record', () => {
+    const records = detectPersonalRecords([weightedSet(1, 50, 12)], [weightedSet(1, 50, 10)]);
+    expect(recordTypes(records)).toContain('bestEstimatedOneRepMax');
+  });
+
+  test('thirteen reps do not produce an estimate record', () => {
+    const records = detectPersonalRecords([weightedSet(1, 50, 13)], [weightedSet(1, 50, 10)]);
+    expect(recordTypes(records)).toEqual(['mostRepetitionsAtWeight']);
+  });
+
+  test('a zero kilogram set ties on the estimate and only counts for reps at weight', () => {
+    const records = detectPersonalRecords([weightedSet(1, 0, 8)], [weightedSet(1, 0, 5)]);
+    expect(recordTypes(records)).toEqual(['mostRepetitionsAtWeight']);
+  });
+
+  test('a weighted set with null values is never a record', () => {
+    const missingWeight = { ...weightedSet(1, 0, 10), weightKilograms: null };
+    const missingRepetitions = { ...weightedSet(1, 100, 0), repetitions: null };
+    expect(detectPersonalRecords([missingWeight, missingRepetitions], [weightedSet(1, 60, 8)])).toEqual([]);
+  });
+
+  test('no estimate record when every earlier set is above twelve reps', () => {
+    const records = detectPersonalRecords([weightedSet(1, 60, 5)], [weightedSet(1, 60, 13)]);
+    expect(recordTypes(records)).not.toContain('bestEstimatedOneRepMax');
+  });
+
+  test('an equal estimate from a different weight and reps is not a record', () => {
+    const records = detectPersonalRecords([weightedSet(1, 20, 5)], [weightedSet(1, 17.5, 10)]);
+    expect(recordTypes(records)).toEqual(['heaviestWeight']);
+  });
 });
 
 describe('single value records', () => {
