@@ -176,7 +176,11 @@ const rowing: EditorExercise = { id: 8, name: 'Rowing', imageUrl: null, defaultT
 
 function stateWithBenchPress() {
   const reducer = createReducer();
-  const state = reducer(initialWorkoutEditorState, { type: 'exercisesAdded', exercises: [benchPress] });
+  const state = reducer(initialWorkoutEditorState, {
+    type: 'exercisesAdded',
+    exercises: [benchPress],
+    asSuperset: false,
+  });
   return { reducer, state, itemKey: state.items[0].key, targetSetKey: state.items[0].targetSets[0].key };
 }
 
@@ -185,13 +189,18 @@ describe('exercisesAdded', () => {
     const state = createReducer()(initialWorkoutEditorState, {
       type: 'exercisesAdded',
       exercises: [plank, benchPress, rowing],
+      asSuperset: false,
     });
     expect(state.items.map((item) => item.exercise.name)).toEqual(['Plank', 'Bench Press', 'Rowing']);
     expect(state.hasUnsavedChanges).toBe(true);
   });
 
   test('a new item uses the default tracking type and starts with one empty set', () => {
-    const state = createReducer()(initialWorkoutEditorState, { type: 'exercisesAdded', exercises: [benchPress] });
+    const state = createReducer()(initialWorkoutEditorState, {
+      type: 'exercisesAdded',
+      exercises: [benchPress],
+      asSuperset: false,
+    });
     expect(state.items[0]).toEqual({
       key: 'test-1',
       exercise: benchPress,
@@ -208,14 +217,19 @@ describe('exercisesAdded', () => {
     const state = createReducer()(initialWorkoutEditorState, {
       type: 'exercisesAdded',
       exercises: [{ ...plank, bodyPart: 'core', createdAt: '2026-10-04T14:30:00Z' } as EditorExercise],
+      asSuperset: false,
     });
     expect(state.items[0].exercise).toEqual(plank);
   });
 
   test('appends after the items already in the workout', () => {
     const reducer = createReducer();
-    const firstState = reducer(initialWorkoutEditorState, { type: 'exercisesAdded', exercises: [benchPress] });
-    const state = reducer(firstState, { type: 'exercisesAdded', exercises: [plank, rowing] });
+    const firstState = reducer(initialWorkoutEditorState, {
+      type: 'exercisesAdded',
+      exercises: [benchPress],
+      asSuperset: false,
+    });
+    const state = reducer(firstState, { type: 'exercisesAdded', exercises: [plank, rowing], asSuperset: false });
     expect(state.items.map((item) => item.exercise.id)).toEqual([3, 5, 8]);
     expect(state.items[0]).toBe(firstState.items[0]);
   });
@@ -259,7 +273,11 @@ describe('trackingTypeChanged', () => {
 
   test('changes only the item it names', () => {
     const reducer = createReducer();
-    const state = reducer(initialWorkoutEditorState, { type: 'exercisesAdded', exercises: [benchPress, plank] });
+    const state = reducer(initialWorkoutEditorState, {
+      type: 'exercisesAdded',
+      exercises: [benchPress, plank],
+      asSuperset: false,
+    });
     const changedState = reducer(state, {
       type: 'trackingTypeChanged',
       itemKey: state.items[1].key,
@@ -337,7 +355,12 @@ describe('targetSetChanged', () => {
 
   test('clearing a field stores null', () => {
     const { reducer, state, itemKey, targetSetKey } = stateWithBenchPress();
-    const filledState = reducer(state, { type: 'targetSetChanged', itemKey, targetSetKey, changes: { repetitions: 10 } });
+    const filledState = reducer(state, {
+      type: 'targetSetChanged',
+      itemKey,
+      targetSetKey,
+      changes: { repetitions: 10 },
+    });
     const clearedState = reducer(filledState, {
       type: 'targetSetChanged',
       itemKey,
@@ -345,5 +368,167 @@ describe('targetSetChanged', () => {
       changes: { repetitions: null },
     });
     expect(clearedState.items[0].targetSets[0].repetitions).toBeNull();
+  });
+});
+
+function stateWithThreeItems() {
+  const reducer = createReducer();
+  const state = reducer(initialWorkoutEditorState, {
+    type: 'exercisesAdded',
+    exercises: [benchPress, plank, rowing],
+    asSuperset: false,
+  });
+  return { reducer, state, keys: state.items.map((item) => item.key) };
+}
+
+function groupsOf(state: WorkoutEditorState) {
+  return state.items.map((item) => item.supersetGroup);
+}
+
+describe('exercisesAdded as a superset', () => {
+  test('appended picks share one new group, lettered after the existing groups', () => {
+    const { reducer, state, keys } = stateWithThreeItems();
+    const linkedState = reducer(state, { type: 'supersetCreated', itemKey: keys[0] });
+    const nextState = reducer(linkedState, {
+      type: 'exercisesAdded',
+      exercises: [
+        { ...plank, id: 11 },
+        { ...rowing, id: 12 },
+      ],
+      asSuperset: true,
+    });
+    expect(groupsOf(nextState)).toEqual(['A', 'A', null, 'B', 'B']);
+  });
+
+  test('a single pick as a superset stays ungrouped', () => {
+    const state = createReducer()(initialWorkoutEditorState, {
+      type: 'exercisesAdded',
+      exercises: [benchPress],
+      asSuperset: true,
+    });
+    expect(groupsOf(state)).toEqual([null]);
+  });
+});
+
+describe('supersetCreated', () => {
+  test('links a card with the card below it', () => {
+    const { reducer, state, keys } = stateWithThreeItems();
+    const nextState = reducer(state, { type: 'supersetCreated', itemKey: keys[0] });
+    expect(groupsOf(nextState)).toEqual(['A', 'A', null]);
+    expect(nextState.hasUnsavedChanges).toBe(true);
+  });
+
+  test('repeating it on the next card makes a tri-set', () => {
+    const { reducer, state, keys } = stateWithThreeItems();
+    const linkedState = reducer(state, { type: 'supersetCreated', itemKey: keys[0] });
+    const nextState = reducer(linkedState, { type: 'supersetCreated', itemKey: keys[1] });
+    expect(groupsOf(nextState)).toEqual(['A', 'A', 'A']);
+  });
+
+  test('linking into a group below merges the two groups', () => {
+    const { reducer, state, keys } = stateWithThreeItems();
+    const withFourth = reducer(state, {
+      type: 'exercisesAdded',
+      exercises: [{ ...plank, id: 11 }],
+      asSuperset: false,
+    });
+    const linkedLowerState = reducer(withFourth, { type: 'supersetCreated', itemKey: keys[1] });
+    const nextState = reducer(linkedLowerState, { type: 'supersetCreated', itemKey: keys[0] });
+    expect(groupsOf(nextState)).toEqual(['A', 'A', 'A', null]);
+  });
+
+  test('does nothing on the last card', () => {
+    const { reducer, state, keys } = stateWithThreeItems();
+    expect(reducer(state, { type: 'supersetCreated', itemKey: keys[2] })).toBe(state);
+  });
+});
+
+describe('supersetRemoved', () => {
+  test('unlinking a two-card superset clears the group', () => {
+    const { reducer, state, keys } = stateWithThreeItems();
+    const linkedState = reducer(state, { type: 'supersetCreated', itemKey: keys[0] });
+    const nextState = reducer(linkedState, { type: 'supersetRemoved', itemKey: keys[0] });
+    expect(groupsOf(nextState)).toEqual([null, null, null]);
+  });
+
+  test('unlinking the first card of a tri-set leaves the other two linked', () => {
+    const { reducer, state, keys } = stateWithThreeItems();
+    const linkedState = reducer(reducer(state, { type: 'supersetCreated', itemKey: keys[0] }), {
+      type: 'supersetCreated',
+      itemKey: keys[1],
+    });
+    const nextState = reducer(linkedState, { type: 'supersetRemoved', itemKey: keys[0] });
+    expect(groupsOf(nextState)).toEqual([null, 'A', 'A']);
+  });
+
+  test('unlinking the middle card of a tri-set leaves the first two linked', () => {
+    const { reducer, state, keys } = stateWithThreeItems();
+    const linkedState = reducer(reducer(state, { type: 'supersetCreated', itemKey: keys[0] }), {
+      type: 'supersetCreated',
+      itemKey: keys[1],
+    });
+    const nextState = reducer(linkedState, { type: 'supersetRemoved', itemKey: keys[1] });
+    expect(groupsOf(nextState)).toEqual(['A', 'A', null]);
+  });
+
+  test('does nothing on a card that is not in a superset', () => {
+    const { reducer, state, keys } = stateWithThreeItems();
+    expect(reducer(state, { type: 'supersetRemoved', itemKey: keys[0] })).toBe(state);
+  });
+});
+
+describe('itemRemoved', () => {
+  test('removes the named card and keeps the others in order', () => {
+    const { reducer, state, keys } = stateWithThreeItems();
+    const nextState = reducer(state, { type: 'itemRemoved', itemKey: keys[1] });
+    expect(nextState.items.map((item) => item.exercise.id)).toEqual([3, 8]);
+    expect(nextState.hasUnsavedChanges).toBe(true);
+  });
+
+  test('removing a member of a two-card superset clears the leftover group', () => {
+    const { reducer, state, keys } = stateWithThreeItems();
+    const linkedState = reducer(state, { type: 'supersetCreated', itemKey: keys[0] });
+    const nextState = reducer(linkedState, { type: 'itemRemoved', itemKey: keys[1] });
+    expect(groupsOf(nextState)).toEqual([null, null]);
+  });
+
+  test('removing a member of a tri-set keeps the other two linked', () => {
+    const { reducer, state, keys } = stateWithThreeItems();
+    const linkedState = reducer(reducer(state, { type: 'supersetCreated', itemKey: keys[0] }), {
+      type: 'supersetCreated',
+      itemKey: keys[1],
+    });
+    const nextState = reducer(linkedState, { type: 'itemRemoved', itemKey: keys[1] });
+    expect(groupsOf(nextState)).toEqual(['A', 'A']);
+  });
+
+  test('removing an earlier superset reletters the later one', () => {
+    const { reducer, state, keys } = stateWithThreeItems();
+    const withFiveItems = reducer(state, {
+      type: 'exercisesAdded',
+      exercises: [
+        { ...plank, id: 11 },
+        { ...rowing, id: 12 },
+      ],
+      asSuperset: true,
+    });
+    const linkedState = reducer(withFiveItems, { type: 'supersetCreated', itemKey: keys[0] });
+    expect(groupsOf(linkedState)).toEqual(['A', 'A', null, 'B', 'B']);
+    const nextState = reducer(linkedState, { type: 'itemRemoved', itemKey: keys[0] });
+    expect(groupsOf(nextState)).toEqual([null, null, 'A', 'A']);
+  });
+});
+
+describe('loaded supersets', () => {
+  test('keeps saved groups and relettering leaves them alone', () => {
+    const state = createReducer()(initialWorkoutEditorState, {
+      type: 'loaded',
+      workout: {
+        ...loadedIndividualWorkout,
+        items: loadedIndividualWorkout.items.map((item) => ({ ...item, supersetGroup: 'A' })),
+      },
+    });
+    expect(groupsOf(state)).toEqual(['A', 'A']);
+    expect(state.hasUnsavedChanges).toBe(false);
   });
 });

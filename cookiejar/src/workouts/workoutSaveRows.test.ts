@@ -127,6 +127,7 @@ describe('toWorkoutSaveRows', () => {
         { id: 2, name: 'Plank', imageUrl: null, defaultTrackingType: 'duration' },
         { id: 4, name: 'Rowing', imageUrl: null, defaultTrackingType: 'distance' },
       ],
+      asSuperset: false,
     });
     const [squat, plank] = addedState.items;
     const filledState = [
@@ -167,7 +168,9 @@ describe('toWorkoutSaveRows', () => {
         supersetGroup: null,
         trackingType: 'duration',
         restSeconds: null,
-        targetSets: [{ position: 0, repetitions: null, weightKilograms: null, durationSeconds: 90, distanceMeters: null }],
+        targetSets: [
+          { position: 0, repetitions: null, weightKilograms: null, durationSeconds: 90, distanceMeters: null },
+        ],
       },
       {
         exerciseId: 4,
@@ -175,7 +178,9 @@ describe('toWorkoutSaveRows', () => {
         supersetGroup: null,
         trackingType: 'distance',
         restSeconds: null,
-        targetSets: [{ position: 0, repetitions: null, weightKilograms: null, durationSeconds: null, distanceMeters: null }],
+        targetSets: [
+          { position: 0, repetitions: null, weightKilograms: null, durationSeconds: null, distanceMeters: null },
+        ],
       },
     ]);
   });

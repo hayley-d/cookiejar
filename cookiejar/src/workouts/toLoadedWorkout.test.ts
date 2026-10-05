@@ -35,8 +35,24 @@ const individualWorkout: WorkoutWithItems = {
       notes: null,
       exercise: { id: 3, name: 'Bench Press', imageUrl: null, defaultTrackingType: 'repetitions_and_weight' },
       targetSets: [
-        { id: 21, workoutItemId: 11, position: 0, repetitions: 8, weightKilograms: 60.5, durationSeconds: null, distanceMeters: null },
-        { id: 22, workoutItemId: 11, position: 1, repetitions: null, weightKilograms: null, durationSeconds: null, distanceMeters: null },
+        {
+          id: 21,
+          workoutItemId: 11,
+          position: 0,
+          repetitions: 8,
+          weightKilograms: 60.5,
+          durationSeconds: null,
+          distanceMeters: null,
+        },
+        {
+          id: 22,
+          workoutItemId: 11,
+          position: 1,
+          repetitions: null,
+          weightKilograms: null,
+          durationSeconds: null,
+          distanceMeters: null,
+        },
       ],
     },
     {
@@ -44,13 +60,21 @@ const individualWorkout: WorkoutWithItems = {
       workoutId: 7,
       exerciseId: 4,
       position: 1,
-      supersetGroup: null,
+      supersetGroup: 'A',
       trackingType: 'distance',
       restSeconds: null,
       notes: null,
       exercise: { id: 4, name: 'Run', imageUrl: 'https://example.com/run.jpg', defaultTrackingType: 'distance' },
       targetSets: [
-        { id: 23, workoutItemId: 12, position: 0, repetitions: null, weightKilograms: null, durationSeconds: null, distanceMeters: 2500 },
+        {
+          id: 23,
+          workoutItemId: 12,
+          position: 0,
+          repetitions: null,
+          weightKilograms: null,
+          durationSeconds: null,
+          distanceMeters: 2500,
+        },
       ],
     },
   ],
@@ -119,7 +143,7 @@ describe('toLoadedWorkout', () => {
 
     expect(saveRows.workoutId).toBe(7);
     expect(saveRows.items.map((item) => item.exerciseId)).toEqual([3, 4]);
-    expect(saveRows.items[0]?.supersetGroup).toBe('A');
+    expect(saveRows.items.map((item) => item.supersetGroup)).toEqual(['A', 'A']);
     expect(saveRows.items[0]?.restSeconds).toBe(90);
     expect(saveRows.items[1]?.targetSets[0]?.distanceMeters).toBe(2500);
   });

@@ -2,11 +2,8 @@ import type { ClassType } from '@/types/ClassType';
 import type { Exercise } from '@/types/Exercise';
 import type { TrackingType } from '@/types/TrackingType';
 import type { WorkoutKind } from '@/types/WorkoutKind';
-import {
-  clearUntrackedFields,
-  emptyTargetSetValues,
-  type TargetSetValues,
-} from '@/workouts/targetSetColumns';
+import { normaliseSupersets } from '@/workouts/normaliseSupersets';
+import { clearUntrackedFields, emptyTargetSetValues, type TargetSetValues } from '@/workouts/targetSetColumns';
 
 export type EditorTargetSet = {
   key: string;
@@ -61,7 +58,10 @@ export type WorkoutEditorAction =
   | { type: 'renamed'; name: string }
   | { type: 'kindChosen'; kind: WorkoutKind }
   | { type: 'classDetailsChanged'; changes: Partial<ClassDetails> }
-  | { type: 'exercisesAdded'; exercises: EditorExercise[] }
+  | { type: 'exercisesAdded'; exercises: EditorExercise[]; asSuperset: boolean }
+  | { type: 'itemRemoved'; itemKey: string }
+  | { type: 'supersetCreated'; itemKey: string }
+  | { type: 'supersetRemoved'; itemKey: string }
   | { type: 'trackingTypeChanged'; itemKey: string; trackingType: TrackingType }
   | { type: 'targetSetAdded'; itemKey: string }
   | { type: 'targetSetRemoved'; itemKey: string; targetSetKey: string }
@@ -135,7 +135,7 @@ export function createWorkoutEditorReducer(createKey: CreateKey) {
     return { ...emptyTargetSetValues, ...targetSets.at(-1), key: createKey() };
   }
 
-  return function workoutEditorReducer(state: WorkoutEditorState, action: WorkoutEditorAction): WorkoutEditorState {
+  function applyAction(state: WorkoutEditorState, action: WorkoutEditorAction): WorkoutEditorState {
     switch (action.type) {
       case 'renamed':
         return { ...state, name: action.name, hasUnsavedChanges: true };
@@ -152,12 +152,63 @@ export function createWorkoutEditorReducer(createKey: CreateKey) {
           classDetails: { ...(state.classDetails ?? defaultClassDetails), ...action.changes },
           hasUnsavedChanges: true,
         };
-      case 'exercisesAdded':
+      case 'exercisesAdded': {
+        const supersetGroup = action.asSuperset ? createKey() : null;
         return {
           ...state,
-          items: [...state.items, ...action.exercises.map(createItem)],
+          items: [...state.items, ...action.exercises.map((exercise) => ({ ...createItem(exercise), supersetGroup }))],
           hasUnsavedChanges: true,
         };
+      }
+      case 'itemRemoved':
+        return {
+          ...state,
+          items: state.items.filter((item) => item.key !== action.itemKey),
+          hasUnsavedChanges: true,
+        };
+      case 'supersetCreated': {
+        const itemIndex = state.items.findIndex((item) => item.key === action.itemKey);
+        const nextItem = state.items[itemIndex + 1];
+        if (itemIndex === -1 || nextItem === undefined) {
+          return state;
+        }
+        const supersetGroup = state.items[itemIndex].supersetGroup ?? createKey();
+        const replacedGroup = nextItem.supersetGroup;
+        return {
+          ...state,
+          items: state.items.map((item, index) =>
+            index === itemIndex ||
+            index === itemIndex + 1 ||
+            (replacedGroup !== null && item.supersetGroup === replacedGroup)
+              ? { ...item, supersetGroup }
+              : item,
+          ),
+          hasUnsavedChanges: true,
+        };
+      }
+      case 'supersetRemoved': {
+        const itemIndex = state.items.findIndex((item) => item.key === action.itemKey);
+        const supersetGroup = state.items[itemIndex]?.supersetGroup ?? null;
+        if (supersetGroup === null) {
+          return state;
+        }
+        const detachedGroup = createKey();
+        let isDetaching = true;
+        return {
+          ...state,
+          items: state.items.map((item, index) => {
+            if (index <= itemIndex || !isDetaching) {
+              return item;
+            }
+            if (item.supersetGroup !== supersetGroup) {
+              isDetaching = false;
+              return item;
+            }
+            return { ...item, supersetGroup: detachedGroup };
+          }),
+          hasUnsavedChanges: true,
+        };
+      }
       case 'trackingTypeChanged':
         return updateItem(state, action.itemKey, (item) => ({
           ...item,
@@ -191,5 +242,10 @@ export function createWorkoutEditorReducer(createKey: CreateKey) {
           hasUnsavedChanges: false,
         };
     }
+  }
+
+  return function workoutEditorReducer(state: WorkoutEditorState, action: WorkoutEditorAction): WorkoutEditorState {
+    const nextState = applyAction(state, action);
+    return nextState === state ? state : { ...nextState, items: normaliseSupersets(nextState.items) };
   };
 }

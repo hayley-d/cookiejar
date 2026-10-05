@@ -21,6 +21,15 @@ export default function WorkoutBuilderLayout() {
         <Stack.Screen name="class-details" options={{ title: 'Class details' }} />
         <Stack.Screen name="editor" />
         <Stack.Screen name="[workoutId]/edit" options={{ title: 'Edit workout' }} />
+        <Stack.Screen
+          name="superset-info"
+          options={{
+            presentation: 'formSheet',
+            headerShown: false,
+            sheetAllowedDetents: 'fitToContents',
+            sheetGrabberVisible: true,
+          }}
+        />
       </Stack>
     </WorkoutEditorProvider>
   );

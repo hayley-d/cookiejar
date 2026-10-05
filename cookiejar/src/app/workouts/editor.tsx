@@ -18,6 +18,7 @@ import {
   type ExercisePickResult,
 } from '@/stores/exercisePickerStore';
 import type { Exercise } from '@/types/Exercise';
+import { toSupersetCardPositions } from '@/workouts/supersetCardPositions';
 import { workoutNameError } from '@/workouts/workoutNameError';
 
 type WorkoutEditorParameters = {
@@ -54,11 +55,13 @@ export default function WorkoutEditorScreen() {
   const pickResult = useExercisePickResult(pickRequestIdentifier);
   const [lastPickResult, setLastPickResult] = useState<ExercisePickResult | null>(null);
   const [pickedExerciseIds, setPickedExerciseIds] = useState<number[]>([]);
+  const [pickedAsSuperset, setPickedAsSuperset] = useState(false);
   const hasOpenedPickerOnOpen = useRef(false);
 
   if (pickResult !== null && pickResult !== lastPickResult) {
     setLastPickResult(pickResult);
     setPickedExerciseIds((currentExerciseIds) => [...currentExerciseIds, ...pickResult.exerciseIds]);
+    setPickedAsSuperset(pickResult.asSuperset);
   }
 
   useEffect(() => {
@@ -76,14 +79,15 @@ export default function WorkoutEditorScreen() {
     let isActive = true;
     Promise.all(pickedExerciseIds.map((exerciseId) => getExercise(database, exerciseId))).then((exercises) => {
       if (isActive) {
-        dispatch({ type: 'exercisesAdded', exercises: exercises.filter(isExercise) });
+        dispatch({ type: 'exercisesAdded', exercises: exercises.filter(isExercise), asSuperset: pickedAsSuperset });
         setPickedExerciseIds([]);
+        setPickedAsSuperset(false);
       }
     });
     return () => {
       isActive = false;
     };
-  }, [database, dispatch, pickedExerciseIds]);
+  }, [database, dispatch, pickedAsSuperset, pickedExerciseIds]);
 
   const addExercises = () => {
     const requestIdentifier = startExercisePick();
@@ -94,6 +98,7 @@ export default function WorkoutEditorScreen() {
     );
   };
 
+  const supersetPositions = toSupersetCardPositions(state.items);
   const canSave = state.items.length > 0 && !isSaving;
 
   const save = async () => {
@@ -119,10 +124,11 @@ export default function WorkoutEditorScreen() {
           )
         ) : (
           <ScrollBox automaticallyAdjustKeyboardInsets>
-            {state.items.map((item) => (
+            {state.items.map((item, itemIndex) => (
               <ExerciseEditorCard
                 key={item.key}
                 item={item}
+                supersetPosition={supersetPositions[itemIndex]}
                 onChangeTrackingType={(trackingType) =>
                   dispatch({ type: 'trackingTypeChanged', itemKey: item.key, trackingType })
                 }
@@ -133,6 +139,10 @@ export default function WorkoutEditorScreen() {
                 onRemoveTargetSet={(targetSetKey) =>
                   dispatch({ type: 'targetSetRemoved', itemKey: item.key, targetSetKey })
                 }
+                onRemove={() => dispatch({ type: 'itemRemoved', itemKey: item.key })}
+                onCreateSuperset={() => dispatch({ type: 'supersetCreated', itemKey: item.key })}
+                onRemoveSuperset={() => dispatch({ type: 'supersetRemoved', itemKey: item.key })}
+                onShowSupersetInfo={() => router.push('/workouts/superset-info')}
               />
             ))}
           </ScrollBox>
