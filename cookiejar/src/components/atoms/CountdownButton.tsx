@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Box } from '@/components/primitives/Box';
 import { Icon } from '@/components/primitives/Icon';
@@ -30,6 +30,11 @@ export function CountdownButton({ targetSeconds, accessibilityLabel, onFinish }:
   const theme = useTheme();
   const [run, setRun] = useState<CountdownRun | null>(null);
   const [nowMilliseconds, setNowMilliseconds] = useState(0);
+  const onFinishReference = useRef(onFinish);
+
+  useEffect(() => {
+    onFinishReference.current = onFinish;
+  });
 
   useEffect(() => {
     if (run === null) {
@@ -40,13 +45,13 @@ export function CountdownButton({ targetSeconds, accessibilityLabel, onFinish }:
       const elapsedSeconds = elapsedSecondsSince(run.startedAtMilliseconds, currentMilliseconds);
       if (hasCountdownFinished(run.plan, elapsedSeconds)) {
         setRun(null);
-        onFinish(recordedCountdownSeconds(run.plan, elapsedSeconds));
+        onFinishReference.current(recordedCountdownSeconds(run.plan, elapsedSeconds));
         return;
       }
       setNowMilliseconds(currentMilliseconds);
     }, theme.durations.fastTimerTick);
     return () => clearInterval(interval);
-  }, [run, onFinish, theme.durations.fastTimerTick]);
+  }, [run, theme.durations.fastTimerTick]);
 
   const start = () => {
     const startedAtMilliseconds = Date.now();
