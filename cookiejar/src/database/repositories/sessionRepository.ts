@@ -2,6 +2,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { isRequestForActiveSession } from '@/sessions/resolveStartAgainstActiveSession';
 import { resolveSessionStart, type ExistingPlanEntrySession } from '@/sessions/resolveSessionStart';
+import type { CompletedSet } from '@/progress/detectPersonalRecords';
 import type { PreviousSessionSet } from '@/sessions/describePreviousSet';
 import type { SetValues } from '@/sessions/fillSetForTick';
 import { normaliseSessionExercises } from '@/sessions/normaliseSessionExercises';
@@ -616,4 +617,45 @@ export async function updateSessionNotes(
   notes: string | null,
 ): Promise<void> {
   await database.runAsync('UPDATE sessions SET notes = ? WHERE id = ?', notes, sessionId);
+}
+
+type CompletedSetRow = {
+  exercise_id: number;
+  tracking_type: TrackingType;
+  repetitions: number | null;
+  weight_kilograms: number | null;
+  duration_seconds: number | null;
+  distance_meters: number | null;
+};
+
+export async function listCompletedSetsForExercises(
+  database: SQLiteDatabase,
+  exerciseIds: readonly number[],
+  beforeStartedAt: string,
+): Promise<CompletedSet[]> {
+  if (exerciseIds.length === 0) {
+    return [];
+  }
+  const placeholders = exerciseIds.map(() => '?').join(', ');
+  const rows = await database.getAllAsync<CompletedSetRow>(
+    `SELECT session_exercises.exercise_id, session_exercises.tracking_type, session_sets.repetitions,
+      session_sets.weight_kilograms, session_sets.duration_seconds, session_sets.distance_meters
+    FROM session_sets
+    JOIN session_exercises ON session_exercises.id = session_sets.session_exercise_id
+    JOIN sessions ON sessions.id = session_exercises.session_id
+    WHERE session_exercises.exercise_id IN (${placeholders})
+      AND session_sets.completed_at IS NOT NULL
+      AND sessions.finished_at IS NOT NULL
+      AND sessions.started_at < ?`,
+    ...exerciseIds,
+    beforeStartedAt,
+  );
+  return rows.map((row) => ({
+    exerciseId: row.exercise_id,
+    trackingType: row.tracking_type,
+    repetitions: row.repetitions,
+    weightKilograms: row.weight_kilograms,
+    durationSeconds: row.duration_seconds,
+    distanceMeters: row.distance_meters,
+  }));
 }
