@@ -665,3 +665,46 @@ export async function listCompletedSetsForExercises(
     distanceMeters: row.distance_meters,
   }));
 }
+
+export type LinkedHealthWorkout = {
+  healthWorkoutUuid: string;
+  healthAverageHeartRate: number | null;
+  healthMaximumHeartRate: number | null;
+  healthActiveKilocalories: number | null;
+  healthDurationSeconds: number;
+};
+
+export async function linkHealthWorkout(
+  database: SQLiteDatabase,
+  sessionId: number,
+  linkedWorkout: LinkedHealthWorkout,
+): Promise<void> {
+  await database.runAsync(
+    `UPDATE sessions SET
+      health_workout_uuid = ?,
+      health_average_heart_rate = ?,
+      health_maximum_heart_rate = ?,
+      health_active_kilocalories = ?,
+      health_duration_seconds = ?
+    WHERE id = ?`,
+    linkedWorkout.healthWorkoutUuid,
+    linkedWorkout.healthAverageHeartRate,
+    linkedWorkout.healthMaximumHeartRate,
+    linkedWorkout.healthActiveKilocalories,
+    Math.round(linkedWorkout.healthDurationSeconds),
+    sessionId,
+  );
+}
+
+export async function unlinkHealthWorkout(database: SQLiteDatabase, sessionId: number): Promise<void> {
+  await database.runAsync(
+    `UPDATE sessions SET
+      health_workout_uuid = NULL,
+      health_average_heart_rate = NULL,
+      health_maximum_heart_rate = NULL,
+      health_active_kilocalories = NULL,
+      health_duration_seconds = NULL
+    WHERE id = ?`,
+    sessionId,
+  );
+}
