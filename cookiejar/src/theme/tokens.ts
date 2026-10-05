@@ -69,10 +69,13 @@ export const radii = {
 export const sizes = {
   dragHandleIcon: 20,
   reorderRow: 56,
+  autoScrollEdge: 72,
+  autoScrollStep: 8,
 };
 
 export const durations = {
   dragLongPress: 300,
+  autoScrollInterval: 16,
 };
 
 export const typography = {

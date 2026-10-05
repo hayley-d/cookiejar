@@ -4,28 +4,20 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useTheme } from '@/theme/useTheme';
 
 type LongPressDragBoxProperties = ViewProps & {
-  slotHeight: number;
-  onDragStart: () => void;
-  onSlotOffsetChange: (slotOffset: number) => void;
-  onDragEnd: (slotOffset: number) => void;
+  onDragStart: (pointerWindowY: number) => void;
+  onDragMove: (pointerWindowY: number) => void;
+  onDragEnd: (didComplete: boolean) => void;
 };
 
-export function LongPressDragBox({
-  slotHeight,
-  onDragStart,
-  onSlotOffsetChange,
-  onDragEnd,
-  ...viewProperties
-}: LongPressDragBoxProperties) {
+export function LongPressDragBox({ onDragStart, onDragMove, onDragEnd, ...viewProperties }: LongPressDragBoxProperties) {
   const theme = useTheme();
-  const toSlotOffset = (translationY: number) => Math.round(translationY / slotHeight);
 
   const dragGesture = Gesture.Pan()
     .runOnJS(true)
     .activateAfterLongPress(theme.durations.dragLongPress)
-    .onStart(() => onDragStart())
-    .onUpdate((event) => onSlotOffsetChange(toSlotOffset(event.translationY)))
-    .onEnd((event, didSucceed) => onDragEnd(didSucceed ? toSlotOffset(event.translationY) : 0));
+    .onStart((event) => onDragStart(event.absoluteY))
+    .onUpdate((event) => onDragMove(event.absoluteY))
+    .onEnd((event, didComplete) => onDragEnd(didComplete));
 
   return (
     <GestureDetector gesture={dragGesture}>

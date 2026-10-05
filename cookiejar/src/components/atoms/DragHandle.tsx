@@ -4,10 +4,9 @@ import { useTheme } from '@/theme/useTheme';
 
 type DragHandleProperties = {
   accessibilityLabel: string;
-  slotHeight: number;
-  onDragStart: () => void;
-  onSlotOffsetChange: (slotOffset: number) => void;
-  onDragEnd: (slotOffset: number) => void;
+  onDragStart: (pointerWindowY: number) => void;
+  onDragMove: (pointerWindowY: number) => void;
+  onDragEnd: (didComplete: boolean) => void;
   onMove: (slotOffset: number) => void;
 };
 
@@ -16,9 +15,8 @@ const moveDownAction = 'moveDown';
 
 export function DragHandle({
   accessibilityLabel,
-  slotHeight,
   onDragStart,
-  onSlotOffsetChange,
+  onDragMove,
   onDragEnd,
   onMove,
 }: DragHandleProperties) {
@@ -26,9 +24,8 @@ export function DragHandle({
 
   return (
     <LongPressDragBox
-      slotHeight={slotHeight}
       onDragStart={onDragStart}
-      onSlotOffsetChange={onSlotOffsetChange}
+      onDragMove={onDragMove}
       onDragEnd={onDragEnd}
       accessible
       accessibilityLabel={accessibilityLabel}
