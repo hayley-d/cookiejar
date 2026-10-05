@@ -87,6 +87,19 @@ export default function RootLayout() {
                 name="profile/apple-health"
                 options={{ title: 'Apple Health', headerLargeTitleEnabled: false }}
               />
+              <Stack.Screen
+                name="profile/measurements/index"
+                options={{ title: 'Body measurements', headerLargeTitleEnabled: false }}
+              />
+              <Stack.Screen
+                name="profile/measurements/new"
+                options={{
+                  presentation: 'formSheet',
+                  title: 'New measurement',
+                  sheetAllowedDetents: [0.9],
+                  sheetGrabberVisible: true,
+                }}
+              />
               <Stack.Screen name="stats/[metric]" options={{ title: '', headerLargeTitleEnabled: false }} />
               <Stack.Screen name="workout/[workoutId]" options={{ title: '', headerLargeTitleEnabled: false }} />
               <Stack.Screen name="workouts" options={{ presentation: 'modal', headerShown: false }} />

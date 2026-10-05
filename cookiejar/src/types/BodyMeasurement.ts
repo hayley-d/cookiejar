@@ -8,3 +8,10 @@ export type BodyMeasurement = {
   chestCentimetres: number | null;
   notes: string | null;
 };
+
+export type BodyMeasurementInput = Omit<BodyMeasurement, 'id'>;
+
+export type WeightMeasurement = {
+  measuredOn: string;
+  weightKilograms: number;
+};
