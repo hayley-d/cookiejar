@@ -14,10 +14,10 @@ export default function LinkHealthWorkoutScreen() {
   const { lookup, refresh, link, isLinking } = useOverlappingHealthWorkouts(Number(sessionIdParameter));
 
   const pickWorkout = async (workout: HealthWorkout) => {
-    const wasLinked = await link(workout);
-    if (wasLinked) {
+    const result = await link(workout);
+    if (result === 'linked') {
       router.back();
-    } else {
+    } else if (result === 'failed') {
       Alert.alert('Could not link the workout', 'Something went wrong. Please try again.');
     }
   };

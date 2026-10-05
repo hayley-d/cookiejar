@@ -78,8 +78,8 @@ export default function SessionSummaryScreen() {
       return;
     }
     healthWorkouts.link(suggestedWorkout).then(
-      (wasLinked) => {
-        if (!wasLinked) {
+      (result) => {
+        if (result === 'failed') {
           Alert.alert('Could not link the workout', 'Something went wrong. Please try again.');
         }
       },

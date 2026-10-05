@@ -17,6 +17,8 @@ export type OverlappingHealthWorkoutsLookup =
   | { status: 'failed' }
   | { status: 'ready'; groupedWorkouts: GroupedHealthWorkouts };
 
+export type LinkHealthWorkoutResult = 'linked' | 'busy' | 'failed';
+
 export function useOverlappingHealthWorkouts(sessionId: number) {
   const database = useSQLiteContext();
   const [lookup, setLookup] = useState<OverlappingHealthWorkoutsLookup>({ status: 'loading' });
@@ -72,9 +74,9 @@ export function useOverlappingHealthWorkouts(sessionId: number) {
   }, [load]);
 
   const link = useCallback(
-    async (workout: HealthWorkout): Promise<boolean> => {
+    async (workout: HealthWorkout): Promise<LinkHealthWorkoutResult> => {
       if (isLinkInFlight.current) {
-        return false;
+        return 'busy';
       }
       isLinkInFlight.current = true;
       setIsLinking(true);
@@ -91,9 +93,9 @@ export function useOverlappingHealthWorkouts(sessionId: number) {
           healthDurationSeconds: workout.durationSeconds,
         });
         bumpDataVersion();
-        return true;
+        return 'linked';
       } catch {
-        return false;
+        return 'failed';
       } finally {
         isLinkInFlight.current = false;
         if (isMountedReference.current) {
