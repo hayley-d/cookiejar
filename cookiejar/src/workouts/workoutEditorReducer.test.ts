@@ -181,6 +181,13 @@ function stateWithBenchPress() {
 }
 
 describe('exercisesAdded', () => {
+  test('an empty pick changes nothing and leaves the workout unchanged', () => {
+    const { reducer, state } = stateWithThreeItems();
+    const savedState = { ...state, hasUnsavedChanges: false };
+    expect(reducer(savedState, { type: 'exercisesAdded', exercises: [], asSuperset: false })).toBe(savedState);
+    expect(reducer(savedState, { type: 'exercisesAdded', exercises: [], asSuperset: true })).toBe(savedState);
+  });
+
   test('adds one item per exercise in the order given', () => {
     const state = createReducer()(initialWorkoutEditorState, {
       type: 'exercisesAdded',
@@ -470,6 +477,12 @@ describe('supersetRemoved', () => {
 });
 
 describe('itemRemoved', () => {
+  test('removing an unknown card changes nothing and leaves the workout unchanged', () => {
+    const { reducer, state } = stateWithThreeItems();
+    const savedState = { ...state, hasUnsavedChanges: false };
+    expect(reducer(savedState, { type: 'itemRemoved', itemKey: 'missing' })).toBe(savedState);
+  });
+
   test('removes the named card and keeps the others in order', () => {
     const { reducer, state, keys } = stateWithThreeItems();
     const nextState = reducer(state, { type: 'itemRemoved', itemKey: keys[1] });

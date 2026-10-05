@@ -154,6 +154,9 @@ export function createWorkoutEditorReducer(createKey: CreateKey) {
           hasUnsavedChanges: true,
         };
       case 'exercisesAdded': {
+        if (action.exercises.length === 0) {
+          return state;
+        }
         const supersetGroup = action.asSuperset ? createKey() : null;
         return {
           ...state,
@@ -161,8 +164,13 @@ export function createWorkoutEditorReducer(createKey: CreateKey) {
           hasUnsavedChanges: true,
         };
       }
-      case 'itemRemoved':
-        return { ...state, items: state.items.filter((item) => item.key !== action.itemKey), hasUnsavedChanges: true };
+      case 'itemRemoved': {
+        const remainingItems = state.items.filter((item) => item.key !== action.itemKey);
+        if (remainingItems.length === state.items.length) {
+          return state;
+        }
+        return { ...state, items: remainingItems, hasUnsavedChanges: true };
+      }
       case 'supersetCreated': {
         const itemIndex = state.items.findIndex((item) => item.key === action.itemKey);
         const nextItem = state.items[itemIndex + 1];

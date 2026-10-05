@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert } from 'react-native';
 
 import { saveWorkout } from '@/database/repositories/workoutRepository';
@@ -12,8 +12,13 @@ export function useSaveWorkout() {
   const database = useSQLiteContext();
   const { leaveWithoutPrompt } = useWorkoutEditor();
   const [isSaving, setIsSaving] = useState(false);
+  const isSaveInFlight = useRef(false);
 
   const save = async (editorState: WorkoutEditorState) => {
+    if (isSaveInFlight.current) {
+      return;
+    }
+    isSaveInFlight.current = true;
     setIsSaving(true);
     try {
       await saveWorkout(database, editorState);
@@ -22,6 +27,7 @@ export function useSaveWorkout() {
     } catch {
       Alert.alert('Could not save the workout', 'Something went wrong. Please try again.');
     } finally {
+      isSaveInFlight.current = false;
       setIsSaving(false);
     }
   };

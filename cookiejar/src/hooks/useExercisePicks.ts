@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useRef, useState, type Dispatch } from 'react';
+import { Alert } from 'react-native';
 
 import { getExercise } from '@/database/repositories/exerciseRepository';
 import {
@@ -61,18 +62,27 @@ export function useExercisePicks({ shouldPickOnOpen, dispatch }: UseExercisePick
       return;
     }
     let isActive = true;
-    Promise.all(pendingPick.exerciseIds.map((exerciseId) => getExercise(database, exerciseId))).then((exercises) => {
-      if (!isActive) {
-        return;
-      }
-      const pickedExercises = exercises.filter(isExercise);
-      if (pendingPick.replacedItemKey === null) {
-        dispatch({ type: 'exercisesAdded', exercises: pickedExercises, asSuperset: pendingPick.asSuperset });
-      } else if (pickedExercises.length > 0) {
-        dispatch({ type: 'exerciseReplaced', itemKey: pendingPick.replacedItemKey, exercise: pickedExercises[0] });
-      }
-      setPendingPick(null);
-    });
+    Promise.all(pendingPick.exerciseIds.map((exerciseId) => getExercise(database, exerciseId))).then(
+      (exercises) => {
+        if (!isActive) {
+          return;
+        }
+        const pickedExercises = exercises.filter(isExercise);
+        if (pendingPick.replacedItemKey === null) {
+          dispatch({ type: 'exercisesAdded', exercises: pickedExercises, asSuperset: pendingPick.asSuperset });
+        } else if (pickedExercises.length > 0) {
+          dispatch({ type: 'exerciseReplaced', itemKey: pendingPick.replacedItemKey, exercise: pickedExercises[0] });
+        }
+        setPendingPick(null);
+      },
+      () => {
+        if (!isActive) {
+          return;
+        }
+        setPendingPick(null);
+        Alert.alert('Could not add the exercises', 'Something went wrong. Please try again.');
+      },
+    );
     return () => {
       isActive = false;
     };
