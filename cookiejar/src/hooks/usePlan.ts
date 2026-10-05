@@ -4,8 +4,11 @@ import { useCallback, useState } from 'react';
 
 import {
   addPlanEntry as insertPlanEntry,
+  copyDayEntries,
   getPlanWithEntries,
+  removePlanEntry as deletePlanEntry,
   type NewPlanEntry,
+  updatePlanEntryTime as writePlanEntryTime,
 } from '@/database/repositories/planRepository';
 import { bumpDataVersion } from '@/stores/dataVersionStore';
 import type { PlanWithEntries } from '@/types/PlanWithEntries';
@@ -37,6 +40,33 @@ export function usePlan(planId: number) {
     [database, planId],
   );
 
+  const updatePlanEntryTime = useCallback(
+    async (planEntryId: number, timeOfDay: string) => {
+      await writePlanEntryTime(database, planEntryId, timeOfDay);
+      bumpDataVersion();
+      await reloadPlan();
+    },
+    [database, reloadPlan],
+  );
+
+  const removePlanEntry = useCallback(
+    async (planEntryId: number) => {
+      await deletePlanEntry(database, planEntryId);
+      bumpDataVersion();
+      await reloadPlan();
+    },
+    [database, reloadPlan],
+  );
+
+  const copyDay = useCallback(
+    async (fromDayOfWeek: number, toDaysOfWeek: readonly number[]) => {
+      const copiedEntryCount = await copyDayEntries(database, planId, fromDayOfWeek, toDaysOfWeek);
+      bumpDataVersion();
+      return copiedEntryCount;
+    },
+    [database, planId],
+  );
+
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
@@ -62,5 +92,5 @@ export function usePlan(planId: number) {
     }, [database, planId]),
   );
 
-  return { planLookup, reloadPlan, addPlanEntry };
+  return { planLookup, reloadPlan, addPlanEntry, updatePlanEntryTime, removePlanEntry, copyDay };
 }

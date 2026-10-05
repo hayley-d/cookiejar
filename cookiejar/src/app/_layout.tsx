@@ -98,6 +98,24 @@ export default function RootLayout() {
                   sheetGrabberVisible: true,
                 }}
               />
+              <Stack.Screen
+                name="plans/[planId]/entry-time"
+                options={{
+                  presentation: 'formSheet',
+                  headerShown: false,
+                  sheetAllowedDetents: [0.5],
+                  sheetGrabberVisible: true,
+                }}
+              />
+              <Stack.Screen
+                name="plans/[planId]/copy-day"
+                options={{
+                  presentation: 'formSheet',
+                  headerShown: false,
+                  sheetAllowedDetents: [0.6],
+                  sheetGrabberVisible: true,
+                }}
+              />
             </Stack>
           </GestureHandlerRootView>
         </SQLiteProvider>

@@ -1,3 +1,4 @@
+import { Alert } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 
 import { EmptyState } from '@/components/molecules/EmptyState';
@@ -12,7 +13,7 @@ type PlanEditorParameters = {
 export default function PlanEditorScreen() {
   const { planId: planIdParameter } = useLocalSearchParams<PlanEditorParameters>();
   const planId = Number(planIdParameter);
-  const { planLookup } = usePlan(planId);
+  const { planLookup, removePlanEntry } = usePlan(planId);
 
   if (planLookup.status === 'missing' || planLookup.status === 'failed') {
     return (
@@ -39,6 +40,23 @@ export default function PlanEditorScreen() {
       <Stack.Screen options={{ title: planLookup.plan.name }} />
       <PlanWeekEditor
         days={groupEntriesByWeekday(planLookup.plan.entries)}
+        onChangeEntryTime={(planEntryId) =>
+          router.push({
+            pathname: '/plans/[planId]/entry-time',
+            params: { planId: String(planId), planEntryId: String(planEntryId) },
+          })
+        }
+        onRemoveEntry={(planEntryId) =>
+          removePlanEntry(planEntryId).catch(() =>
+            Alert.alert('Could not remove the workout', 'Something went wrong. Please try again.'),
+          )
+        }
+        onCopyDay={(dayOfWeek) =>
+          router.push({
+            pathname: '/plans/[planId]/copy-day',
+            params: { planId: String(planId), fromDay: String(dayOfWeek) },
+          })
+        }
         onAddEntry={(dayOfWeek) =>
           router.push({
             pathname: '/plans/[planId]/add-entry',

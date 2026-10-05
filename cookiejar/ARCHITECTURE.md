@@ -255,12 +255,14 @@ Registered flat on the root `Stack`. Every change writes straight through `planR
 | `/plans/new` | Modal | Name the plan (required, trimmed), then replace the modal with the editor |
 | `/plans/[planId]` | Stack push | `PlanWeekEditor`: Monday to Sunday, entries in time order, an empty day shows the `restDay` nuggie and "Rest day" |
 | `/plans/[planId]/add-entry` | Form sheet | `AddPlanEntrySheet`: a time picker (default from `defaultTimeOfDayForNewEntry`) and a searchable `WorkoutRow` list; tapping a workout adds it and closes |
+| `/plans/[planId]/entry-time` | Form sheet | `EntryTimeSheet`: spinner time picker and Save for one entry, opened by tapping an entry row |
+| `/plans/[planId]/copy-day` | Form sheet | `CopyDaySheet`: weekday toggles (source day excluded), opened from the day ⋯ menu |
 
 The Create hub has a "New plan" `ActionCard` under "New workout", and "My plans" between it and "My workouts" (active first with an `ACTIVE` badge, summary from `describePlanSummary`).
 
 ### Plan Repository
 
-`src/database/repositories/planRepository.ts`: `listPlans` (entry count, active first, then newest), `getPlanWithEntries` (entries joined to the workout summary fields including `exerciseCount`, or `null`), `createPlan` and `addPlanEntry`. `usePlans` and `usePlan` reload on focus, and their writes call `bumpDataVersion()`.
+`src/database/repositories/planRepository.ts`: `listPlans` (entry count, active first, then newest), `getPlanWithEntries` (entries joined to the workout summary fields including `exerciseCount`, or `null`), `createPlan`, `addPlanEntry`, `updatePlanEntryTime`, `removePlanEntry` (swipe on `PlanEntryRow` through `SwipeableBox`) and `copyDayEntries` (one transaction, appends to each chosen day and skips a workout already there at the same time). `usePlans` and `usePlan` reload on focus, and their writes call `bumpDataVersion()`.
 
 ### Data Version Store
 
@@ -273,6 +275,7 @@ The Create hub has a "New plan" `ActionCard` under "New workout", and "My plans"
 ### Pure Modules
 
 - `src/plans/timeOfDay.ts`: `HH:MM` to and from minutes and `Date`, display formatting, comparing and sorting, and the default time for a new entry (07:00 on an empty day, otherwise the last entry + 1 hour, capped at 23:30)
+- `src/plans/planCopyDay.ts`: which entries to insert when copying a day, skipping duplicates
 - `src/plans/describePlanSummary.ts`: "n workouts / week" or "No workouts yet"
 - `src/plans/groupEntriesByWeekday.ts` and `src/plans/weekdays.ts`: Monday to Sunday sections in time order
 - `src/plans/describePlanEntryWorkout.ts`: the class type label or "n ex."

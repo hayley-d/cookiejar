@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { planCopyDay } from '@/plans/planCopyDay';
 import type { ClassType } from '@/types/ClassType';
 import type { Plan } from '@/types/Plan';
 import type { PlanSummary } from '@/types/PlanSummary';
@@ -126,4 +127,58 @@ export async function addPlanEntry(
     timeOfDay,
   );
   return result.lastInsertRowId;
+}
+
+export async function updatePlanEntryTime(
+  database: SQLiteDatabase,
+  planEntryId: number,
+  timeOfDay: string,
+): Promise<void> {
+  await database.runAsync('UPDATE plan_entries SET time_of_day = ? WHERE id = ?', timeOfDay, planEntryId);
+}
+
+export async function removePlanEntry(database: SQLiteDatabase, planEntryId: number): Promise<void> {
+  await database.runAsync('DELETE FROM plan_entries WHERE id = ?', planEntryId);
+}
+
+type CopyableEntryRow = {
+  day_of_week: number;
+  workout_id: number;
+  time_of_day: string;
+};
+
+export async function copyDayEntries(
+  database: SQLiteDatabase,
+  planId: number,
+  fromDayOfWeek: number,
+  toDaysOfWeek: readonly number[],
+): Promise<number> {
+  let copiedEntryCount = 0;
+
+  await database.withTransactionAsync(async () => {
+    const rows = await database.getAllAsync<CopyableEntryRow>(
+      'SELECT day_of_week, workout_id, time_of_day FROM plan_entries WHERE plan_id = ?',
+      planId,
+    );
+    const toCopyableEntry = (row: CopyableEntryRow) => ({ workoutId: row.workout_id, timeOfDay: row.time_of_day });
+    const sourceEntries = rows.filter((row) => row.day_of_week === fromDayOfWeek).map(toCopyableEntry);
+    const targets = toDaysOfWeek.map((dayOfWeek) => ({
+      dayOfWeek,
+      existingEntries: rows.filter((row) => row.day_of_week === dayOfWeek).map(toCopyableEntry),
+    }));
+
+    const plannedInserts = planCopyDay(sourceEntries, fromDayOfWeek, targets);
+    for (const plannedInsert of plannedInserts) {
+      await database.runAsync(
+        'INSERT INTO plan_entries (plan_id, workout_id, day_of_week, time_of_day) VALUES (?, ?, ?, ?)',
+        planId,
+        plannedInsert.workoutId,
+        plannedInsert.dayOfWeek,
+        plannedInsert.timeOfDay,
+      );
+    }
+    copiedEntryCount = plannedInserts.length;
+  });
+
+  return copiedEntryCount;
 }
