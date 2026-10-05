@@ -89,6 +89,40 @@ describe('resolveRestTimerStart', () => {
     expect(resolveRestTimerStart(exercises, 3)).toEqual({ shouldStart: true, restSeconds: 90 });
   });
 
+  test('ticking the first member after the last one completes the round with the last members rest time', () => {
+    const exercises = [
+      makeExercise('A', 45, [{ id: 1, isDone: true }]),
+      makeExercise('A', 75, [{ id: 2, isDone: true }]),
+    ];
+    expect(resolveRestTimerStart(exercises, 1)).toEqual({ shouldStart: true, restSeconds: 75 });
+  });
+
+  test('a middle member that completes the round starts rest', () => {
+    const exercises = [
+      makeExercise('A', 45, [{ id: 1, isDone: true }]),
+      makeExercise('A', 30, [{ id: 2, isDone: true }]),
+      makeExercise('A', 75, [{ id: 3, isDone: true }]),
+    ];
+    expect(resolveRestTimerStart(exercises, 2)).toEqual({ shouldStart: true, restSeconds: 75 });
+  });
+
+  test('with uneven set counts the member with the extra set completes its round alone', () => {
+    const exercises = [
+      makeExercise('A', 45, [
+        { id: 1, isDone: true },
+        { id: 3, isDone: true },
+        { id: 5, isDone: true },
+      ]),
+      makeExercise('A', 75, [
+        { id: 2, isDone: true },
+        { id: 4, isDone: false },
+      ]),
+    ];
+    expect(resolveRestTimerStart(exercises, 5)).toEqual({ shouldStart: true, restSeconds: 75 });
+    expect(resolveRestTimerStart(exercises, 3)).toEqual({ shouldStart: false });
+    expect(resolveRestTimerStart(exercises, 1)).toEqual({ shouldStart: true, restSeconds: 75 });
+  });
+
   test('exercises of other groups and standalone exercises are ignored', () => {
     const exercises = [
       makeExercise('A', 45, [{ id: 1, isDone: true }]),

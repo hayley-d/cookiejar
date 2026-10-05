@@ -31,10 +31,7 @@ export function resolveRestTimerStart(exercises: readonly RestExercise[], ticked
   }
 
   const groupMembers = exercises.filter((exercise) => exercise.supersetGroup === tickedExercise.supersetGroup);
-  const lastMember = groupMembers[groupMembers.length - 1];
-  if (lastMember !== tickedExercise) {
-    return doesNotStart;
-  }
+  const lastMember = groupMembers[groupMembers.length - 1] ?? tickedExercise;
 
   const isRoundComplete = groupMembers.every((member) => {
     const memberSet = member.sets[tickedSetIndex];
