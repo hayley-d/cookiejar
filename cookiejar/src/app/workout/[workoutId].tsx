@@ -4,6 +4,7 @@ import { IconButton } from '@/components/atoms/IconButton';
 import { EmptyState } from '@/components/molecules/EmptyState';
 import { ClassWorkoutDetail } from '@/components/organisms/ClassWorkoutDetail';
 import { IndividualWorkoutDetail } from '@/components/organisms/IndividualWorkoutDetail';
+import { useStartSession } from '@/hooks/useStartSession';
 import { useWorkoutWithItems } from '@/hooks/useWorkoutWithItems';
 import { toLocalDateString } from '@/dates/toLocalDateString';
 
@@ -29,6 +30,7 @@ export default function WorkoutDetailScreen() {
   } = useLocalSearchParams<WorkoutDetailParameters>();
   const workoutId = Number(workoutIdParameter);
   const workoutLookup = useWorkoutWithItems(workoutId);
+  const { startSession } = useStartSession();
 
   if (workoutLookup.status === 'missing' || workoutLookup.status === 'failed') {
     return (
@@ -53,6 +55,7 @@ export default function WorkoutDetailScreen() {
   const { workout } = workoutLookup;
   const date = dateParameter ?? toLocalDateString(new Date());
   const planEntryId = parseOptionalInteger(planEntryIdParameter);
+  const startWorkout = () => void startSession({ workoutId: workout.id, date, planEntryId });
 
   return (
     <>
@@ -71,9 +74,9 @@ export default function WorkoutDetailScreen() {
         }}
       />
       {workout.kind === 'individual' ? (
-        <IndividualWorkoutDetail workout={workout} date={date} planEntryId={planEntryId} />
+        <IndividualWorkoutDetail workout={workout} onStart={startWorkout} />
       ) : (
-        <ClassWorkoutDetail workout={workout} date={date} planEntryId={planEntryId} />
+        <ClassWorkoutDetail workout={workout} onStart={startWorkout} />
       )}
     </>
   );

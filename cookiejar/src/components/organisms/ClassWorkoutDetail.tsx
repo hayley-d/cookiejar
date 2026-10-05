@@ -8,15 +8,13 @@ import { chooseNuggie } from '@/nuggies/chooseNuggie';
 import { useTheme } from '@/theme/useTheme';
 import { classTypeLabels } from '@/types/ClassType';
 import type { WorkoutWithItems } from '@/types/WorkoutWithItems';
-import { startWorkout } from '@/workouts/startWorkout';
 
 type ClassWorkoutDetailProperties = {
   workout: WorkoutWithItems;
-  date: string;
-  planEntryId: number | null;
+  onStart: () => void;
 };
 
-export function ClassWorkoutDetail({ workout, date, planEntryId }: ClassWorkoutDetailProperties) {
+export function ClassWorkoutDetail({ workout, onStart }: ClassWorkoutDetailProperties) {
   const theme = useTheme();
   const nuggie =
     workout.classType === null
@@ -42,10 +40,7 @@ export function ClassWorkoutDetail({ workout, date, planEntryId }: ClassWorkoutD
         background="background"
         style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}
       >
-        <Button
-          label="START CLASS"
-          onPress={() => startWorkout({ workoutId: workout.id, date, planEntryId })}
-        />
+        <Button label="START CLASS" onPress={onStart} />
       </Box>
     </Box>
   );

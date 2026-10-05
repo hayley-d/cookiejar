@@ -8,14 +8,12 @@ import { useTheme } from '@/theme/useTheme';
 import { bodyPartLabels } from '@/types/BodyPart';
 import type { WorkoutWithItems } from '@/types/WorkoutWithItems';
 import { estimateMinutesForWorkoutWithItems } from '@/workouts/estimateWorkoutMinutes';
-import { startWorkout } from '@/workouts/startWorkout';
 import { toSupersetCardPositions } from '@/workouts/supersetCardPositions';
 import { workoutNuggie } from '@/workouts/workoutNuggie';
 
 type IndividualWorkoutDetailProperties = {
   workout: WorkoutWithItems;
-  date: string;
-  planEntryId: number | null;
+  onStart: () => void;
 };
 
 function describeSummary(workout: WorkoutWithItems): string {
@@ -34,7 +32,7 @@ function describeSummary(workout: WorkoutWithItems): string {
   return parts.join(' · ');
 }
 
-export function IndividualWorkoutDetail({ workout, date, planEntryId }: IndividualWorkoutDetailProperties) {
+export function IndividualWorkoutDetail({ workout, onStart }: IndividualWorkoutDetailProperties) {
   const theme = useTheme();
   const positions = toSupersetCardPositions(workout.items);
 
@@ -64,10 +62,7 @@ export function IndividualWorkoutDetail({ workout, date, planEntryId }: Individu
         background="background"
         style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}
       >
-        <Button
-          label="START WORKOUT"
-          onPress={() => startWorkout({ workoutId: workout.id, date, planEntryId })}
-        />
+        <Button label="START WORKOUT" onPress={onStart} />
       </Box>
     </Box>
   );

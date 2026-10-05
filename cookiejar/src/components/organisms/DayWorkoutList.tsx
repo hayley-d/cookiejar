@@ -7,11 +7,11 @@ import { Box } from '@/components/primitives/Box';
 import { Typography } from '@/components/primitives/Typography';
 import type { ScheduledWorkoutsForDateLookup } from '@/plans/scheduledWeekCache';
 import type { ScheduledWorkout } from '@/types/ScheduledWorkout';
-import { startWorkout } from '@/workouts/startWorkout';
 
 type DayWorkoutListProperties = {
   lookup: ScheduledWorkoutsForDateLookup;
   today: string;
+  onStartWorkout: (scheduledWorkout: ScheduledWorkout) => void;
 };
 
 function openWorkout(scheduledWorkout: ScheduledWorkout) {
@@ -29,15 +29,7 @@ function openWorkout(scheduledWorkout: ScheduledWorkout) {
   });
 }
 
-function startScheduledWorkout(scheduledWorkout: ScheduledWorkout) {
-  const workoutId = scheduledWorkout.workout.id;
-  if (workoutId === null) {
-    return;
-  }
-  startWorkout({ workoutId, date: scheduledWorkout.date, planEntryId: scheduledWorkout.planEntryId });
-}
-
-export function DayWorkoutList({ lookup, today }: DayWorkoutListProperties) {
+export function DayWorkoutList({ lookup, today, onStartWorkout }: DayWorkoutListProperties) {
   if (lookup.status === 'loading') {
     return (
       <Box paddingHorizontal="medium">
@@ -71,7 +63,7 @@ export function DayWorkoutList({ lookup, today }: DayWorkoutListProperties) {
           scheduledWorkout={scheduledWorkout}
           today={today}
           onPress={() => openWorkout(scheduledWorkout)}
-          onStart={() => startScheduledWorkout(scheduledWorkout)}
+          onStart={() => onStartWorkout(scheduledWorkout)}
         />
       ))}
     </Box>

@@ -14,9 +14,11 @@ import { toLocalDateString } from '@/dates/toLocalDateString';
 import { monthLabelForWeek } from '@/dates/weekPages';
 import { useScheduledWeeks } from '@/hooks/useScheduledWeeks';
 import { useSelectedDate } from '@/hooks/useSelectedDate';
+import { useStartSession } from '@/hooks/useStartSession';
 import { useWeekPages } from '@/hooks/useWeekPages';
 import { dayMarkerState } from '@/plans/dayMarkerState';
 import { useTheme } from '@/theme/useTheme';
+import type { ScheduledWorkout } from '@/types/ScheduledWorkout';
 
 export default function CalendarScreen() {
   const theme = useTheme();
@@ -35,6 +37,18 @@ export default function CalendarScreen() {
   const { selectedDate, selectDate, followVisibleWeek } = useSelectedDate(todayDate);
   const { lookupDate } = useScheduledWeeks(visibleWeekStart);
   const weekStripReference = useRef<WeekStripHandle>(null);
+  const { startSession } = useStartSession();
+
+  const startScheduledWorkout = useCallback(
+    (scheduledWorkout: ScheduledWorkout) => {
+      const workoutId = scheduledWorkout.workout.id;
+      if (workoutId === null) {
+        return;
+      }
+      void startSession({ workoutId, date: scheduledWorkout.date, planEntryId: scheduledWorkout.planEntryId });
+    },
+    [startSession],
+  );
 
   const changeVisibleWeek = useCallback(
     (weekStart: string) => {
@@ -92,7 +106,11 @@ export default function CalendarScreen() {
           </Typography>
         </Box>
         <ScrollBox gap="medium" padding="none">
-          <DayWorkoutList lookup={lookupDate(selectedDate)} today={todayDate} />
+          <DayWorkoutList
+            lookup={lookupDate(selectedDate)}
+            today={todayDate}
+            onStartWorkout={startScheduledWorkout}
+          />
         </ScrollBox>
       </Box>
     </SafeAreaView>
