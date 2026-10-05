@@ -4,36 +4,37 @@ import { useEffect, useState } from 'react';
 import { getProfile } from '@/database/repositories/profileRepository';
 import { useFocusReloadKey } from '@/hooks/useFocusReloadKey';
 import { useDataVersion } from '@/stores/dataVersionStore';
+import type { Profile } from '@/types/Profile';
 
-export type ProfileSummary = {
-  displayName: string | null;
-  dailyStepGoal: number;
-  weeklyWorkoutTarget: number;
+export type ProfileState = Profile & {
+  isLoaded: boolean;
 };
 
-const defaultDailyStepGoal = 10000;
-const defaultWeeklyWorkoutTarget = 4;
+const defaultProfileState: ProfileState = {
+  id: 1,
+  displayName: null,
+  birthDate: null,
+  sex: null,
+  heightCentimetres: null,
+  goal: null,
+  weeklyWorkoutTarget: 4,
+  dailyStepGoal: 10000,
+  updatedAt: '',
+  isLoaded: false,
+};
 
-export function useProfile(): ProfileSummary {
+export function useProfile(): ProfileState {
   const database = useSQLiteContext();
   const dataVersion = useDataVersion();
   const focusCount = useFocusReloadKey();
-  const [profileSummary, setProfileSummary] = useState<ProfileSummary>({
-    displayName: null,
-    dailyStepGoal: defaultDailyStepGoal,
-    weeklyWorkoutTarget: defaultWeeklyWorkoutTarget,
-  });
+  const [profileState, setProfileState] = useState<ProfileState>(defaultProfileState);
 
   useEffect(() => {
     let isActive = true;
     getProfile(database).then(
       (profile) => {
         if (isActive && profile) {
-          setProfileSummary({
-            displayName: profile.displayName,
-            dailyStepGoal: profile.dailyStepGoal,
-            weeklyWorkoutTarget: profile.weeklyWorkoutTarget,
-          });
+          setProfileState({ ...profile, isLoaded: true });
         }
       },
       () => {},
@@ -43,5 +44,5 @@ export function useProfile(): ProfileSummary {
     };
   }, [database, dataVersion, focusCount]);
 
-  return profileSummary;
+  return profileState;
 }

@@ -13,6 +13,7 @@ type TimePickerBoxProperties = {
   mode?: TimePickerBoxMode;
   display?: TimePickerBoxDisplay;
   minimumDate?: Date;
+  maximumDate?: Date;
 };
 
 export function TimePickerBox({
@@ -22,6 +23,7 @@ export function TimePickerBox({
   mode = 'time',
   display = 'compact',
   minimumDate,
+  maximumDate,
 }: TimePickerBoxProperties) {
   const theme = useTheme();
 
@@ -31,6 +33,7 @@ export function TimePickerBox({
       mode={mode}
       display={display}
       minimumDate={minimumDate}
+      maximumDate={maximumDate}
       accentColor={theme.colors.accent}
       textColor={theme.colors.textPrimary}
       themeVariant={theme.colorScheme}

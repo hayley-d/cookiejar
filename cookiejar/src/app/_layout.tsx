@@ -79,6 +79,10 @@ export default function RootLayout() {
                 name="exercises/[exerciseId]"
                 options={{ title: 'Edit exercise', headerLargeTitleEnabled: false }}
               />
+              <Stack.Screen
+                name="profile/edit"
+                options={{ presentation: 'modal', title: 'Edit profile', headerLargeTitleEnabled: false }}
+              />
               <Stack.Screen name="stats/[metric]" options={{ title: '', headerLargeTitleEnabled: false }} />
               <Stack.Screen name="workout/[workoutId]" options={{ title: '', headerLargeTitleEnabled: false }} />
               <Stack.Screen name="workouts" options={{ presentation: 'modal', headerShown: false }} />
