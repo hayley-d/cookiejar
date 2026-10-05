@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { getSessionWithExercises, listCompletedSetsForExercises } from '@/database/repositories/sessionRepository';
 import { detectPersonalRecords, type PersonalRecord } from '@/progress/detectPersonalRecords';
 import { flattenCompletedSets } from '@/progress/flattenCompletedSets';
+import { useDataVersion } from '@/stores/dataVersionStore';
 import type { SessionWithExercises } from '@/types/SessionWithExercises';
 
 export type FinishedSessionLookup =
@@ -20,6 +21,7 @@ type LoadedFinishedSession = {
 export function useFinishedSession(sessionId: number): FinishedSessionLookup {
   const database = useSQLiteContext();
   const [loaded, setLoaded] = useState<LoadedFinishedSession | null>(null);
+  const dataVersion = useDataVersion();
 
   useEffect(() => {
     let isActive = true;
@@ -51,7 +53,7 @@ export function useFinishedSession(sessionId: number): FinishedSessionLookup {
     return () => {
       isActive = false;
     };
-  }, [database, sessionId]);
+  }, [database, sessionId, dataVersion]);
 
   if (!Number.isInteger(sessionId)) {
     return { status: 'missing' };

@@ -94,6 +94,15 @@ export default function RootLayout() {
                 options={{ title: 'Summary', headerLargeTitleEnabled: false }}
               />
               <Stack.Screen
+                name="sessions/[sessionId]/link-health-workout"
+                options={{
+                  presentation: 'formSheet',
+                  headerShown: false,
+                  sheetAllowedDetents: [0.6, 1],
+                  sheetGrabberVisible: true,
+                }}
+              />
+              <Stack.Screen
                 name="exercises/picker"
                 options={{ presentation: 'fullScreenModal', headerShown: false }}
               />

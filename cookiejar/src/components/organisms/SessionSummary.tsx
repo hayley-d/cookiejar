@@ -1,5 +1,6 @@
 import { Button } from '@/components/atoms/Button';
 import { NuggieImage } from '@/components/atoms/NuggieImage';
+import { LinkedHealthWorkoutRow } from '@/components/molecules/LinkedHealthWorkoutRow';
 import { PersonalRecordRow } from '@/components/molecules/PersonalRecordRow';
 import { StatTile } from '@/components/molecules/StatTile';
 import { Box } from '@/components/primitives/Box';
@@ -14,7 +15,7 @@ import { describeExerciseBestSet } from '@/sessions/describeExerciseBestSet';
 import { formatSessionDuration, formatSetCount, formatVolume } from '@/sessions/formatSessionValues';
 import type { SessionWithExercises } from '@/types/SessionWithExercises';
 
-const isGarminLinkEnabled = false;
+const isGarminLinkEnabled = true;
 const nuggieSize = 96;
 
 type SessionSummaryProperties = {
@@ -23,9 +24,11 @@ type SessionSummaryProperties = {
   nuggie: NuggieName;
   now: Date;
   onDone: () => void;
+  onLinkGarmin: () => void;
+  onUnlinkGarmin: () => void;
 };
 
-export function SessionSummary({ session, personalRecords, nuggie, now, onDone }: SessionSummaryProperties) {
+export function SessionSummary({ session, personalRecords, nuggie, now, onDone, onLinkGarmin, onUnlinkGarmin }: SessionSummaryProperties) {
   const totals = calculateSessionTotals(session, now);
   const bestRecords = selectBestRecordPerExercise(personalRecords);
   const exerciseNames = new Map(
@@ -82,7 +85,18 @@ export function SessionSummary({ session, personalRecords, nuggie, now, onDone }
           })}
         </Box>
       )}
-      {isGarminLinkEnabled ? <Button label="Link Garmin workout" variant="secondary" onPress={() => undefined} /> : null}
+      {isGarminLinkEnabled && session.healthWorkoutUuid === null ? (
+        <Button label="Link Garmin workout" variant="secondary" onPress={onLinkGarmin} />
+      ) : null}
+      {session.healthWorkoutUuid === null ? null : (
+        <LinkedHealthWorkoutRow
+          averageHeartRate={session.healthAverageHeartRate}
+          maximumHeartRate={session.healthMaximumHeartRate}
+          activeKilocalories={session.healthActiveKilocalories}
+          durationSeconds={session.healthDurationSeconds}
+          onUnlink={onUnlinkGarmin}
+        />
+      )}
       {trimmedNotes.length === 0 ? null : (
         <Box gap="small">
           <Typography variant="heading">Notes</Typography>
