@@ -1,17 +1,10 @@
-import type { HealthWorkout } from "@/health/HealthTypes";
-import { isGarminSource } from "@/health/isGarminSource";
+import type { HealthWorkout } from '@/health/HealthTypes';
+import { isGarminSource } from '@/health/isGarminSource';
 
 const minimumOverlapFraction = 0.5;
 
-function overlapMilliseconds(
-  workout: HealthWorkout,
-  sessionStart: Date,
-  sessionEnd: Date,
-): number {
-  const overlapStart = Math.max(
-    workout.startDate.getTime(),
-    sessionStart.getTime(),
-  );
+function overlapMilliseconds(workout: HealthWorkout, sessionStart: Date, sessionEnd: Date): number {
+  const overlapStart = Math.max(workout.startDate.getTime(), sessionStart.getTime());
   const overlapEnd = Math.min(workout.endDate.getTime(), sessionEnd.getTime());
   return Math.max(0, overlapEnd - overlapStart);
 }
@@ -28,9 +21,7 @@ export function findSuggestedHealthWorkout(
   const qualifyingWorkouts = workouts.filter(
     (workout) =>
       isGarminSource(workout) &&
-      overlapMilliseconds(workout, sessionStart, sessionEnd) /
-        sessionMilliseconds >=
-        minimumOverlapFraction,
+      overlapMilliseconds(workout, sessionStart, sessionEnd) / sessionMilliseconds >= minimumOverlapFraction,
   );
   return qualifyingWorkouts.length === 1 ? qualifyingWorkouts[0] : null;
 }
