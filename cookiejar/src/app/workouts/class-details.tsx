@@ -17,11 +17,13 @@ export default function ClassDetailsScreen() {
   const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
   const classDetails = state.classDetails ?? defaultClassDetails;
   const imageUrlProblem = imageUrlError(classDetails.imageUrl);
+  const isEditingSavedWorkout = state.workoutId !== null;
+  const nameError = workoutNameError(state.name);
   const errors: ClassDetailsErrors = hasAttemptedSave && imageUrlProblem !== null ? { imageUrl: imageUrlProblem } : {};
 
   const save = async () => {
     setHasAttemptedSave(true);
-    if (imageUrlProblem !== null || workoutNameError(state.name) !== null) {
+    if (imageUrlProblem !== null || nameError !== null) {
       return;
     }
     await saveEditorState(state);
@@ -31,10 +33,21 @@ export default function ClassDetailsScreen() {
     <>
       <Stack.Screen
         options={{
-          headerRight: () => <TextButton label="Save" onPress={save} disabled={isSaving} />,
+          headerRight: () => (
+            <TextButton label="Save" onPress={save} disabled={isSaving || nameError !== null} />
+          ),
         }}
       />
       <ClassDetailsForm
+        workoutName={
+          isEditingSavedWorkout
+            ? {
+                name: state.name,
+                error: nameError,
+                onChangeName: (name) => dispatch({ type: 'renamed', name }),
+              }
+            : undefined
+        }
         classDetails={classDetails}
         errors={errors}
         onChangeClassDetails={(changes) => dispatch({ type: 'classDetailsChanged', changes })}

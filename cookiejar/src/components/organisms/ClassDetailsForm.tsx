@@ -2,6 +2,7 @@ import { ChipGroup } from '@/components/molecules/ChipGroup';
 import { FormField } from '@/components/molecules/FormField';
 import { ImageUrlField } from '@/components/molecules/ImageUrlField';
 import { Stepper } from '@/components/molecules/Stepper';
+import { WorkoutNameField, type WorkoutNameFieldProperties } from '@/components/molecules/WorkoutNameField';
 import { ScrollBox } from '@/components/primitives/ScrollBox';
 import { TextField } from '@/components/primitives/TextField';
 import { classTypeLabels, classTypes } from '@/types/ClassType';
@@ -13,6 +14,7 @@ export type ClassDetailsErrors = {
 };
 
 type ClassDetailsFormProperties = {
+  workoutName?: WorkoutNameFieldProperties;
   classDetails: ClassDetails;
   errors: ClassDetailsErrors;
   onChangeClassDetails: (changes: Partial<ClassDetails>) => void;
@@ -33,9 +35,15 @@ function formatMinutes(minutes: number) {
   return `${minutes} min`;
 }
 
-export function ClassDetailsForm({ classDetails, errors, onChangeClassDetails }: ClassDetailsFormProperties) {
+export function ClassDetailsForm({
+  workoutName,
+  classDetails,
+  errors,
+  onChangeClassDetails,
+}: ClassDetailsFormProperties) {
   return (
     <ScrollBox gap="large">
+      {workoutName === undefined ? null : <WorkoutNameField {...workoutName} />}
       <FormField label="Class type">
         <ChipGroup
           options={classTypeOptions}

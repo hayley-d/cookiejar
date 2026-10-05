@@ -1,11 +1,13 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 
 import { EmptyState } from '@/components/molecules/EmptyState';
+import { WorkoutNameField } from '@/components/molecules/WorkoutNameField';
 import { ExerciseEditorCard } from '@/components/organisms/ExerciseEditorCard';
 import { ReorderableExerciseList } from '@/components/organisms/ReorderableExerciseList';
 import { WorkoutEditorFooter } from '@/components/organisms/WorkoutEditorFooter';
 import { Box } from '@/components/primitives/Box';
 import { useExercisePicks } from '@/hooks/useExercisePicks';
+import { useReorderingSheetLock } from '@/hooks/useReorderingSheetLock';
 import { useSaveWorkout } from '@/hooks/useSaveWorkout';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useWorkoutEditor } from '@/hooks/useWorkoutEditor';
@@ -20,6 +22,7 @@ export default function WorkoutEditorScreen() {
   const { state, dispatch } = useWorkoutEditor();
   const { isSaving, save: saveEditorState } = useSaveWorkout();
   useUnsavedChangesGuard(state.hasUnsavedChanges);
+  const setIsReordering = useReorderingSheetLock();
   const { isLoadingPick, addExercises, replaceExercise } = useExercisePicks({
     shouldPickOnOpen: pickOnOpen === 'true' && state.items.length === 0,
     dispatch,
@@ -29,10 +32,12 @@ export default function WorkoutEditorScreen() {
     state.items.filter((item) => item.key !== itemKey).map((item) => item.exercise.id);
 
   const supersetPositions = toSupersetCardPositions(state.items);
-  const canSave = state.items.length > 0 && !isSaving;
+  const isEditingSavedWorkout = state.workoutId !== null;
+  const nameError = workoutNameError(state.name);
+  const canSave = state.items.length > 0 && !isSaving && nameError === null;
 
   const save = async () => {
-    if (!canSave || workoutNameError(state.name) !== null) {
+    if (!canSave) {
       return;
     }
     await saveEditorState(state);
@@ -42,6 +47,15 @@ export default function WorkoutEditorScreen() {
     <>
       <Stack.Screen options={{ title: state.name.trim() }} />
       <Box flex={1}>
+        {isEditingSavedWorkout ? (
+          <Box paddingHorizontal="medium" paddingVertical="small">
+            <WorkoutNameField
+              name={state.name}
+              error={nameError}
+              onChangeName={(name) => dispatch({ type: 'renamed', name })}
+            />
+          </Box>
+        ) : null}
         {state.items.length === 0 ? (
           isLoadingPick ? null : (
             <EmptyState
@@ -56,6 +70,7 @@ export default function WorkoutEditorScreen() {
           <ReorderableExerciseList
             blocks={groupIntoBlocks(state.items)}
             onReorder={(blockKeys) => dispatch({ type: 'itemsReordered', blockKeys })}
+            onDraggingChange={setIsReordering}
             renderItem={(item, itemIndex, dragHandle) => (
               <ExerciseEditorCard
                 item={item}

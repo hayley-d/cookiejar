@@ -15,6 +15,7 @@ export function WorkoutEditorProvider({ children }: WorkoutEditorProviderPropert
   const [workoutEditorReducer] = useState(() => createWorkoutEditorReducer(createKeyCounter('editor')));
   const [state, dispatch] = useReducer(workoutEditorReducer, initialWorkoutEditorState);
   const [isLeavingPermitted, setIsLeavingPermitted] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
   const pendingLeave = useRef<(() => void) | null>(null);
 
   const leaveWithoutPrompt = useCallback((leave: () => void) => {
@@ -32,8 +33,8 @@ export function WorkoutEditorProvider({ children }: WorkoutEditorProviderPropert
   }, [isLeavingPermitted]);
 
   const workoutEditor = useMemo(
-    () => ({ state, dispatch, isLeavingPermitted, leaveWithoutPrompt }),
-    [state, isLeavingPermitted, leaveWithoutPrompt],
+    () => ({ state, dispatch, isLeavingPermitted, leaveWithoutPrompt, isReordering, setIsReordering }),
+    [state, isLeavingPermitted, leaveWithoutPrompt, isReordering],
   );
 
   return <WorkoutEditorContext.Provider value={workoutEditor}>{children}</WorkoutEditorContext.Provider>;

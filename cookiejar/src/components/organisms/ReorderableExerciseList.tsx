@@ -21,6 +21,7 @@ import type { EditorItem } from '@/workouts/workoutEditorReducer';
 type ReorderableExerciseListProperties = {
   blocks: ItemBlock<EditorItem>[];
   onReorder: (blockKeys: string[]) => void;
+  onDraggingChange: (isDragging: boolean) => void;
   renderItem: (item: EditorItem, itemIndex: number, dragHandle: ReactNode) => ReactNode;
 };
 
@@ -33,7 +34,12 @@ function describeBlock(block: ItemBlock<EditorItem>) {
   return block.supersetGroup === null ? exerciseNames : `${block.supersetGroup} · ${exerciseNames}`;
 }
 
-export function ReorderableExerciseList({ blocks, onReorder, renderItem }: ReorderableExerciseListProperties) {
+export function ReorderableExerciseList({
+  blocks,
+  onReorder,
+  onDraggingChange,
+  renderItem,
+}: ReorderableExerciseListProperties) {
   const theme = useTheme();
   const [viewportFrame, setViewportFrame] = useState<WindowFrame>({ top: 0, height: 0 });
   const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
@@ -82,6 +88,7 @@ export function ReorderableExerciseList({ blocks, onReorder, renderItem }: Reord
 
     const startDrag = (blockKey: string, fromIndex: number, pointerWindowY: number) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onDraggingChange(true);
       setActiveDrag({
         blockKey,
         fromIndex,
@@ -103,6 +110,7 @@ export function ReorderableExerciseList({ blocks, onReorder, renderItem }: Reord
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       const finishedDrag = finishedDragReference.current;
       setActiveDrag(null);
+      onDraggingChange(false);
       if (!didComplete || finishedDrag === null) {
         return;
       }
@@ -131,7 +139,7 @@ export function ReorderableExerciseList({ blocks, onReorder, renderItem }: Reord
         )}
       </Fragment>
     ));
-  }, [blocks, onReorder, renderItem, rowHeight]);
+  }, [blocks, onReorder, onDraggingChange, renderItem, rowHeight]);
 
   const dragPosition = activeDrag === null ? null : dragViewportPosition(activeDrag, viewportTop, rowHeight);
   const blocksByKey = new Map(blocks.map((block) => [block.key, block]));

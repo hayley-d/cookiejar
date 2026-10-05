@@ -7,6 +7,8 @@ export type WorkoutEditor = {
   dispatch: Dispatch<WorkoutEditorAction>;
   isLeavingPermitted: boolean;
   leaveWithoutPrompt: (leave: () => void) => void;
+  isReordering: boolean;
+  setIsReordering: (isReordering: boolean) => void;
 };
 
 export const WorkoutEditorContext = createContext<WorkoutEditor | null>(null);
