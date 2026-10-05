@@ -1,4 +1,4 @@
-import type { TrackingType } from "@/types/TrackingType";
+import type { TrackingType } from '@/types/TrackingType';
 
 export type SessionExercise = {
   id: number;

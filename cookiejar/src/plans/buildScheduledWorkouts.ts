@@ -1,11 +1,11 @@
-import { addDays } from "@/dates/addDays";
-import { dayOfWeekNumber } from "@/dates/dayOfWeekNumber";
-import { parseLocalDateString } from "@/dates/parseLocalDateString";
-import { toLocalDateString } from "@/dates/toLocalDateString";
-import { sortByTimeOfDay } from "@/plans/timeOfDay";
-import type { ScheduledWorkout } from "@/types/ScheduledWorkout";
-import type { PlanWithEntries } from "@/types/PlanWithEntries";
-import type { SessionSummary } from "@/types/SessionSummary";
+import { addDays } from '@/dates/addDays';
+import { dayOfWeekNumber } from '@/dates/dayOfWeekNumber';
+import { parseLocalDateString } from '@/dates/parseLocalDateString';
+import { toLocalDateString } from '@/dates/toLocalDateString';
+import { sortByTimeOfDay } from '@/plans/timeOfDay';
+import type { ScheduledWorkout } from '@/types/ScheduledWorkout';
+import type { PlanWithEntries } from '@/types/PlanWithEntries';
+import type { SessionSummary } from '@/types/SessionSummary';
 
 export type BuildScheduledWorkoutsInput = {
   startDate: string;
@@ -54,7 +54,7 @@ function buildDay(
         timeOfDay: entry.timeOfDay,
         planEntryId: entry.id,
         workout: entry.workout,
-        status: "planned",
+        status: 'planned',
         sessionId: null,
       };
     }
@@ -64,7 +64,7 @@ function buildDay(
       timeOfDay: entry.timeOfDay,
       planEntryId: entry.id,
       workout: entry.workout,
-      status: matchingSession.finishedAt === null ? "inProgress" : "completed",
+      status: matchingSession.finishedAt === null ? 'inProgress' : 'completed',
       sessionId: matchingSession.id,
     };
   });
@@ -76,7 +76,7 @@ function buildDay(
       timeOfDay: null,
       planEntryId: null,
       workout: session.workout,
-      status: session.finishedAt === null ? "inProgress" : "completed",
+      status: session.finishedAt === null ? 'inProgress' : 'completed',
       sessionId: session.id,
     }));
 

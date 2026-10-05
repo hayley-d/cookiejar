@@ -1,4 +1,4 @@
-import type { ScheduledWorkoutSummary } from "@/types/ScheduledWorkout";
+import type { ScheduledWorkoutSummary } from '@/types/ScheduledWorkout';
 
 export type SessionSummary = {
   id: number;

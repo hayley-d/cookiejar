@@ -1,12 +1,12 @@
-import { useFocusEffect } from "expo-router";
-import { useSQLiteContext } from "expo-sqlite";
-import { useCallback, useEffect, useState } from "react";
+import { useFocusEffect } from 'expo-router';
+import { useSQLiteContext } from 'expo-sqlite';
+import { useCallback, useEffect, useState } from 'react';
 
-import { getActivePlanWithEntries } from "@/database/repositories/planRepository";
-import { listSessionsBetween } from "@/database/repositories/scheduleRepository";
-import { buildScheduledWorkouts } from "@/plans/buildScheduledWorkouts";
-import { useDataVersion } from "@/stores/dataVersionStore";
-import type { ScheduledWorkout } from "@/types/ScheduledWorkout";
+import { getActivePlanWithEntries } from '@/database/repositories/planRepository';
+import { listSessionsBetween } from '@/database/repositories/scheduleRepository';
+import { buildScheduledWorkouts } from '@/plans/buildScheduledWorkouts';
+import { useDataVersion } from '@/stores/dataVersionStore';
+import type { ScheduledWorkout } from '@/types/ScheduledWorkout';
 
 export function useScheduledWorkouts(startDate: string, endDate: string) {
   const database = useSQLiteContext();

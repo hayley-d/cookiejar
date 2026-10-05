@@ -1,8 +1,8 @@
-import type { SQLiteDatabase } from "expo-sqlite";
+import type { SQLiteDatabase } from 'expo-sqlite';
 
-import type { ClassType } from "@/types/ClassType";
-import type { SessionSummary } from "@/types/SessionSummary";
-import type { WorkoutKind } from "@/types/WorkoutKind";
+import type { ClassType } from '@/types/ClassType';
+import type { SessionSummary } from '@/types/SessionSummary';
+import type { WorkoutKind } from '@/types/WorkoutKind';
 
 type SessionSummaryRow = {
   id: number;

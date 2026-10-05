@@ -1,14 +1,14 @@
-import type { Workout } from "@/types/Workout";
+import type { Workout } from '@/types/Workout';
 
 export type ScheduledWorkoutSummary = Pick<
   Workout,
-  "name" | "kind" | "classType" | "durationMinutes" | "imageUrl"
+  'name' | 'kind' | 'classType' | 'durationMinutes' | 'imageUrl'
 > & {
   id: number | null;
   exerciseCount: number;
 };
 
-export type ScheduledWorkoutStatus = "planned" | "inProgress" | "completed";
+export type ScheduledWorkoutStatus = 'planned' | 'inProgress' | 'completed';
 
 export type ScheduledWorkout = {
   date: string;

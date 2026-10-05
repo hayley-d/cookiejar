@@ -1,5 +1,5 @@
-import type { ClassType } from "@/types/ClassType";
-import type { WorkoutKind } from "@/types/WorkoutKind";
+import type { ClassType } from '@/types/ClassType';
+import type { WorkoutKind } from '@/types/WorkoutKind';
 
 export type Session = {
   id: number;

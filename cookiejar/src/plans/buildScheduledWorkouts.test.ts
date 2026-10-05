@@ -1,17 +1,17 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from 'bun:test';
 
-import { buildScheduledWorkouts } from "@/plans/buildScheduledWorkouts";
+import { buildScheduledWorkouts } from '@/plans/buildScheduledWorkouts';
 import type {
   PlanEntryWithWorkout,
   PlanWithEntries,
-} from "@/types/PlanWithEntries";
-import type { SessionSummary } from "@/types/SessionSummary";
+} from '@/types/PlanWithEntries';
+import type { SessionSummary } from '@/types/SessionSummary';
 
 function makeWorkout(id: number, name: string) {
   return {
     id,
     name,
-    kind: "individual" as const,
+    kind: 'individual' as const,
     classType: null,
     durationMinutes: null,
     imageUrl: null,
@@ -42,10 +42,10 @@ function makePlan(
 ): PlanWithEntries {
   return {
     id: 1,
-    name: "Plan",
+    name: 'Plan',
     isActive: true,
     startsOn,
-    createdAt: "2026-09-01T00:00:00.000Z",
+    createdAt: '2026-09-01T00:00:00.000Z',
     entries,
   };
 }
@@ -56,7 +56,7 @@ function makeSession(
   planEntryId: number | null,
   finishedAt: string | null,
   workoutId: number | null = 1,
-  name = "Legs",
+  name = 'Legs',
 ): SessionSummary {
   return {
     id,
@@ -68,167 +68,167 @@ function makeSession(
   };
 }
 
-const mondayEntryLate = makeEntry(1, 1, "17:30", 2, "Weights");
-const mondayEntryEarly = makeEntry(2, 1, "06:00", 1, "Spin");
-const wednesdayEntry = makeEntry(3, 3, "07:00", 3, "Yoga");
+const mondayEntryLate = makeEntry(1, 1, '17:30', 2, 'Weights');
+const mondayEntryEarly = makeEntry(2, 1, '06:00', 1, 'Spin');
+const wednesdayEntry = makeEntry(3, 3, '07:00', 3, 'Yoga');
 
-describe("buildScheduledWorkouts", () => {
-  test("returns an empty list for every date when there is no active plan", () => {
+describe('buildScheduledWorkouts', () => {
+  test('returns an empty list for every date when there is no active plan', () => {
     const result = buildScheduledWorkouts({
-      startDate: "2026-10-05",
-      endDate: "2026-10-07",
+      startDate: '2026-10-05',
+      endDate: '2026-10-07',
       activePlan: null,
       sessions: [],
     });
 
     expect([...result.keys()]).toEqual([
-      "2026-10-05",
-      "2026-10-06",
-      "2026-10-07",
+      '2026-10-05',
+      '2026-10-06',
+      '2026-10-07',
     ]);
     expect([...result.values()]).toEqual([[], [], []]);
   });
 
-  test("returns nothing before the plan start date and entries from it onward", () => {
+  test('returns nothing before the plan start date and entries from it onward', () => {
     const result = buildScheduledWorkouts({
-      startDate: "2026-09-28",
-      endDate: "2026-10-05",
-      activePlan: makePlan("2026-10-05", [mondayEntryEarly]),
+      startDate: '2026-09-28',
+      endDate: '2026-10-05',
+      activePlan: makePlan('2026-10-05', [mondayEntryEarly]),
       sessions: [],
     });
 
-    expect(result.get("2026-09-28")).toEqual([]);
+    expect(result.get('2026-09-28')).toEqual([]);
     expect(
-      result.get("2026-10-05")?.map((scheduled) => scheduled.planEntryId),
+      result.get('2026-10-05')?.map((scheduled) => scheduled.planEntryId),
     ).toEqual([2]);
   });
 
-  test("orders two entries on one day by time of day", () => {
+  test('orders two entries on one day by time of day', () => {
     const result = buildScheduledWorkouts({
-      startDate: "2026-10-05",
-      endDate: "2026-10-05",
-      activePlan: makePlan("2026-10-01", [mondayEntryLate, mondayEntryEarly]),
+      startDate: '2026-10-05',
+      endDate: '2026-10-05',
+      activePlan: makePlan('2026-10-01', [mondayEntryLate, mondayEntryEarly]),
       sessions: [],
     });
 
     expect(
-      result.get("2026-10-05")?.map((scheduled) => scheduled.timeOfDay),
-    ).toEqual(["06:00", "17:30"]);
+      result.get('2026-10-05')?.map((scheduled) => scheduled.timeOfDay),
+    ).toEqual(['06:00', '17:30']);
     expect(
       result
-        .get("2026-10-05")
-        ?.every((scheduled) => scheduled.status === "planned"),
+        .get('2026-10-05')
+        ?.every((scheduled) => scheduled.status === 'planned'),
     ).toBe(true);
   });
 
-  test("marks an entry completed when its session has finished", () => {
+  test('marks an entry completed when its session has finished', () => {
     const result = buildScheduledWorkouts({
-      startDate: "2026-10-05",
-      endDate: "2026-10-05",
-      activePlan: makePlan("2026-10-01", [mondayEntryLate, mondayEntryEarly]),
-      sessions: [makeSession(10, "2026-10-05", 2, "2026-10-05T09:00:00.000Z")],
+      startDate: '2026-10-05',
+      endDate: '2026-10-05',
+      activePlan: makePlan('2026-10-01', [mondayEntryLate, mondayEntryEarly]),
+      sessions: [makeSession(10, '2026-10-05', 2, '2026-10-05T09:00:00.000Z')],
     });
 
-    const scheduledWorkouts = result.get("2026-10-05");
+    const scheduledWorkouts = result.get('2026-10-05');
     expect(scheduledWorkouts).toHaveLength(2);
     expect(scheduledWorkouts?.[0]).toMatchObject({
       planEntryId: 2,
-      status: "completed",
+      status: 'completed',
       sessionId: 10,
     });
     expect(scheduledWorkouts?.[1]).toMatchObject({
       planEntryId: 1,
-      status: "planned",
+      status: 'planned',
       sessionId: null,
     });
   });
 
-  test("marks an entry in progress when its session has not finished", () => {
+  test('marks an entry in progress when its session has not finished', () => {
     const result = buildScheduledWorkouts({
-      startDate: "2026-10-05",
-      endDate: "2026-10-05",
-      activePlan: makePlan("2026-10-01", [mondayEntryEarly]),
-      sessions: [makeSession(11, "2026-10-05", 2, null)],
+      startDate: '2026-10-05',
+      endDate: '2026-10-05',
+      activePlan: makePlan('2026-10-01', [mondayEntryEarly]),
+      sessions: [makeSession(11, '2026-10-05', 2, null)],
     });
 
-    expect(result.get("2026-10-05")).toEqual([
+    expect(result.get('2026-10-05')).toEqual([
       expect.objectContaining({
         planEntryId: 2,
-        status: "inProgress",
+        status: 'inProgress',
         sessionId: 11,
       }),
     ]);
   });
 
-  test("lists an unplanned session after planned entries", () => {
+  test('lists an unplanned session after planned entries', () => {
     const result = buildScheduledWorkouts({
-      startDate: "2026-10-05",
-      endDate: "2026-10-05",
-      activePlan: makePlan("2026-10-01", [mondayEntryLate, mondayEntryEarly]),
+      startDate: '2026-10-05',
+      endDate: '2026-10-05',
+      activePlan: makePlan('2026-10-01', [mondayEntryLate, mondayEntryEarly]),
       sessions: [
         makeSession(
           12,
-          "2026-10-05",
+          '2026-10-05',
           null,
-          "2026-10-05T07:00:00.000Z",
+          '2026-10-05T07:00:00.000Z',
           null,
-          "Ad hoc",
+          'Ad hoc',
         ),
       ],
     });
 
-    const scheduledWorkouts = result.get("2026-10-05");
+    const scheduledWorkouts = result.get('2026-10-05');
     expect(
       scheduledWorkouts?.map((scheduled) => scheduled.planEntryId),
     ).toEqual([2, 1, null]);
     expect(scheduledWorkouts?.[2]).toMatchObject({
       timeOfDay: null,
-      status: "completed",
+      status: 'completed',
       sessionId: 12,
-      workout: { name: "Ad hoc" },
+      workout: { name: 'Ad hoc' },
     });
   });
 
-  test("shows a session with no active plan as unplanned", () => {
+  test('shows a session with no active plan as unplanned', () => {
     const result = buildScheduledWorkouts({
-      startDate: "2026-10-05",
-      endDate: "2026-10-05",
+      startDate: '2026-10-05',
+      endDate: '2026-10-05',
       activePlan: null,
-      sessions: [makeSession(13, "2026-10-05", null, null)],
+      sessions: [makeSession(13, '2026-10-05', null, null)],
     });
 
-    expect(result.get("2026-10-05")).toEqual([
+    expect(result.get('2026-10-05')).toEqual([
       expect.objectContaining({
         planEntryId: null,
-        status: "inProgress",
+        status: 'inProgress',
         sessionId: 13,
       }),
     ]);
   });
 
-  test("builds a week that crosses a month boundary", () => {
+  test('builds a week that crosses a month boundary', () => {
     const result = buildScheduledWorkouts({
-      startDate: "2026-09-28",
-      endDate: "2026-10-04",
-      activePlan: makePlan("2026-09-01", [mondayEntryEarly, wednesdayEntry]),
+      startDate: '2026-09-28',
+      endDate: '2026-10-04',
+      activePlan: makePlan('2026-09-01', [mondayEntryEarly, wednesdayEntry]),
       sessions: [],
     });
 
     expect([...result.keys()]).toEqual([
-      "2026-09-28",
-      "2026-09-29",
-      "2026-09-30",
-      "2026-10-01",
-      "2026-10-02",
-      "2026-10-03",
-      "2026-10-04",
+      '2026-09-28',
+      '2026-09-29',
+      '2026-09-30',
+      '2026-10-01',
+      '2026-10-02',
+      '2026-10-03',
+      '2026-10-04',
     ]);
     expect(
-      result.get("2026-09-28")?.map((scheduled) => scheduled.planEntryId),
+      result.get('2026-09-28')?.map((scheduled) => scheduled.planEntryId),
     ).toEqual([2]);
     expect(
-      result.get("2026-09-30")?.map((scheduled) => scheduled.planEntryId),
+      result.get('2026-09-30')?.map((scheduled) => scheduled.planEntryId),
     ).toEqual([3]);
-    expect(result.get("2026-10-01")).toEqual([]);
+    expect(result.get('2026-10-01')).toEqual([]);
   });
 });
