@@ -108,6 +108,11 @@ export const sizes = {
   previousColumn: 72,
   coachButton: 64,
   healthPermissionNuggie: 72,
+  todayCardWidthRatio: 0.82,
+  todayCardImageHeight: 180,
+  todayCardNuggie: 120,
+  todayCardActiveBorderWidth: 2,
+  pageDot: 8,
 };
 
 export const durations = {
