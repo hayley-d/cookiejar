@@ -2,8 +2,10 @@ import type { InsightRule } from '@/coach/Insight';
 import { elevatedRestingHeartRate } from '@/coach/rules/elevatedRestingHeartRate';
 import { lowSleep } from '@/coach/rules/lowSleep';
 import { missedSessions } from '@/coach/rules/missedSessions';
+import { muscleBalance } from '@/coach/rules/muscleBalance';
 import { newPersonalRecords } from '@/coach/rules/newPersonalRecords';
 import { noData } from '@/coach/rules/noData';
+import { noRecentWeighIn } from '@/coach/rules/noRecentWeighIn';
 import { plateau } from '@/coach/rules/plateau';
 import { recoveryGood } from '@/coach/rules/recoveryGood';
 import { stalePlan } from '@/coach/rules/stalePlan';
@@ -25,4 +27,6 @@ export const insightRules: readonly InsightRule[] = [
   lowSleep,
   elevatedRestingHeartRate,
   recoveryGood,
+  muscleBalance,
+  noRecentWeighIn,
 ];
