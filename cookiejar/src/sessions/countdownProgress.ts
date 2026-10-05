@@ -2,12 +2,11 @@ const millisecondsPerSecond = 1000;
 
 export type CountdownPlan = { direction: 'down'; startSeconds: number } | { direction: 'up' };
 
-export function planCountdown(targetSeconds: number | null, currentSeconds: number | null): CountdownPlan {
-  const startSeconds = targetSeconds !== null && targetSeconds > 0 ? targetSeconds : currentSeconds;
-  if (startSeconds === null || startSeconds <= 0) {
+export function planCountdown(targetSeconds: number | null): CountdownPlan {
+  if (targetSeconds === null || targetSeconds <= 0) {
     return { direction: 'up' };
   }
-  return { direction: 'down', startSeconds };
+  return { direction: 'down', startSeconds: targetSeconds };
 }
 
 export function elapsedSecondsSince(startedAtMilliseconds: number, nowMilliseconds: number): number {

@@ -1,6 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { resolveSessionStart, type ExistingPlanEntrySession } from '@/sessions/resolveSessionStart';
+import type { PreviousSessionSet } from '@/sessions/describePreviousSet';
 import type { SetValues } from '@/sessions/fillSetForTick';
 import type { ClassType } from '@/types/ClassType';
 import type { SessionSet } from '@/types/SessionSet';
@@ -310,6 +311,7 @@ type PreviousSessionExerciseRow = {
 };
 
 type PreviousSessionSetRow = {
+  position: number;
   repetitions: number | null;
   weight_kilograms: number | null;
   duration_seconds: number | null;
@@ -320,7 +322,7 @@ export async function getPreviousSessionSets(
   database: SQLiteDatabase,
   exerciseId: number,
   beforeSessionId: number,
-): Promise<SetValues[]> {
+): Promise<PreviousSessionSet[]> {
   const previousExercise = await database.getFirstAsync<PreviousSessionExerciseRow>(
     `SELECT session_exercises.id
     FROM session_exercises
@@ -339,13 +341,14 @@ export async function getPreviousSessionSets(
     return [];
   }
   const setRows = await database.getAllAsync<PreviousSessionSetRow>(
-    `SELECT repetitions, weight_kilograms, duration_seconds, distance_meters
+    `SELECT position, repetitions, weight_kilograms, duration_seconds, distance_meters
     FROM session_sets
     WHERE session_exercise_id = ? AND completed_at IS NOT NULL
     ORDER BY position, id`,
     previousExercise.id,
   );
   return setRows.map((setRow) => ({
+    position: setRow.position,
     repetitions: setRow.repetitions,
     weightKilograms: setRow.weight_kilograms,
     durationSeconds: setRow.duration_seconds,

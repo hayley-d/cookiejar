@@ -10,20 +10,12 @@ import {
 
 describe('planCountdown', () => {
   test('counts down from the target', () => {
-    expect(planCountdown(60, null)).toEqual({ direction: 'down', startSeconds: 60 });
+    expect(planCountdown(60)).toEqual({ direction: 'down', startSeconds: 60 });
   });
 
-  test('counts down from the current value when there is no target', () => {
-    expect(planCountdown(null, 45)).toEqual({ direction: 'down', startSeconds: 45 });
-  });
-
-  test('prefers the target over the current value', () => {
-    expect(planCountdown(60, 45)).toEqual({ direction: 'down', startSeconds: 60 });
-  });
-
-  test('counts up with no target and no value', () => {
-    expect(planCountdown(null, null)).toEqual({ direction: 'up' });
-    expect(planCountdown(0, 0)).toEqual({ direction: 'up' });
+  test('counts up with no target', () => {
+    expect(planCountdown(null)).toEqual({ direction: 'up' });
+    expect(planCountdown(0)).toEqual({ direction: 'up' });
   });
 });
 

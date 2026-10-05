@@ -7,6 +7,7 @@ import { Box } from '@/components/primitives/Box';
 import { ScrollBox } from '@/components/primitives/ScrollBox';
 import { Typography } from '@/components/primitives/Typography';
 import { useRestTimer } from '@/hooks/useRestTimer';
+import type { PreviousSessionSet } from '@/sessions/describePreviousSet';
 import type { SetCompletionOutcome, SetValues } from '@/sessions/fillSetForTick';
 import { toSupersetCardPositions } from '@/workouts/supersetCardPositions';
 import { useTheme } from '@/theme/useTheme';
@@ -15,7 +16,7 @@ import type { SessionWithExercises } from '@/types/SessionWithExercises';
 type SessionLoggerProperties = {
   session: SessionWithExercises;
   isFinishing: boolean;
-  previousSetsByExerciseId: Map<number, SetValues[]>;
+  previousSetsByExerciseId: Map<number, PreviousSessionSet[]>;
   onChangeSetValues: (sessionSetId: number, changes: Partial<SetValues>) => void;
   onToggleSetCompletion: (sessionSetId: number) => SetCompletionOutcome;
   onFinish: () => void;

@@ -1,25 +1,41 @@
 import { describe, expect, test } from 'bun:test';
 
-import { describePreviousSet, matchPreviousSets } from '@/sessions/describePreviousSet';
+import { describePreviousSet, matchPreviousSets, type PreviousSessionSet } from '@/sessions/describePreviousSet';
 import type { TargetSetValues } from '@/workouts/targetSetColumns';
 
 function makeValues(changes: Partial<TargetSetValues>): TargetSetValues {
   return { repetitions: null, weightKilograms: null, durationSeconds: null, distanceMeters: null, ...changes };
 }
 
+function makePreviousSet(position: number, repetitions: number): PreviousSessionSet {
+  return { position, ...makeValues({ repetitions }) };
+}
+
 describe('matchPreviousSets', () => {
   test('matches earlier sets to this sessions sets by position', () => {
-    const previousSets = [makeValues({ repetitions: 8 }), makeValues({ repetitions: 6 })];
-    expect(matchPreviousSets(3, previousSets)).toEqual([previousSets[0] ?? null, previousSets[1] ?? null, null]);
+    const previousSets = [makePreviousSet(1, 8), makePreviousSet(2, 6)];
+    expect(matchPreviousSets([{ position: 1 }, { position: 2 }, { position: 3 }], previousSets)).toEqual([
+      previousSets[0] ?? null,
+      previousSets[1] ?? null,
+      null,
+    ]);
   });
 
-  test('ignores earlier sets beyond this sessions set count', () => {
-    const previousSets = [makeValues({ repetitions: 8 }), makeValues({ repetitions: 6 })];
-    expect(matchPreviousSets(1, previousSets)).toEqual([previousSets[0] ?? null]);
+  test('a gap in the earlier positions leaves that position without a match', () => {
+    const previousSets = [makePreviousSet(1, 8), makePreviousSet(3, 5)];
+    const matched = matchPreviousSets([{ position: 1 }, { position: 2 }, { position: 3 }], previousSets);
+    expect(matched[0]).toEqual(previousSets[0] ?? null);
+    expect(matched[1]).toBeNull();
+    expect(matched[2]).toEqual(previousSets[1] ?? null);
+  });
+
+  test('ignores earlier sets beyond this sessions sets', () => {
+    const previousSets = [makePreviousSet(1, 8), makePreviousSet(2, 6)];
+    expect(matchPreviousSets([{ position: 1 }], previousSets)).toEqual([previousSets[0] ?? null]);
   });
 
   test('has no match for any set when there is no earlier session', () => {
-    expect(matchPreviousSets(2, [])).toEqual([null, null]);
+    expect(matchPreviousSets([{ position: 1 }, { position: 2 }], [])).toEqual([null, null]);
   });
 });
 

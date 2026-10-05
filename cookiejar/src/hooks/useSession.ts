@@ -11,6 +11,7 @@ import {
   uncompleteSessionSet,
   updateSessionSet,
 } from '@/database/repositories/sessionRepository';
+import type { PreviousSessionSet } from '@/sessions/describePreviousSet';
 import { actualValuesOf, fillSetForTick, type SetCompletionOutcome, type SetValues } from '@/sessions/fillSetForTick';
 import { resolveRestTimerStart } from '@/sessions/resolveRestTimerStart';
 import { findSessionSet, withSessionSetChanges } from '@/sessions/sessionSetChanges';
@@ -29,7 +30,7 @@ type LoadedSession = {
   lookup: Exclude<SessionLookup, { status: 'loading' }>;
 };
 
-type PreviousSetsByExerciseId = Map<number, SetValues[]>;
+type PreviousSetsByExerciseId = Map<number, PreviousSessionSet[]>;
 
 const noPreviousSets: PreviousSetsByExerciseId = new Map();
 
@@ -90,7 +91,7 @@ export function useSession(sessionId: number) {
     let isActive = true;
     const exerciseIds = exerciseIdsKey.split(',').map(Number);
     Promise.all(
-      exerciseIds.map(async (exerciseId): Promise<[number, SetValues[]]> => [
+      exerciseIds.map(async (exerciseId): Promise<[number, PreviousSessionSet[]]> => [
         exerciseId,
         await getPreviousSessionSets(database, exerciseId, sessionId),
       ]),

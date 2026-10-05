@@ -99,7 +99,6 @@ export function SessionSetRow({
                   </Box>
                   <CountdownButton
                     targetSeconds={targetValues.durationSeconds}
-                    currentSeconds={actualValues.durationSeconds}
                     accessibilityLabel={`timer for set ${setNumber}`}
                     onFinish={finishCountdown}
                   />

@@ -17,7 +17,6 @@ import { useTheme } from '@/theme/useTheme';
 
 type CountdownButtonProperties = {
   targetSeconds: number | null;
-  currentSeconds: number | null;
   accessibilityLabel: string;
   onFinish: (elapsedSeconds: number) => void;
 };
@@ -27,12 +26,7 @@ type CountdownRun = {
   startedAtMilliseconds: number;
 };
 
-export function CountdownButton({
-  targetSeconds,
-  currentSeconds,
-  accessibilityLabel,
-  onFinish,
-}: CountdownButtonProperties) {
+export function CountdownButton({ targetSeconds, accessibilityLabel, onFinish }: CountdownButtonProperties) {
   const theme = useTheme();
   const [run, setRun] = useState<CountdownRun | null>(null);
   const [nowMilliseconds, setNowMilliseconds] = useState(0);
@@ -57,7 +51,7 @@ export function CountdownButton({
   const start = () => {
     const startedAtMilliseconds = Date.now();
     setNowMilliseconds(startedAtMilliseconds);
-    setRun({ plan: planCountdown(targetSeconds, currentSeconds), startedAtMilliseconds });
+    setRun({ plan: planCountdown(targetSeconds), startedAtMilliseconds });
   };
 
   const stop = () => {

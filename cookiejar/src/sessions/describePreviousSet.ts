@@ -11,11 +11,15 @@ const primaryFieldByTrackingType: Record<TrackingType, TargetSetField> = {
   distance: 'distanceMeters',
 };
 
+export type PreviousSessionSet = TargetSetValues & {
+  position: number;
+};
+
 export function matchPreviousSets(
-  setCount: number,
-  previousSets: readonly TargetSetValues[],
+  sets: readonly { position: number }[],
+  previousSets: readonly PreviousSessionSet[],
 ): (TargetSetValues | null)[] {
-  return Array.from({ length: setCount }, (_, index) => previousSets[index] ?? null);
+  return sets.map((set) => previousSets.find((previousSet) => previousSet.position === set.position) ?? null);
 }
 
 export function describePreviousSet(trackingType: TrackingType, previousSet: TargetSetValues | null): string {

@@ -7,7 +7,7 @@ import { SessionSetRow } from '@/components/molecules/SessionSetRow';
 import { Box } from '@/components/primitives/Box';
 import { Image } from '@/components/primitives/Image';
 import { Typography } from '@/components/primitives/Typography';
-import { describePreviousSet, matchPreviousSets } from '@/sessions/describePreviousSet';
+import { describePreviousSet, matchPreviousSets, type PreviousSessionSet } from '@/sessions/describePreviousSet';
 import type { SetCompletionOutcome, SetValues } from '@/sessions/fillSetForTick';
 import { useTheme } from '@/theme/useTheme';
 import type { SessionExerciseWithSets } from '@/types/SessionWithExercises';
@@ -18,7 +18,7 @@ type SessionExerciseCardProperties = {
   sessionExercise: SessionExerciseWithSets;
   label: string | null;
   bracket: SupersetBracketPosition | null;
-  previousSets: SetValues[];
+  previousSets: PreviousSessionSet[];
   onChangeSetValues: (sessionSetId: number, changes: Partial<SetValues>) => void;
   onToggleSetCompletion: (sessionSetId: number) => SetCompletionOutcome;
 };
@@ -37,7 +37,7 @@ export function SessionExerciseCard({
   const { imageUrl } = exercise;
   const showsImage = imageUrl !== null && imageUrl !== failedImageUrl;
   const columns = targetSetColumns(sessionExercise.trackingType);
-  const matchedPreviousSets = matchPreviousSets(sessionExercise.sets.length, previousSets);
+  const matchedPreviousSets = matchPreviousSets(sessionExercise.sets, previousSets);
 
   return (
     <Box style={bracket === null ? undefined : { paddingLeft: theme.spacing.medium }}>
