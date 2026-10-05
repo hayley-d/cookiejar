@@ -107,6 +107,7 @@ export const sizes = {
   sessionTopBarSideSlot: 88,
   previousColumn: 72,
   coachButton: 64,
+  healthPermissionNuggie: 72,
 };
 
 export const durations = {
