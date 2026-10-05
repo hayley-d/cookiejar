@@ -3,16 +3,24 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 
 import {
+  addSessionExercises,
+  addSessionSet,
   completeSessionSet,
   discardSession,
   finishSession,
   getPreviousSessionSets,
   getSessionWithExercises,
+  removeSessionExercise,
+  removeSessionSet,
+  replaceSessionExercise,
   uncompleteSessionSet,
+  updateSessionExerciseRest,
+  updateSessionNotes,
   updateSessionSet,
 } from '@/database/repositories/sessionRepository';
 import type { PreviousSessionSet } from '@/sessions/describePreviousSet';
 import { actualValuesOf, fillSetForTick, type SetCompletionOutcome, type SetValues } from '@/sessions/fillSetForTick';
+import { valuesForAddedSet } from '@/sessions/valuesForAddedSet';
 import { resolveRestTimerStart } from '@/sessions/resolveRestTimerStart';
 import { findSessionSet, withSessionSetChanges } from '@/sessions/sessionSetChanges';
 import { bumpDataVersion } from '@/stores/dataVersionStore';
@@ -51,6 +59,7 @@ export function useSession(sessionId: number) {
   } | null>(null);
   const sessionReference = useRef<SessionWithExercises | null>(null);
   const pendingValueWrites = useRef(new Map<number, ReturnType<typeof setTimeout>>());
+  const pendingNotesWrite = useRef<ReturnType<typeof setTimeout> | null>(null);
   const writeQueue = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
@@ -137,14 +146,36 @@ export function useSession(sessionId: number) {
     }
   }, []);
 
+  const writeLatestNotes = useCallback(
+    () =>
+      enqueueWrite(async () => {
+        const session = sessionReference.current;
+        if (session !== null) {
+          await updateSessionNotes(database, session.id, session.notes);
+        }
+      }),
+    [database, enqueueWrite],
+  );
+
+  const cancelPendingNotesWrite = useCallback(() => {
+    if (pendingNotesWrite.current !== null) {
+      clearTimeout(pendingNotesWrite.current);
+      pendingNotesWrite.current = null;
+    }
+  }, []);
+
   const flushPendingValueWrites = useCallback(async () => {
     const pendingSessionSetIds = [...pendingValueWrites.current.keys()];
     for (const sessionSetId of pendingSessionSetIds) {
       cancelPendingValueWrite(sessionSetId);
       writeLatestValues(sessionSetId);
     }
+    if (pendingNotesWrite.current !== null) {
+      cancelPendingNotesWrite();
+      writeLatestNotes();
+    }
     await writeQueue.current;
-  }, [cancelPendingValueWrite, writeLatestValues]);
+  }, [cancelPendingNotesWrite, cancelPendingValueWrite, writeLatestNotes, writeLatestValues]);
 
   useEffect(() => {
     return () => {
@@ -175,6 +206,106 @@ export function useSession(sessionId: number) {
       );
     },
     [applySessionChange, cancelPendingValueWrite, writeLatestValues],
+  );
+
+  const changeNotes = useCallback(
+    (notes: string) => {
+      applySessionChange((session) => ({ ...session, notes: notes.length === 0 ? null : notes }));
+      cancelPendingNotesWrite();
+      pendingNotesWrite.current = setTimeout(() => {
+        pendingNotesWrite.current = null;
+        writeLatestNotes();
+      }, textInputDebounceMilliseconds);
+    },
+    [applySessionChange, cancelPendingNotesWrite, writeLatestNotes],
+  );
+
+  const enqueueStructuralChange = useCallback(
+    (change: () => Promise<void>) =>
+      enqueueWrite(async () => {
+        await change();
+        const reloadedSession = await getSessionWithExercises(database, sessionId);
+        if (reloadedSession === null) {
+          return;
+        }
+        const unsavedSession = sessionReference.current;
+        const mergedSession: SessionWithExercises = {
+          ...reloadedSession,
+          notes: pendingNotesWrite.current === null || unsavedSession === null ? reloadedSession.notes : unsavedSession.notes,
+          exercises: reloadedSession.exercises.map((reloadedExercise) => ({
+            ...reloadedExercise,
+            sets: reloadedExercise.sets.map((reloadedSet) => {
+              const unsavedSet =
+                unsavedSession === null ? null : findSessionSet(unsavedSession, reloadedSet.id)?.set ?? null;
+              return unsavedSet !== null && pendingValueWrites.current.has(reloadedSet.id)
+                ? { ...reloadedSet, ...actualValuesOf(unsavedSet) }
+                : reloadedSet;
+            }),
+          })),
+        };
+        sessionReference.current = mergedSession;
+        setLoadedSession({ sessionId: mergedSession.id, lookup: { status: 'found', session: mergedSession } });
+      }),
+    [database, enqueueWrite, sessionId],
+  );
+
+  const addSet = useCallback(
+    (sessionExerciseId: number) => {
+      const exercise = sessionReference.current?.exercises.find((candidate) => candidate.id === sessionExerciseId);
+      if (exercise === undefined) {
+        return;
+      }
+      const lastSet = exercise.sets[exercise.sets.length - 1] ?? null;
+      const values = valuesForAddedSet(lastSet);
+      enqueueStructuralChange(() => addSessionSet(database, sessionExerciseId, values));
+    },
+    [database, enqueueStructuralChange],
+  );
+
+  const removeSet = useCallback(
+    (sessionExerciseId: number, sessionSetId: number) => {
+      cancelPendingValueWrite(sessionSetId);
+      enqueueStructuralChange(() => removeSessionSet(database, sessionExerciseId, sessionSetId));
+    },
+    [cancelPendingValueWrite, database, enqueueStructuralChange],
+  );
+
+  const addExercises = useCallback(
+    (exerciseIds: number[]) => {
+      enqueueStructuralChange(() => addSessionExercises(database, sessionId, exerciseIds));
+    },
+    [database, enqueueStructuralChange, sessionId],
+  );
+
+  const replaceExercise = useCallback(
+    (sessionExerciseId: number, newExerciseId: number) => {
+      enqueueStructuralChange(() => replaceSessionExercise(database, sessionId, sessionExerciseId, newExerciseId));
+    },
+    [database, enqueueStructuralChange, sessionId],
+  );
+
+  const removeExercise = useCallback(
+    (sessionExerciseId: number) => {
+      const exercise = sessionReference.current?.exercises.find((candidate) => candidate.id === sessionExerciseId);
+      for (const set of exercise?.sets ?? []) {
+        cancelPendingValueWrite(set.id);
+      }
+      enqueueStructuralChange(() => removeSessionExercise(database, sessionId, sessionExerciseId));
+    },
+    [cancelPendingValueWrite, database, enqueueStructuralChange, sessionId],
+  );
+
+  const changeExerciseRest = useCallback(
+    (sessionExerciseId: number, restSeconds: number | null) => {
+      applySessionChange((session) => ({
+        ...session,
+        exercises: session.exercises.map((exercise) =>
+          exercise.id === sessionExerciseId ? { ...exercise, restSeconds } : exercise,
+        ),
+      }));
+      enqueueWrite(() => updateSessionExerciseRest(database, sessionId, sessionExerciseId, restSeconds));
+    },
+    [applySessionChange, database, enqueueWrite, sessionId],
   );
 
   const toggleSetCompletion = useCallback(
@@ -230,11 +361,12 @@ export function useSession(sessionId: number) {
     for (const sessionSetId of [...pendingValueWrites.current.keys()]) {
       cancelPendingValueWrite(sessionSetId);
     }
+    cancelPendingNotesWrite();
     await writeQueue.current;
     await discardSession(database, sessionId);
     clearRestTimer();
     bumpDataVersion();
-  }, [cancelPendingValueWrite, database, sessionId]);
+  }, [cancelPendingNotesWrite, cancelPendingValueWrite, database, sessionId]);
 
   let sessionLookup: SessionLookup;
   if (!Number.isInteger(sessionId)) {
@@ -248,5 +380,19 @@ export function useSession(sessionId: number) {
   const previousSetsByExerciseId =
     previousSets !== null && previousSets.sessionId === sessionId ? previousSets.byExerciseId : noPreviousSets;
 
-  return { sessionLookup, previousSetsByExerciseId, changeSetValues, toggleSetCompletion, finish, discard };
+  return {
+    sessionLookup,
+    previousSetsByExerciseId,
+    changeSetValues,
+    toggleSetCompletion,
+    addSet,
+    removeSet,
+    addExercises,
+    replaceExercise,
+    removeExercise,
+    changeExerciseRest,
+    changeNotes,
+    finish,
+    discard,
+  };
 }
