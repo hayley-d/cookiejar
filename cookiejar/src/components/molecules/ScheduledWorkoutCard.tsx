@@ -39,7 +39,7 @@ export function ScheduledWorkoutCard({ scheduledWorkout, today, onPress, onStart
     <Touchable
       onPress={onPress}
       disabled={!isTappable}
-      accessibilityLabel={summary === null ? `${kindText}, ${workout.name}` : `${kindText}, ${workout.name}, ${summary}`}
+      accessible={false}
     >
       <Card padding="small">
         <Stack direction="horizontal" gap="medium" align="center">
@@ -57,7 +57,13 @@ export function ScheduledWorkoutCard({ scheduledWorkout, today, onPress, onStart
           ) : (
             <NuggieImage name={workoutNuggie(workout.classType)} size={theme.sizes.workoutRowImage} shape="rounded" />
           )}
-          <Box flex={1} gap="extraSmall">
+          <Box
+            flex={1}
+            gap="extraSmall"
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={summary === null ? `${kindText}, ${workout.name}` : `${kindText}, ${workout.name}, ${summary}`}
+          >
             <Typography variant="caption" color="textSecondary">
               {kindText}
             </Typography>
