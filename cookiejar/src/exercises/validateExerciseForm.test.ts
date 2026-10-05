@@ -1,11 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import {
-  imageUrlToStore,
-  isPreviewableImageUrl,
-  validateExerciseForm,
-  type ExerciseFormValues,
-} from '@/exercises/validateExerciseForm';
+import { validateExerciseForm, type ExerciseFormValues } from '@/exercises/validateExerciseForm';
 
 const validValues: ExerciseFormValues = {
   name: 'Squat',
@@ -120,29 +115,5 @@ describe('validateExerciseForm', () => {
   test('an image URL of only the https prefix is rejected', () => {
     const errors = validateExerciseForm({ ...validValues, imageUrl: 'https://' }, { existingExercises });
     expect(errors.imageUrl).toBe('Image URL must start with https://');
-  });
-});
-
-describe('isPreviewableImageUrl', () => {
-  test('a valid https URL can be previewed', () => {
-    expect(isPreviewableImageUrl(' https://example.com/squat.jpg ')).toBe(true);
-  });
-
-  test('an empty URL cannot be previewed', () => {
-    expect(isPreviewableImageUrl('')).toBe(false);
-  });
-
-  test('an incomplete URL cannot be previewed', () => {
-    expect(isPreviewableImageUrl('https://')).toBe(false);
-  });
-});
-
-describe('imageUrlToStore', () => {
-  test('an empty URL is stored as null', () => {
-    expect(imageUrlToStore('  ')).toBeNull();
-  });
-
-  test('a URL is stored trimmed', () => {
-    expect(imageUrlToStore('  https://example.com/squat.jpg ')).toBe('https://example.com/squat.jpg');
   });
 });

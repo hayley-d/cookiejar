@@ -1,3 +1,4 @@
+import { imageUrlError } from '@/images/imageUrls';
 import type { BodyPart } from '@/types/BodyPart';
 import type { Exercise } from '@/types/Exercise';
 import type { TrackingType } from '@/types/TrackingType';
@@ -15,20 +16,6 @@ type ExerciseFormValidationContext = {
   existingExercises: Pick<Exercise, 'id' | 'name'>[];
   editingExerciseId?: number;
 };
-
-const imageUrlPrefix = 'https://';
-
-export function isPreviewableImageUrl(imageUrl: string) {
-  const trimmedImageUrl = imageUrl.trim();
-  return (
-    trimmedImageUrl.length > imageUrlPrefix.length && trimmedImageUrl.toLowerCase().startsWith(imageUrlPrefix)
-  );
-}
-
-export function imageUrlToStore(imageUrl: string) {
-  const trimmedImageUrl = imageUrl.trim();
-  return trimmedImageUrl.length === 0 ? null : trimmedImageUrl;
-}
 
 export function duplicateExerciseNameMessage(name: string) {
   return `You already have an exercise called "${name}"`;
@@ -62,8 +49,9 @@ export function validateExerciseForm(
     errors.defaultTrackingType = 'Choose how this exercise is measured';
   }
 
-  if (imageUrlToStore(values.imageUrl) !== null && !isPreviewableImageUrl(values.imageUrl)) {
-    errors.imageUrl = 'Image URL must start with https://';
+  const imageUrlProblem = imageUrlError(values.imageUrl);
+  if (imageUrlProblem !== null) {
+    errors.imageUrl = imageUrlProblem;
   }
 
   return errors;

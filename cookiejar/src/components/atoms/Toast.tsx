@@ -1,0 +1,50 @@
+import { useEffect } from 'react';
+import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
+
+import { Icon } from '@/components/primitives/Icon';
+import { Stack } from '@/components/primitives/Stack';
+import { Typography } from '@/components/primitives/Typography';
+import { useTheme } from '@/theme/useTheme';
+
+type ToastProperties = {
+  message: string;
+  onDismiss: () => void;
+};
+
+const visibleMilliseconds = 2500;
+const iconSize = 18;
+
+export function Toast({ message, onDismiss }: ToastProperties) {
+  const theme = useTheme();
+
+  useEffect(() => {
+    const timeout = setTimeout(onDismiss, visibleMilliseconds);
+    return () => clearTimeout(timeout);
+  }, [onDismiss]);
+
+  return (
+    <Animated.View
+      entering={FadeInDown}
+      exiting={FadeOutDown}
+      accessibilityRole="alert"
+      accessibilityLiveRegion="polite"
+      style={[
+        {
+          alignSelf: 'center',
+          backgroundColor: theme.colors.accent,
+          borderRadius: theme.radii.round,
+          paddingHorizontal: theme.spacing.medium,
+          paddingVertical: theme.spacing.small + theme.spacing.extraSmall,
+        },
+        theme.shadows.card,
+      ]}
+    >
+      <Stack direction="horizontal" gap="small" align="center">
+        <Icon name="checkmark.circle.fill" size={iconSize} color="onAccent" />
+        <Typography variant="label" color="onAccent">
+          {message}
+        </Typography>
+      </Stack>
+    </Animated.View>
+  );
+}

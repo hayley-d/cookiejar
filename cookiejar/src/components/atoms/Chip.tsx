@@ -1,14 +1,20 @@
+import { NuggieImage } from '@/components/atoms/NuggieImage';
+import { Stack } from '@/components/primitives/Stack';
 import { Touchable } from '@/components/primitives/Touchable';
 import { Typography } from '@/components/primitives/Typography';
+import type { NuggieName } from '@/nuggies/NuggieName';
 import { useTheme } from '@/theme/useTheme';
 
 type ChipProperties = {
   label: string;
   isSelected: boolean;
   onPress: () => void;
+  nuggie?: NuggieName;
 };
 
-export function Chip({ label, isSelected, onPress }: ChipProperties) {
+const nuggieSize = 32;
+
+export function Chip({ label, isSelected, onPress, nuggie }: ChipProperties) {
   const theme = useTheme();
 
   return (
@@ -17,17 +23,21 @@ export function Chip({ label, isSelected, onPress }: ChipProperties) {
       accessibilityLabel={label}
       accessibilityState={{ selected: isSelected }}
       style={{
-        paddingVertical: theme.spacing.small,
-        paddingHorizontal: theme.spacing.medium,
+        paddingVertical: nuggie ? theme.spacing.extraSmall : theme.spacing.small,
+        paddingLeft: nuggie ? theme.spacing.extraSmall : theme.spacing.medium,
+        paddingRight: theme.spacing.medium,
         borderRadius: theme.radii.round,
         borderWidth: 1,
         borderColor: isSelected ? theme.colors.accent : theme.colors.border,
         backgroundColor: isSelected ? theme.colors.accent : theme.colors.surface,
       }}
     >
-      <Typography variant="label" color={isSelected ? 'onAccent' : 'textPrimary'}>
-        {label}
-      </Typography>
+      <Stack direction="horizontal" gap="small" align="center">
+        {nuggie ? <NuggieImage name={nuggie} size={nuggieSize} /> : null}
+        <Typography variant="label" color={isSelected ? 'onAccent' : 'textPrimary'}>
+          {label}
+        </Typography>
+      </Stack>
     </Touchable>
   );
 }

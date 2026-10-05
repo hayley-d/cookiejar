@@ -3,12 +3,12 @@ import { useState } from 'react';
 import { DuplicateExerciseNameError, type NewExercise } from '@/database/repositories/exerciseRepository';
 import {
   duplicateExerciseNameMessage,
-  imageUrlToStore,
   validateExerciseForm,
   type ExerciseFormErrors,
   type ExerciseFormValues,
 } from '@/exercises/validateExerciseForm';
 import { useExercises } from '@/hooks/useExercises';
+import { imageUrlToStore } from '@/images/imageUrls';
 
 type ExerciseFormOptions = {
   initialValues: ExerciseFormValues;

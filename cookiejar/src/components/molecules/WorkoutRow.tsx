@@ -1,0 +1,51 @@
+import { useState } from 'react';
+
+import { Badge } from '@/components/atoms/Badge';
+import { Card } from '@/components/atoms/Card';
+import { NuggieImage } from '@/components/atoms/NuggieImage';
+import { Box } from '@/components/primitives/Box';
+import { Image } from '@/components/primitives/Image';
+import { Stack } from '@/components/primitives/Stack';
+import { Typography } from '@/components/primitives/Typography';
+import type { NuggieName } from '@/nuggies/NuggieName';
+import { useTheme } from '@/theme/useTheme';
+
+type WorkoutRowProperties = {
+  name: string;
+  summary: string;
+  imageUrl: string | null;
+  nuggie: NuggieName;
+  badgeLabel?: string;
+};
+
+const imageSize = 72;
+
+export function WorkoutRow({ name, summary, imageUrl, nuggie, badgeLabel }: WorkoutRowProperties) {
+  const theme = useTheme();
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
+  const showsImage = imageUrl !== null && imageUrl !== failedImageUrl;
+
+  return (
+    <Card padding="small" accessible accessibilityLabel={`${name}, ${summary}`}>
+      <Stack direction="horizontal" gap="medium" align="center">
+        {showsImage ? (
+          <Image
+            source={{ uri: imageUrl }}
+            contentFit="cover"
+            style={{ width: imageSize, height: imageSize, borderRadius: theme.radii.medium }}
+            onError={() => setFailedImageUrl(imageUrl)}
+          />
+        ) : (
+          <NuggieImage name={nuggie} size={imageSize} shape="rounded" />
+        )}
+        <Box flex={1} gap="extraSmall">
+          <Typography variant="label">{name}</Typography>
+          {badgeLabel ? <Badge label={badgeLabel} /> : null}
+          <Typography variant="caption" color="textSecondary">
+            {summary}
+          </Typography>
+        </Box>
+      </Stack>
+    </Card>
+  );
+}

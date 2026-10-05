@@ -1,9 +1,11 @@
 import { Chip } from '@/components/atoms/Chip';
 import { Stack } from '@/components/primitives/Stack';
+import type { NuggieName } from '@/nuggies/NuggieName';
 
 export type ChipOption<Value extends string> = {
   value: Value;
   label: string;
+  nuggie?: NuggieName;
 };
 
 type ChipGroupProperties<Value extends string> = {
@@ -19,6 +21,7 @@ export function ChipGroup<Value extends string>({ options, selectedValue, onSele
         <Chip
           key={option.value}
           label={option.label}
+          nuggie={option.nuggie}
           isSelected={option.value === selectedValue}
           onPress={() => onSelect(option.value)}
         />
