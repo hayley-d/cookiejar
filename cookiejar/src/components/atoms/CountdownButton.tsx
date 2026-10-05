@@ -78,6 +78,7 @@ export function CountdownButton({ targetSeconds, accessibilityLabel, onFinish }:
     <Touchable
       onPress={isRunning ? stop : start}
       accessibilityLabel={isRunning ? `Stop ${accessibilityLabel}` : `Start ${accessibilityLabel}`}
+      hitSlop={(theme.sizes.minimumTouchTarget - theme.sizes.countdownButtonHeight) / 2}
       style={{ minWidth: theme.sizes.countdownButtonHeight, height: theme.sizes.countdownButtonHeight }}
     >
       <Box

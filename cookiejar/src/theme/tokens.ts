@@ -103,6 +103,7 @@ export const sizes = {
   classRingStroke: 12,
   countdownButtonHeight: 36,
   countdownButtonIcon: 14,
+  minimumTouchTarget: 44,
   previousColumn: 72,
   coachButton: 64,
 };
