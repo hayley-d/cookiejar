@@ -7,6 +7,7 @@ import { View } from 'react-native';
 import { ActiveSessionBanner } from '@/components/molecules/ActiveSessionBanner';
 import { CoachFloatingButton } from '@/components/molecules/CoachFloatingButton';
 import { useActiveSession } from '@/hooks/useActiveSession';
+import { useTipOfTheDay } from '@/hooks/useTipOfTheDay';
 import { useTheme } from '@/theme/useTheme';
 
 const tabIconSize = 24;
@@ -27,6 +28,7 @@ export default function TabsLayout() {
   const [tabBarHeight, setTabBarHeight] = useState<number | null>(null);
   const activeSessionLookup = useActiveSession();
   const focusedTabName = useFocusedTabName();
+  const tipText = useTipOfTheDay();
   const isResuming = useRef(false);
 
   const resumeActiveSession = useCallback(() => {
@@ -105,7 +107,7 @@ export default function TabsLayout() {
       )}
       {tabBarHeight === null ? null : (
         <View style={{ position: 'absolute', right: coachButtonMargin, bottom: tabBarHeight + coachButtonMargin }}>
-          <CoachFloatingButton />
+          <CoachFloatingButton tipText={tipText} />
         </View>
       )}
     </View>

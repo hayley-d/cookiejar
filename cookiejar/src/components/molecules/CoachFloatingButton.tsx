@@ -25,7 +25,9 @@ export function CoachFloatingButton({ tipText }: CoachFloatingButtonProperties) 
   return (
     <View>
       {tipText ? (
-        <View
+        <Touchable
+          onPress={openCoach}
+          accessibilityLabel={tipText}
           style={[
             {
               position: 'absolute',
@@ -40,7 +42,7 @@ export function CoachFloatingButton({ tipText }: CoachFloatingButtonProperties) 
           ]}
         >
           <Typography variant="caption">{tipText}</Typography>
-        </View>
+        </Touchable>
       ) : null}
       <Touchable
         onPress={openCoach}

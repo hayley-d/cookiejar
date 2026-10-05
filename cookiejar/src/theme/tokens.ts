@@ -163,6 +163,7 @@ export const durations = {
   bannerRefresh: 15000,
   typingDotPulse: 400,
   typingDotStagger: 150,
+  tipBubbleVisible: 6000,
 };
 
 export const typography = {
