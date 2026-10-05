@@ -1,35 +1,30 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
-import { Button } from '@/components/atoms/Button';
-import { Card } from '@/components/atoms/Card';
 import { EmptyState } from '@/components/molecules/EmptyState';
-import { Box } from '@/components/primitives/Box';
-import { ScrollBox } from '@/components/primitives/ScrollBox';
-import { Typography } from '@/components/primitives/Typography';
-import { formatFullDate } from '@/dates/formatFullDate';
-import { useSession } from '@/hooks/useSession';
-import { calculateSessionTotals } from '@/sessions/calculateSessionTotals';
-import { formatSessionDuration, formatSetCount, formatVolume } from '@/sessions/formatSessionValues';
-import { useTheme } from '@/theme/useTheme';
+import { SessionSummary } from '@/components/organisms/SessionSummary';
+import { useFinishedSession } from '@/hooks/useFinishedSession';
+import { countExercisesWithRecords } from '@/progress/detectPersonalRecords';
+import { chooseStableFinishingPresentation, parseFinishingNuggie } from '@/sessions/chooseFinishingNuggie';
 
 type SessionSummaryParameters = {
   sessionId: string;
+  nuggie?: string;
 };
 
 export default function SessionSummaryScreen() {
-  const theme = useTheme();
-  const { sessionId: sessionIdParameter } = useLocalSearchParams<SessionSummaryParameters>();
-  const { sessionLookup } = useSession(Number(sessionIdParameter));
+  const { sessionId: sessionIdParameter, nuggie: nuggieParameter } = useLocalSearchParams<SessionSummaryParameters>();
+  const sessionId = Number(sessionIdParameter);
+  const lookup = useFinishedSession(sessionId);
   const [openedAt] = useState(() => new Date());
 
-  if (sessionLookup.status === 'missing' || sessionLookup.status === 'failed') {
+  if (lookup.status === 'missing' || lookup.status === 'failed') {
     return (
       <EmptyState
         nuggie="workout"
-        title={sessionLookup.status === 'missing' ? 'Workout not found' : 'Could not open the summary'}
+        title={lookup.status === 'missing' ? 'Workout not found' : 'Could not open the summary'}
         message={
-          sessionLookup.status === 'missing'
+          lookup.status === 'missing'
             ? 'This workout session may have been discarded.'
             : 'Something went wrong while loading it. Please try again.'
         }
@@ -39,45 +34,25 @@ export default function SessionSummaryScreen() {
     );
   }
 
-  if (sessionLookup.status === 'loading') {
+  if (lookup.status === 'loading') {
     return null;
   }
 
-  const { session } = sessionLookup;
-  const totals = calculateSessionTotals(session, openedAt);
-  const statTiles = [
-    { label: 'Duration', value: formatSessionDuration(totals.durationSeconds) },
-    { label: 'Volume', value: formatVolume(totals.volumeKilograms) },
-    { label: 'Sets done', value: formatSetCount(totals.completedSetCount) },
-  ];
+  const nuggie =
+    parseFinishingNuggie(nuggieParameter) ??
+    chooseStableFinishingPresentation(sessionId, {
+      workoutKind: lookup.session.workoutKind,
+      classType: lookup.session.classType,
+      personalRecordCount: countExercisesWithRecords(lookup.personalRecords),
+    }).nuggie;
 
   return (
-    <ScrollBox gap="large">
-      <Box gap="extraSmall">
-        <Typography variant="display">{session.workoutName}</Typography>
-        <Typography color="textSecondary">{formatFullDate(session.scheduledDate)}</Typography>
-      </Box>
-      <Box direction="row" gap="small">
-        {statTiles.map((statTile) => (
-          <Card
-            key={statTile.label}
-            padding="small"
-            accessible
-            accessibilityLabel={`${statTile.label} ${statTile.value}`}
-            style={{ flex: 1, minHeight: theme.sizes.statTileMinimumHeight, justifyContent: 'center' }}
-          >
-            <Typography variant="heading" align="center">
-              {statTile.value}
-            </Typography>
-            <Typography variant="caption" color="textSecondary" align="center">
-              {statTile.label}
-            </Typography>
-          </Card>
-        ))}
-      </Box>
-      <Box align="center">
-        <Button label="Done" onPress={() => router.back()} />
-      </Box>
-    </ScrollBox>
+    <SessionSummary
+      session={lookup.session}
+      personalRecords={lookup.personalRecords}
+      nuggie={nuggie}
+      now={openedAt}
+      onDone={() => router.back()}
+    />
   );
 }

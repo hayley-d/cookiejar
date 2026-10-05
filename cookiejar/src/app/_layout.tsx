@@ -86,6 +86,10 @@ export default function RootLayout() {
                 options={{ presentation: 'fullScreenModal', headerShown: false, gestureEnabled: false }}
               />
               <Stack.Screen
+                name="sessions/[sessionId]/finishing"
+                options={{ presentation: 'fullScreenModal', headerShown: false, gestureEnabled: false }}
+              />
+              <Stack.Screen
                 name="sessions/[sessionId]/summary"
                 options={{ title: 'Summary', headerLargeTitleEnabled: false }}
               />

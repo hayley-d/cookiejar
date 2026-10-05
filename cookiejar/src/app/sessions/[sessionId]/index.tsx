@@ -62,7 +62,7 @@ export default function SessionLoggerScreen() {
     setIsFinishing(true);
     try {
       await finish();
-      router.replace({ pathname: '/sessions/[sessionId]/summary', params: { sessionId: String(sessionId) } });
+      router.replace({ pathname: '/sessions/[sessionId]/finishing', params: { sessionId: String(sessionId) } });
     } catch {
       setIsFinishing(false);
       Alert.alert('Could not finish the workout', 'Something went wrong. Please try again.');
