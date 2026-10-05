@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { Card } from '@/components/atoms/Card';
+import { Checkbox } from '@/components/atoms/Checkbox';
 import { NuggieImage } from '@/components/atoms/NuggieImage';
 import { Box } from '@/components/primitives/Box';
 import { Image } from '@/components/primitives/Image';
@@ -13,11 +14,13 @@ type ExerciseRowProperties = {
   name: string;
   imageUrl: string | null;
   onPress?: () => void;
+  isSelected?: boolean;
+  disabled?: boolean;
 };
 
 const imageSize = 88;
 
-export function ExerciseRow({ name, imageUrl, onPress }: ExerciseRowProperties) {
+export function ExerciseRow({ name, imageUrl, onPress, isSelected, disabled }: ExerciseRowProperties) {
   const theme = useTheme();
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
   const showsImage = imageUrl !== null && imageUrl !== failedImageUrl;
@@ -38,6 +41,7 @@ export function ExerciseRow({ name, imageUrl, onPress }: ExerciseRowProperties) 
         <Box flex={1}>
           <Typography variant="label">{name}</Typography>
         </Box>
+        {isSelected === undefined ? null : <Checkbox isChecked={isSelected} />}
       </Stack>
     </Card>
   );
@@ -47,7 +51,13 @@ export function ExerciseRow({ name, imageUrl, onPress }: ExerciseRowProperties) 
   }
 
   return (
-    <Touchable onPress={onPress} accessibilityLabel={name}>
+    <Touchable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityLabel={name}
+      accessibilityRole={isSelected === undefined ? 'button' : 'checkbox'}
+      accessibilityState={{ checked: isSelected, disabled }}
+    >
       {row}
     </Touchable>
   );
