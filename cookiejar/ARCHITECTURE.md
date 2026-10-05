@@ -264,7 +264,23 @@ The Create hub has a "New plan" `ActionCard` under "New workout", and "My plans"
 
 ### Plan Repository
 
-`src/database/repositories/planRepository.ts`: `listPlans` (entry count, active first, then newest), `getPlanWithEntries` (entries joined to the workout summary fields including `exerciseCount`, or `null`), `createPlan`, `addPlanEntry`, `updatePlanEntryTime`, `renamePlan`, `duplicatePlan` (inactive "(copy)" with its entries, one transaction), `deletePlan` (entries cascade), `removePlanEntry` (swipe on `PlanEntryRow` through `SwipeableBox`) and `copyDayEntries` (one transaction, appends to each chosen day and skips a workout already there at the same time). Every plan write function calls `bumpDataVersion()`.
+`src/database/repositories/planRepository.ts` holds all plan SQL:
+
+| Function | Behaviour |
+| --- | --- |
+| `listPlans(database)` | Every plan with entry count, active first, then newest by creation date |
+| `getPlanWithEntries(database, planId)` | One plan with entries joined to workout summary fields (name, kind, class type, duration, image URL, exercise count), or `null` |
+| `createPlan(database, name)` | Inserts inactive plan, returns the new id |
+| `addPlanEntry(database, newEntry)` | Inserts plan entry, returns the new id |
+| `updatePlanEntryTime(database, planEntryId, timeOfDay)` | Updates entry time |
+| `removePlanEntry(database, planEntryId)` | Deletes plan entry |
+| `renamePlan(database, planId, name)` | Updates plan name |
+| `duplicatePlan(database, planId)` | Copies plan and all entries, named "(copy)", one transaction, returns the new id |
+| `deletePlan(database, planId)` | Deletes plan (entries cascade) |
+| `copyDayEntries(database, planId, fromDayOfWeek, toDaysOfWeek)` | Appends entries from source day to chosen days in one transaction, skipping duplicates at the same time, returns count inserted |
+| `setActivePlan(database, planId, startsOn)` | Deactivates all plans, then activates the given plan with start date, one transaction |
+| `deactivatePlan(database)` | Deactivates the active plan |
+| `getActivePlanWithEntries(database)` | The active plan with entries, or `null` |
 
 ### Schedule Repository
 
@@ -272,7 +288,7 @@ The Create hub has a "New plan" `ActionCard` under "New workout", and "My plans"
 
 | Function | Behaviour |
 | --- | --- |
-| `listSessionsBetween(database, startDate, endDate)` | Every session in the date range (inclusive), joined to their workouts to get exercise counts and image URLs, ordered by date and started_at |
+| `listSessionsBetween(database, startDate, endDate)` | Every session in the date range (inclusive), joined to their workouts to get metadata (name, kind, class type, duration, image URL, exercise count), ordered by date and started_at |
 
 ### Scheduling Model
 
@@ -287,21 +303,21 @@ The `ScheduledWorkout` type holds `date`, `timeOfDay` (null for unplanned), `pla
 
 ### Hooks
 
-Plan-specific hooks reload on focus and depend on `dataVersion`:
+Plan-specific hooks reload on focus. Their write functions call repository functions, then call `bumpDataVersion()`, which triggers `useScheduledWorkouts` to recompute:
 
 | Hook | Behaviour |
 | --- | --- |
-| `usePlans()` | Returns every plan: `id`, `name`, `isActive`, `startsOn`, entry count |
-| `usePlan(planId)` | Returns one plan with entries joined to workout summary fields (name, kind, class type, exercise count), or `null` |
-| `usePlanActions(planId)` | Returns functions: `renamePlan(newName)`, `duplicatePlan()`, `deletePlan()`, `deactivatePlan()`, `getActivePlanWithEntries()` |
+| `usePlans()` | Returns `{ plans, reloadPlans, createPlan }` where plans is `PlanSummary[]` (with id, name, isActive, startsOn, entryCount) or `null` |
+| `usePlan(planId)` | Returns `{ planLookup, reloadPlan, addPlanEntry, updatePlanEntryTime, removePlanEntry, copyDay, renamePlan, duplicatePlan, deletePlan, activatePlan, deactivatePlan }`. The planLookup is `{ status: 'loading' } | { status: 'missing' } | { status: 'failed' } | { status: 'found', plan }` |
+| `usePlanActions(options)` | Takes options with `planName`, `isActive`, `renamePlan`, `duplicatePlan`, `deletePlan`, `deactivatePlan`, `onChangeStartDate` callback. Returns `{ openMenu, openActiveMenu }` for editor and active banner action sheets |
 | `useScheduledWorkouts(startDate, endDate)` | Returns the computed scheduled workouts map for the date range, or `null` while loading. Reloads on focus and when `dataVersion` changes |
 | `useScheduledWorkoutsForDate(date)` | Shorthand for `useScheduledWorkouts(date, date)`, returning `ScheduledWorkout[]` or `null` |
 
-`useScheduledWorkouts` reads the data version from `useDataVersion`, so it reloads when plan writes, workout save, or workout delete bump the version.
+`useScheduledWorkouts` depends on `useDataVersion()` so it reloads whenever the version bumps: after plan writes (in `usePlans` and `usePlan`), workout save, or workout delete.
 
 ### Data Version Store
 
-`src/stores/dataVersionStore.ts` is a module-level counter with `bumpDataVersion(callback?)` (runs the optional callback in a transaction), `subscribeToDataVersion(listener)` and the `useDataVersion()` hook. It is bumped by every plan write function (`createPlan`, `addPlanEntry`, `updatePlanEntryTime`, `renamePlan`, `duplicatePlan`, `deletePlan`, `removePlanEntry`, `copyDayEntries`) and by `saveWorkout` and `deleteWorkout`, because all of these change what is scheduled. Screens and hooks that care about the schedule read it with `useDataVersion()`.
+`src/stores/dataVersionStore.ts` is a module-level counter with `bumpDataVersion()`, `subscribeToDataVersion(listener)`, `getDataVersion()`, `resetDataVersion()` and `useDataVersion()` hook. It is bumped in hooks immediately after their repository writes: `usePlans.createPlan`, `usePlan.addPlanEntry`, `usePlan.updatePlanEntryTime`, `usePlan.copyDay`, `usePlan.renamePlan`, `usePlan.duplicatePlan`, `usePlan.deletePlan`, `usePlan.activatePlan`, `usePlan.deactivatePlan`, `useSaveWorkout`, and `useWorkoutActions.deleteWorkout`, because all of these change what is scheduled. `useScheduledWorkouts` reads the version with `useDataVersion()` and recomputes the schedule when it bumps.
 
 ### Time Picker
 
@@ -311,11 +327,11 @@ Plan-specific hooks reload on focus and depend on `dataVersion`:
 
 These hold the plans logic, import no React Native, and are covered by `bun test`:
 
-- `src/plans/buildScheduledWorkouts.ts`: merges plan entries with sessions, handling the three cases (planned, in progress, completed, unplanned) and returning scheduled workouts for a date range
+- `src/plans/buildScheduledWorkouts.ts`: merges plan entries with sessions into scheduled workouts (planned entries, completed or in-progress sessions, and unplanned sessions) for a date range
 - `src/plans/timeOfDay.ts`: `HH:MM` to and from minutes and `Date`, display formatting, sorting, and the default time for a new entry (07:00 on an empty day, otherwise the last entry + 1 hour, capped at 23:30)
 - `src/plans/planCopyDay.ts`: which entries to insert when copying a day, skipping duplicates at the same time
 - `src/plans/describePlanSummary.ts`: "n workouts / week" or "No workouts yet"
-- `src/plans/describeActiveSince.ts`: "Active since MM/DD/YYYY" for a plan
+- `src/plans/describeActiveSince.ts`: "Active since Mon 5 Oct" format for a plan
 - `src/plans/groupEntriesByWeekday.ts` and `src/plans/weekdays.ts`: Monday to Sunday sections in time order
 - `src/plans/describePlanEntryWorkout.ts`: the class type label or "n ex."
 - `src/plans/planNameError.ts`: plan name is required
