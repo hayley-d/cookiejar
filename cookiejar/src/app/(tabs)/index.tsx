@@ -25,9 +25,9 @@ import { useScheduledWorkoutsForDate } from '@/hooks/useScheduledWorkouts';
 import { useStartSession } from '@/hooks/useStartSession';
 import { useWeeklyStreak } from '@/hooks/useWeeklyStreak';
 import type { StatsMetric } from '@/stats/parseStatsMetric';
+import { useTheme } from '@/theme/useTheme';
 import type { ScheduledWorkout } from '@/types/ScheduledWorkout';
 
-const coachButtonClearance = 96;
 const trendDayCount = 7;
 const healthAccessInstructions = 'Settings → Health → Data Access & Devices → Cookiejar → Turn On All';
 
@@ -36,6 +36,7 @@ const showHealthAccessInstructions = () => {
 };
 
 export default function HomeScreen() {
+  const theme = useTheme();
   const now = new Date();
   const today = toLocalDateString(now);
   const { displayName, dailyStepGoal } = useProfile();
@@ -86,8 +87,8 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1 }}>
-      <Box flex={1} background="background" style={{ paddingBottom: coachButtonClearance }}>
-        <ScrollBox showsVerticalScrollIndicator={false}>
+      <Box flex={1} background="background">
+        <ScrollBox showsVerticalScrollIndicator={false} contentBottomPadding={theme.sizes.coachButtonClearance}>
           <GreetingHeader displayName={displayName} now={now} />
           {todayWorkouts.status === 'ready' ? (
             todayWorkouts.scheduledWorkouts.length > 0 ? (
