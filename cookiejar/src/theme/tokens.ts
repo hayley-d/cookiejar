@@ -104,6 +104,7 @@ export const sizes = {
   countdownButtonHeight: 36,
   countdownButtonIcon: 14,
   minimumTouchTarget: 44,
+  sessionTopBarSideSlot: 88,
   previousColumn: 72,
   coachButton: 64,
 };

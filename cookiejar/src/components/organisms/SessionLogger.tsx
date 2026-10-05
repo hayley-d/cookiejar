@@ -1,8 +1,10 @@
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Button } from '@/components/atoms/Button';
 import { ElapsedTimer } from '@/components/atoms/ElapsedTimer';
 import { TextButton } from '@/components/atoms/TextButton';
 import { RestTimerBar } from '@/components/molecules/RestTimerBar';
+import { SessionTopBar } from '@/components/molecules/SessionTopBar';
 import { SessionExerciseCard } from '@/components/organisms/SessionExerciseCard';
 import { Box } from '@/components/primitives/Box';
 import { ScrollBox } from '@/components/primitives/ScrollBox';
@@ -68,24 +70,15 @@ export function SessionLogger({
 
   return (
     <Box flex={1} background="background">
-      <Box
-        direction="row"
-        align="center"
-        gap="small"
-        paddingHorizontal="medium"
-        style={{ paddingTop: safeAreaInsets.top + theme.spacing.small, paddingBottom: theme.spacing.small }}
-      >
-        <TextButton label="✕ Discard" color="danger" onPress={onDiscard} disabled={isFinishing} />
-        <Box flex={1}>
-          <Typography variant="heading" numberOfLines={1} accessibilityRole="header">
-            {session.workoutName.toUpperCase()}
-          </Typography>
-        </Box>
-        <ElapsedTimer startedAt={session.startedAt} />
-        <TextButton label="Finish" onPress={onFinish} disabled={isFinishing} />
-      </Box>
+      <SessionTopBar
+        title={session.workoutName.toUpperCase()}
+        topInset={safeAreaInsets.top}
+        isQuitDisabled={isFinishing}
+        onQuit={onDiscard}
+        trailing={<ElapsedTimer startedAt={session.startedAt} />}
+      />
       <SessionRestTimerBar />
-      <ScrollBox automaticallyAdjustKeyboardInsets contentInsetAdjustmentBehavior="never">
+      <ScrollBox automaticallyAdjustKeyboardInsets>
         {session.exercises.length === 0 ? (
           <Typography color="textSecondary" align="center">
             This workout has no exercises.
@@ -120,8 +113,10 @@ export function SessionLogger({
           textAlignVertical="top"
           style={{ minHeight: theme.sizes.sessionNotesMinimumHeight }}
         />
-        <Box style={{ height: safeAreaInsets.bottom }} />
       </ScrollBox>
+      <Box padding="medium" style={{ paddingBottom: safeAreaInsets.bottom + theme.spacing.medium }}>
+        <Button label="FINISH" onPress={onFinish} disabled={isFinishing} />
+      </Box>
     </Box>
   );
 }

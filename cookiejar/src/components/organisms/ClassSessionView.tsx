@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/atoms/Button';
 import { ElapsedTimer } from '@/components/atoms/ElapsedTimer';
 import { NuggieImage } from '@/components/atoms/NuggieImage';
-import { TextButton } from '@/components/atoms/TextButton';
+import { SessionTopBar } from '@/components/molecules/SessionTopBar';
 import { Box } from '@/components/primitives/Box';
 import { ProgressRingBox } from '@/components/primitives/ProgressRingBox';
 import { ScrollBox } from '@/components/primitives/ScrollBox';
@@ -49,20 +49,12 @@ export function ClassSessionView({
 
   return (
     <Box flex={1} background="background">
-      <Box
-        direction="row"
-        align="center"
-        gap="small"
-        paddingHorizontal="medium"
-        style={{ paddingTop: safeAreaInsets.top + theme.spacing.small, paddingBottom: theme.spacing.small }}
-      >
-        <TextButton label="✕ Discard" color="danger" onPress={onDiscard} disabled={isFinishing} />
-        <Box flex={1}>
-          <Typography variant="heading" numberOfLines={1} accessibilityRole="header">
-            {session.workoutName.toUpperCase()}
-          </Typography>
-        </Box>
-      </Box>
+      <SessionTopBar
+        title={session.workoutName.toUpperCase()}
+        topInset={safeAreaInsets.top}
+        isQuitDisabled={isFinishing}
+        onQuit={onDiscard}
+      />
       <ScrollBox automaticallyAdjustKeyboardInsets>
         <Box align="center" gap="medium">
           <NuggieImage name={nuggie} size={theme.sizes.sessionClassNuggie} />
