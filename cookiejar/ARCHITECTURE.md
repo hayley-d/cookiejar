@@ -127,7 +127,7 @@ routes (src/app)  →  organisms  →  molecules  →  atoms  →  primitives  �
 | **atoms** | The smallest pieces of UI with meaning, built from primitives. No data access. | `Button`, `TextButton`, `IconButton`, `Badge`, `Chip`, `Checkbox`, `NuggieImage`, `Card`, `NumberInput`, `DurationInput`, `DragHandle`, `SupersetBracket`, `Toast`, `TimeLabel` |
 | **molecules** | Small groups of atoms that work as a unit. Hold local UI state at most. | `CoachFloatingButton`, `ScreenHeader`, `EmptyState`, `ChipGroup`, `SegmentedControl`, `SearchBar`, `AlphabetIndex`, `ExerciseRow`, `FormField`, `ImageUrlField`, `Stepper`, `KindChoiceCard`, `ActionCard`, `TargetSetRow`, `TargetSetTable`, `WorkoutRow`, `WorkoutNameField`, `PlanEntryRow`, `DaySectionHeader`, `PlanRow`, `RestDay`, `ActivePlanBanner` |
 | **organisms** | Self-contained sections of a screen. Receive data and callbacks through props. | `NuggieLoadingScreen`, `ExerciseForm`, `ExercisePicker`, `ExerciseEditorCard`, `ReorderableExerciseList`, `ClassDetailsForm`, `CreateHub`, `WorkoutEditorFooter`, `PlanWeekEditor`, `AddPlanEntrySheet`, `ActivatePlanSheet`, `EntryTimeSheet`, `CopyDaySheet` |
-| **routes** | Expo Router screens. Load data through repositories and hooks, then compose organisms. | `src/app/(tabs)/index.tsx`, `src/app/(tabs)/_layout.tsx`, `src/app/coach.tsx`, `src/app/exercises/*`, `src/app/workouts/*` |
+| **routes** | Expo Router screens. Load data through repositories and hooks, then compose organisms. | `src/app/(tabs)/index.tsx`, `src/app/(tabs)/_layout.tsx`, `src/app/coach.tsx`, `src/app/exercises/*`, `src/app/workouts/*`, `src/app/plans/*` |
 
 Rules:
 
@@ -257,7 +257,7 @@ Registered flat on the root `Stack`. Every change writes straight through `planR
 | `/plans/[planId]` | Stack push | `PlanWeekEditor`: Monday to Sunday, entries in time order, an empty day shows the `restDay` nuggie and "Rest day". An `ActivePlanBanner` shows at the top when this is the active plan, with tapping opening an action sheet for "Change start date" or "Deactivate" |
 | `/plans/[planId]/add-entry` | Form sheet | `AddPlanEntrySheet`: a time picker (default from `defaultTimeOfDayForNewEntry`) and a searchable `WorkoutRow` list; tapping a workout adds it and closes |
 | `/plans/[planId]/entry-time` | Form sheet | `EntryTimeSheet`: spinner time picker and Save for one entry, opened by tapping an entry row |
-| `/plans/[planId]/activate` | Form sheet | `ActivatePlanSheet`: date picker to set the plan's start date. Opened from the active banner or when creating a new plan after naming it |
+| `/plans/[planId]/activate` | Form sheet | `ActivatePlanSheet`: date picker to set the plan's start date. Opened from the "Make active" button on the inactive banner and from the active banner's "Change start date"; naming a new plan does not open it |
 | `/plans/[planId]/copy-day` | Form sheet | `CopyDaySheet`: weekday toggles (source day excluded), opened from the day ⋯ menu |
 
 The Create hub has a "New plan" `ActionCard` under "New workout", and "My plans" between it and "My workouts" (active first with an `ACTIVE` badge, summary from `describePlanSummary`).
@@ -272,14 +272,14 @@ The Create hub has a "New plan" `ActionCard` under "New workout", and "My plans"
 | `getPlanWithEntries(database, planId)` | One plan with entries joined to workout summary fields (name, kind, class type, duration, image URL, exercise count), or `null` |
 | `createPlan(database, name)` | Inserts inactive plan, returns the new id |
 | `addPlanEntry(database, newEntry)` | Inserts plan entry, returns the new id |
-| `updatePlanEntryTime(database, planEntryId, timeOfDay)` | Updates entry time |
-| `removePlanEntry(database, planEntryId)` | Deletes plan entry |
+| `updatePlanEntryTime(database, planId, planEntryId, timeOfDay)` | Updates entry time, scoped by `AND plan_id = ?` so an entry of another plan is never touched |
+| `removePlanEntry(database, planId, planEntryId)` | Deletes plan entry, scoped by `AND plan_id = ?` |
 | `renamePlan(database, planId, name)` | Updates plan name |
 | `duplicatePlan(database, planId)` | Copies plan and all entries, named "(copy)", one transaction, returns the new id |
 | `deletePlan(database, planId)` | Deletes plan (entries cascade) |
 | `copyDayEntries(database, planId, fromDayOfWeek, toDaysOfWeek)` | Appends entries from source day to chosen days in one transaction, skipping duplicates at the same time, returns count inserted |
 | `setActivePlan(database, planId, startsOn)` | Deactivates all plans, then activates the given plan with start date, one transaction |
-| `deactivatePlan(database)` | Deactivates the active plan |
+| `deactivatePlan(database, planId)` | Deactivates the given plan (`UPDATE plans SET is_active = 0 WHERE id = ?`) |
 | `getActivePlanWithEntries(database)` | The active plan with entries, or `null` |
 
 ### Schedule Repository
@@ -288,7 +288,7 @@ The Create hub has a "New plan" `ActionCard` under "New workout", and "My plans"
 
 | Function | Behaviour |
 | --- | --- |
-| `listSessionsBetween(database, startDate, endDate)` | Every session in the date range (inclusive), joined to their workouts to get metadata (name, kind, class type, duration, image URL, exercise count), ordered by date and started_at |
+| `listSessionsBetween(database, startDate, endDate)` | Every session in the date range (inclusive), taking name, kind and class type from the session's own snapshot columns, and duration, image URL and exercise count from a LEFT JOIN to workouts (null or zero when the workout was deleted), ordered by date and started_at |
 
 ### Scheduling Model
 
@@ -301,6 +301,13 @@ The algorithm merges plan entries with sessions for each day:
 
 The `ScheduledWorkout` type holds `date`, `timeOfDay` (null for unplanned), `planEntryId` (null for unplanned), `workout` (with `id` that may be null), `status` (`planned | inProgress | completed`) and `sessionId` (null for planned).
 
+### Notes for Phase 04 and 05 consumers
+
+- `ScheduledWorkout.workout.id` may be null (the session's workout was deleted).
+- A `planned` entry on a past date means missed.
+- A session linked to an entry but started on a different weekday shows as unplanned on its own date, while the original entry stays `planned`.
+- Duplicating then activating a plan leaves old sessions linked to the old plan's entries, so they appear as unplanned.
+
 ### Hooks
 
 Plan-specific hooks reload on focus. Their write functions call repository functions, then call `bumpDataVersion()`, which triggers `useScheduledWorkouts` to recompute:
@@ -310,14 +317,16 @@ Plan-specific hooks reload on focus. Their write functions call repository funct
 | `usePlans()` | Returns `{ plans, reloadPlans, createPlan }` where plans is `PlanSummary[]` (with id, name, isActive, startsOn, entryCount) or `null` |
 | `usePlan(planId)` | Returns `{ planLookup, reloadPlan, addPlanEntry, updatePlanEntryTime, removePlanEntry, copyDay, renamePlan, duplicatePlan, deletePlan, activatePlan, deactivatePlan }`. The planLookup is `{ status: 'loading' } | { status: 'missing' } | { status: 'failed' } | { status: 'found', plan }` |
 | `usePlanActions(options)` | Takes options with `planName`, `isActive`, `renamePlan`, `duplicatePlan`, `deletePlan`, `deactivatePlan`, `onChangeStartDate` callback. Returns `{ openMenu, openActiveMenu }` for editor and active banner action sheets |
-| `useScheduledWorkouts(startDate, endDate)` | Returns the computed scheduled workouts map for the date range, or `null` while loading. Reloads on focus and when `dataVersion` changes |
-| `useScheduledWorkoutsForDate(date)` | Shorthand for `useScheduledWorkouts(date, date)`, returning `ScheduledWorkout[]` or `null` |
+| `useScheduledWorkouts(startDate, endDate)` | Returns `{ status: 'loading' } | { status: 'failed' } | { status: 'ready', scheduledWorkoutsByDate }`. A result for a different range than requested counts as loading. Loads once on mount, then reloads on later focus and when `dataVersion` changes |
+| `useScheduledWorkoutsForDate(date)` | Shorthand for `useScheduledWorkouts(date, date)`, returning `{ status: 'loading' } | { status: 'failed' } | { status: 'ready', scheduledWorkouts }` |
+
+`usePlan.updatePlanEntryTime` and `usePlan.activatePlan` do not reload the plan because they are called from sheets that close straight after and the editor reloads on focus. Writes made from the editor itself (`removePlanEntry`, `renamePlan`, `deactivatePlan`) do reload. `duplicatePlan` and `copyDay` do not reload (duplicate navigates to the copy, copy-day runs from a sheet).
 
 `useScheduledWorkouts` depends on `useDataVersion()` so it reloads whenever the version bumps: after plan writes (in `usePlans` and `usePlan`), workout save, or workout delete.
 
 ### Data Version Store
 
-`src/stores/dataVersionStore.ts` is a module-level counter with `bumpDataVersion()`, `subscribeToDataVersion(listener)`, `getDataVersion()`, `resetDataVersion()` and `useDataVersion()` hook. It is bumped in hooks immediately after their repository writes: `usePlans.createPlan`, `usePlan.addPlanEntry`, `usePlan.updatePlanEntryTime`, `usePlan.copyDay`, `usePlan.renamePlan`, `usePlan.duplicatePlan`, `usePlan.deletePlan`, `usePlan.activatePlan`, `usePlan.deactivatePlan`, `useSaveWorkout`, and `useWorkoutActions.deleteWorkout`, because all of these change what is scheduled. `useScheduledWorkouts` reads the version with `useDataVersion()` and recomputes the schedule when it bumps.
+`src/stores/dataVersionStore.ts` is a module-level counter with `bumpDataVersion()`, `subscribeToDataVersion(listener)`, `getDataVersion()`, `resetDataVersion()` and `useDataVersion()` hook. It is bumped in hooks immediately after their repository writes: `usePlans.createPlan`, `usePlan.addPlanEntry`, `usePlan.updatePlanEntryTime`, `usePlan.removePlanEntry`, `usePlan.copyDay`, `usePlan.renamePlan`, `usePlan.duplicatePlan`, `usePlan.deletePlan`, `usePlan.activatePlan`, `usePlan.deactivatePlan`, `useSaveWorkout`, and `useWorkoutActions.deleteWorkout`, because all of these change what is scheduled. `useScheduledWorkouts` reads the version with `useDataVersion()` and recomputes the schedule when it bumps.
 
 ### Time Picker
 
@@ -384,7 +393,7 @@ src/
   coach/                    Coach logic and screens (phase 09)
 ```
 
-**Note on typed routes:** Expo Router generates TypeScript types for file-based routes into `.expo/types/router.d.ts` during `npx expo start` on the development machine. A fresh checkout needs one dev-server start before `bun run typecheck` accepts new route references. Type checking happens in CI without a dev-server start, so it must pass on the main branch before merging.
+**Note on typed routes:** Expo Router generates TypeScript types for file-based routes into `.expo/types/router.d.ts` during `npx expo start` on the development machine. A fresh checkout needs one dev-server start before `bun run typecheck` accepts new route references.
 
 ## Conventions
 
