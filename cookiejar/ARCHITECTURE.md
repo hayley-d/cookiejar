@@ -226,8 +226,7 @@ The exercise picker is opened from inside the builder by calling `beginExerciseP
 
 These hold the builder's logic, import no React Native, and are covered by `bun test`:
 
-- `src/workouts/workoutEditorReducer.ts`: all actions with deterministic keys
-- `src/workouts/createKeyCounter`: factory function that produces a key generator for deterministic test fixtures
+- `src/workouts/workoutEditorReducer.ts`: reducer factory that injects a `createKeyCounter`-generated key function for deterministic test fixtures, plus all actions
 - `src/workouts/normaliseSupersets.ts`: relettering groups and clearing single members
 - `src/workouts/groupIntoBlocks.ts`: grouping items into superset blocks and applying block-key order back
 - `src/workouts/targetSetColumns.ts`: columns and input rules by tracking type, empty values for each type
