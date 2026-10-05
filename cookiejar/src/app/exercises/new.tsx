@@ -1,4 +1,4 @@
-import { router, Stack } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
 import { TextButton } from '@/components/atoms/TextButton';
@@ -6,6 +6,7 @@ import { ExerciseForm } from '@/components/organisms/ExerciseForm';
 import { createExercise, type NewExercise } from '@/database/repositories/exerciseRepository';
 import type { ExerciseFormValues } from '@/exercises/validateExerciseForm';
 import { useExerciseForm } from '@/hooks/useExerciseForm';
+import { completeExercisePick } from '@/stores/exercisePickerStore';
 
 const initialValues: ExerciseFormValues = {
   name: '',
@@ -16,9 +17,13 @@ const initialValues: ExerciseFormValues = {
 
 export default function NewExerciseScreen() {
   const database = useSQLiteContext();
+  const { requestIdentifier } = useLocalSearchParams<{ requestIdentifier?: string }>();
 
   async function saveExercise(newExercise: NewExercise) {
-    await createExercise(database, newExercise);
+    const exerciseId = await createExercise(database, newExercise);
+    if (requestIdentifier) {
+      completeExercisePick(requestIdentifier, { exerciseIds: [exerciseId], asSuperset: false });
+    }
     router.back();
   }
 

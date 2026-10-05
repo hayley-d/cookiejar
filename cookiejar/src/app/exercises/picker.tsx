@@ -5,7 +5,13 @@ import { ExercisePicker } from '@/components/organisms/ExercisePicker';
 import { toggleExerciseSelection } from '@/exercises/toggleExerciseSelection';
 import { useExercises } from '@/hooks/useExercises';
 import { useRecentlyUsedExercises } from '@/hooks/useRecentlyUsedExercises';
-import { completeExercisePick } from '@/stores/exercisePickerStore';
+import {
+  beginExercisePick,
+  completeExercisePick,
+  createExercisePickRequestIdentifier,
+  useExercisePickResult,
+  type ExercisePickResult,
+} from '@/stores/exercisePickerStore';
 
 type ExercisePickerParameters = {
   requestIdentifier?: string;
@@ -30,6 +36,24 @@ export default function ExercisePickerScreen() {
   const excludedExerciseIds = useMemo(() => parseExerciseIds(excludeExerciseIds), [excludeExerciseIds]);
   const [searchText, setSearchText] = useState('');
   const [selectedExerciseIds, setSelectedExerciseIds] = useState<number[]>([]);
+  const [creationRequestIdentifier, setCreationRequestIdentifier] = useState<string | null>(null);
+  const creationResult = useExercisePickResult(creationRequestIdentifier);
+  const [lastCreationResult, setLastCreationResult] = useState<ExercisePickResult | null>(null);
+
+  if (creationResult !== null && creationResult !== lastCreationResult) {
+    setLastCreationResult(creationResult);
+    setSelectedExerciseIds((currentSelection) => [
+      ...currentSelection,
+      ...creationResult.exerciseIds.filter((exerciseId) => !currentSelection.includes(exerciseId)),
+    ]);
+  }
+
+  const createExercise = () => {
+    const newRequestIdentifier = createExercisePickRequestIdentifier();
+    beginExercisePick(newRequestIdentifier);
+    setCreationRequestIdentifier(newRequestIdentifier);
+    router.push({ pathname: '/exercises/new', params: { requestIdentifier: newRequestIdentifier } });
+  };
 
   const returnSelection = (exerciseIds: number[], asSuperset: boolean) => {
     if (requestIdentifier) {
@@ -64,6 +88,7 @@ export default function ExercisePickerScreen() {
       selectedExerciseIds={selectedExerciseIds}
       excludedExerciseIds={excludedExerciseIds}
       onClose={() => router.back()}
+      onCreateExercise={createExercise}
       onAddExercises={() => returnSelection(selectedExerciseIds, false)}
       onCreateSuperset={() => returnSelection(selectedExerciseIds, true)}
     />
