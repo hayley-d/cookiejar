@@ -20,6 +20,7 @@ import {
 } from '@/database/repositories/sessionRepository';
 import type { PreviousSessionSet } from '@/sessions/describePreviousSet';
 import { actualValuesOf, fillSetForTick, type SetCompletionOutcome, type SetValues } from '@/sessions/fillSetForTick';
+import { mergeReloadedSession } from '@/sessions/mergeReloadedSession';
 import { valuesForAddedSet } from '@/sessions/valuesForAddedSet';
 import { resolveRestTimerStart } from '@/sessions/resolveRestTimerStart';
 import { findSessionSet, withSessionSetChanges } from '@/sessions/sessionSetChanges';
@@ -228,24 +229,10 @@ export function useSession(sessionId: number) {
         if (reloadedSession === null) {
           return;
         }
-        const unsavedSession = sessionReference.current;
-        const mergedSession: SessionWithExercises = {
-          ...reloadedSession,
-          notes:
-            pendingNotesWrite.current === null || unsavedSession === null
-              ? reloadedSession.notes
-              : unsavedSession.notes,
-          exercises: reloadedSession.exercises.map((reloadedExercise) => ({
-            ...reloadedExercise,
-            sets: reloadedExercise.sets.map((reloadedSet) => {
-              const unsavedSet =
-                unsavedSession === null ? null : (findSessionSet(unsavedSession, reloadedSet.id)?.set ?? null);
-              return unsavedSet !== null && pendingValueWrites.current.has(reloadedSet.id)
-                ? { ...reloadedSet, ...actualValuesOf(unsavedSet) }
-                : reloadedSet;
-            }),
-          })),
-        };
+        const mergedSession = mergeReloadedSession(reloadedSession, sessionReference.current, {
+          pendingValueSetIds: new Set(pendingValueWrites.current.keys()),
+          hasPendingNotes: pendingNotesWrite.current !== null,
+        });
         sessionReference.current = mergedSession;
         setLoadedSession({ sessionId: mergedSession.id, lookup: { status: 'found', session: mergedSession } });
       }),
