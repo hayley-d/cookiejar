@@ -5,6 +5,7 @@ import { AppState } from 'react-native';
 
 import { getSetting } from '@/database/repositories/appSettingsRepository';
 import { getHealthSnapshot, upsertHealthSnapshot } from '@/database/repositories/healthSnapshotRepository';
+import { combineQueuedRunRequests, type RunRequest } from '@/health/combineQueuedRunRequests';
 import { clearRefreshStarted, getLastRefreshStartedAt, markRefreshStarted } from '@/health/healthRefreshThrottle';
 import { healthAuthorizationRequestedAtSettingKey } from '@/health/healthSettingKeys';
 import { isHealthSnapshotFinal } from '@/health/isHealthSnapshotFinal';
@@ -16,11 +17,6 @@ import type { HealthSnapshot } from '@/types/HealthSnapshot';
 type LoadedSnapshot = {
   date: string;
   snapshot: HealthSnapshot | null;
-};
-
-type RunRequest = {
-  isActive: () => boolean;
-  execute: () => Promise<void>;
 };
 
 export function useDailyHealth(date: string) {
@@ -44,7 +40,7 @@ export function useDailyHealth(date: string) {
 
   const requestRun = useCallback(async (request: RunRequest) => {
     if (isRunningReference.current) {
-      queuedRequestReference.current = request;
+      queuedRequestReference.current = combineQueuedRunRequests(queuedRequestReference.current, request);
       return;
     }
     isRunningReference.current = true;
@@ -54,7 +50,9 @@ export function useDailyHealth(date: string) {
         const runningRequest: RunRequest = nextRequest;
         queuedRequestReference.current = null;
         if (runningRequest.isActive()) {
-          await runningRequest.execute();
+          try {
+            await runningRequest.execute(runningRequest.isActive);
+          } catch {}
         }
         const queuedRequest = queuedRequestReference.current as RunRequest | null;
         nextRequest = queuedRequest !== null && queuedRequest.isActive() ? queuedRequest : null;
@@ -116,7 +114,7 @@ export function useDailyHealth(date: string) {
     useCallback(() => {
       let isActive = true;
       const isStillActive = () => isActive;
-      const request: RunRequest = { isActive: isStillActive, execute: () => loadAndRefresh(isStillActive) };
+      const request: RunRequest = { isActive: isStillActive, execute: loadAndRefresh };
       requestRun(request).catch(() => {});
       const subscription = AppState.addEventListener('change', (appState) => {
         if (appState === 'active') {
@@ -132,7 +130,7 @@ export function useDailyHealth(date: string) {
 
   const refresh = useCallback(() => {
     const isStillMounted = () => isMountedReference.current;
-    requestRun({ isActive: isStillMounted, execute: () => loadAndRefresh(isStillMounted) }).catch(() => {});
+    requestRun({ isActive: isStillMounted, execute: loadAndRefresh }).catch(() => {});
   }, [loadAndRefresh, requestRun]);
 
   const isCurrentDate = loadedSnapshot !== null && loadedSnapshot.date === date;
