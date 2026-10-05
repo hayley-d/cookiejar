@@ -659,5 +659,9 @@ src/
 
 ### HealthKit signing (2026-10-05)
 
-- Outcome: not yet determined. `expo prebuild` generated `ios/Cookiejar/Cookiejar.entitlements` with `com.apple.developer.healthkit` and the `NSHealthShareUsageDescription` string. `bun run device` could not run because no physical iPhone was connected (only simulators were available), so whether the free personal team signs the HealthKit capability is still to be confirmed on the phone.
+- Outcome: the free personal team (Hayley Dodkins (Personal Team)) signs the HealthKit capability. Xcode Signing & Capabilities shows HealthKit with no capability error, `bun run device` installs the app, and the Apple Health permission sheet appears and can be granted. `ios/Cookiejar/Cookiejar.entitlements` contains `com.apple.developer.healthkit`.
 - Library pin: `@kingstinct/react-native-healthkit` is pinned exactly at `15.1.0`. Version 16.0.0 fails to build on Expo 57 / React Native 0.86 (issue #391, fix in PR #395 unreleased as of 2026-10-05). Move up once a fixed 16.x ships.
+- One-time Mac setup that the first device build needed:
+  1. "No code signing certificates are available to use": in Xcode → Settings → Accounts, add the Apple ID, select the Personal Team, Manage Certificates, then + Apple Development.
+  2. "Your team has no devices from which to generate a provisioning profile": open `ios/Cookiejar.xcworkspace`, choose the connected iPhone as the run destination, and click Try Again under Signing.
+  3. Repeated "codesign wants to access key" prompts, one per signed framework: run `security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k <mac password> ~/Library/Keychains/login.keychain-db`. Clear stuck prompts with `killall SecurityAgent`.
