@@ -36,6 +36,7 @@ This app is built in phases. See [docs/README.md](docs/README.md) for the full p
 | Icons | `expo-symbols` for SF Symbols in tabs and buttons |
 | SVG | `react-native-svg` for the progress ring in class session view (used only in the `ProgressRingBox` primitive) |
 | Date/time picker | `@react-native-community/datetimepicker` (native platform pickers for time and date selection) |
+| Apple Health | `@kingstinct/react-native-healthkit`, pinned exactly at `15.1.0`, with `react-native-nitro-modules` (`0.37.1`) as its native bridge |
 | Splash screen | `expo-splash-screen` |
 | Package manager | bun |
 | Test runner | `bun test` for TypeScript modules |
@@ -655,3 +656,8 @@ src/
 3. On the first install, enable Developer Mode (Settings → Privacy & Security → Developer Mode) and trust the developer certificate (Settings → General → VPN & Device Management).
 4. With a free Apple ID, the build expires after 7 days. Re-run step 2 to refresh it. With the paid Apple Developer Program, builds last one year.
 5. Installing over the existing app keeps the SQLite database. Deleting the app from the phone deletes all data.
+
+### HealthKit signing (2026-10-05)
+
+- Outcome: not yet determined. `expo prebuild` generated `ios/Cookiejar/Cookiejar.entitlements` with `com.apple.developer.healthkit` and the `NSHealthShareUsageDescription` string. `bun run device` could not run because no physical iPhone was connected (only simulators were available), so whether the free personal team signs the HealthKit capability is still to be confirmed on the phone.
+- Library pin: `@kingstinct/react-native-healthkit` is pinned exactly at `15.1.0`. Version 16.0.0 fails to build on Expo 57 / React Native 0.86 (issue #391, fix in PR #395 unreleased as of 2026-10-05). Move up once a fixed 16.x ships.
