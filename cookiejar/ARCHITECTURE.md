@@ -35,10 +35,11 @@ This app is built in phases. See [docs/README.md](docs/README.md) for the full p
 | Haptics | `expo-haptics` for button feedback |
 | Icons | `expo-symbols` for SF Symbols in tabs and buttons |
 | SVG | `react-native-svg` for the progress ring in the class session view and the steps stat tile (used only in the `ProgressRingBox` primitive) |
+| Charts | `victory-native` (`^42.0.1`, resolved at 42.0.1) drawing with `@shopify/react-native-skia` (`2.6.2`). Both are imported only by `ProgressChartFrame`, `ProgressLineChart` and `ProgressBarChart` |
 | Date/time picker | `@react-native-community/datetimepicker` (native platform pickers for time and date selection) |
 | Apple Health | `@kingstinct/react-native-healthkit`, pinned exactly at `15.1.0`, with `react-native-nitro-modules` (`0.37.1`) as its native bridge |
 | Splash screen | `expo-splash-screen` |
-| Package manager | bun |
+| Package manager | bun. `package.json` lists `@shopify/react-native-skia` under `trustedDependencies` so bun runs its install script |
 | Test runner | `bun test` for TypeScript modules |
 | Build and install | `npx expo run:ios --device` (builds through Xcode and signs with the developer's Apple ID) |
 
@@ -107,10 +108,35 @@ Read the versioned docs at https://docs.expo.dev/versions/v57.0.0/ before using 
 | Function | Behaviour |
 | --- | --- |
 | `getProfile(database)` | The profile row mapped to a `Profile` (`id`, `displayName`, `birthDate`, `sex`, `heightCentimetres`, `goal`, `weeklyWorkoutTarget`, `dailyStepGoal`, `updatedAt`), or `null` when the row is missing. It reads with a bound `id` parameter |
+| `updateProfile(database, profileUpdate)` | Phase 08. Updates `display_name`, `birth_date`, `sex`, `height_centimetres`, `goal`, `weekly_workout_target` and `daily_step_goal` of the `id = 1` row and sets `updated_at` to now, with bound parameters. `ProfileUpdate` comes from `src/profile/validateProfileForm.ts` |
 
-Phase 07 only reads the profile. Nothing writes it yet; Phase 08 adds the form that sets the name.
+The profile form (see Profile and Progress) is the only writer.
 
-`useProfile()` (in `src/hooks/useProfile.ts`) returns a `ProfileSummary` of `displayName`, `dailyStepGoal` and `weeklyWorkoutTarget`. It starts from the defaults `displayName: null`, `dailyStepGoal: 10000` and `weeklyWorkoutTarget: 4`, and keeps them when the row is missing or the read fails. It reloads on focus (not the first one, through `useFocusReloadKey`) and when `dataVersion` changes.
+`useProfile()` (in `src/hooks/useProfile.ts`) returns a `ProfileState`: every `Profile` field plus `isLoaded` and `hasLoadFailed`. It starts from the defaults `displayName: null`, `birthDate: null`, `sex: null`, `heightCentimetres: null`, `goal: null`, `dailyStepGoal: 10000` and `weeklyWorkoutTarget: 4` with `isLoaded: false`, and keeps them when the row is missing. A failed read sets `hasLoadFailed` and keeps the previous state. It reloads on focus (not the first one, through `useFocusReloadKey`) and when `dataVersion` changes.
+
+### Body Measurement Repository
+
+`src/database/repositories/bodyMeasurementRepository.ts` holds the `body_measurements` SQL (Phase 08). Checked on the device, not with `bun test`.
+
+| Function | Behaviour |
+| --- | --- |
+| `listBodyMeasurements(database)` | Every measurement as a `BodyMeasurement`, ordered by `measured_on DESC, id DESC` |
+| `addBodyMeasurement(database, input)` | Inserts a `BodyMeasurementInput` and returns the new id |
+| `deleteBodyMeasurement(database, bodyMeasurementId)` | Deletes one measurement |
+| `getLatestBodyMeasurement(database)` | The newest measurement (same order), or `null` |
+| `listWeightsBetween(database, startDate, endDate)` | `WeightMeasurement` rows (`measuredOn`, `weightKilograms`) with a weight, inclusive of both dates, ordered by `measured_on ASC, id ASC` |
+
+### Progress Repository
+
+`src/database/repositories/progressRepository.ts` holds the read-only SQL behind the Progress screens (Phase 08). Only finished sessions (`finished_at IS NOT NULL`) and completed sets (`completed_at IS NOT NULL`) count. Checked on the device, not with `bun test`.
+
+| Function | Behaviour |
+| --- | --- |
+| `getTrainingTotals(database, startDate, endDate)` | `TrainingTotals` (`workoutCount`, `timeTrainedSeconds`, `volumeKilograms`) for sessions whose `started_at` falls in the range. A `null` start date means from the beginning. Time trained is the sum of `finished_at - started_at`, classes included. Volume is the sum of weight times repetitions over `repetitions_and_weight` sets |
+| `listAllFinishedSessionSets(database)` | Every completed set of every finished session as a `FinishedSessionSet`, in session, exercise and set order. Feeds the records list |
+| `listFinishedSessionSetsForExercise(database, exerciseId)` | The same rows for one exercise, as `ExerciseHistorySet`. Feeds the exercise history |
+| `listExercisesWithHistory(database)` | `ExerciseWithHistory` for each exercise that has a completed set in a finished session, newest `lastPerformedAt` first, then by name |
+| `listClassStatistics(database, monthRange)` | `ClassStatistics` per class type (`sessionCount`, `totalSeconds`, `sessionsThisMonth`, `lastStartedAt`) from finished class sessions, ordered by `sortClassStatistics` |
 
 ### Migrations
 
@@ -158,10 +184,10 @@ routes (src/app)  →  organisms  →  molecules  →  atoms  →  primitives  �
 | Layer | Responsibility | Examples |
 | --- | --- | --- |
 | **primitives** | Thin themed wrappers over React Native elements. The only layer that touches raw `View`, `Text`, `Pressable`, `TextInput`, `ScrollView`, `FlatList`, `SectionList`, `expo-image`, `expo-symbols`, `react-native-svg` and `@react-native-community/datetimepicker`. They apply theme tokens and nothing else. | `Box`, `Typography`, `Touchable`, `TextField`, `Stack`, `Image`, `Icon`, `List`, `SectionedList`, `ScrollBox`, `AnimatedBox`, `SwipeableBox`, `LongPressDragBox`, `WindowMeasuredBox`, `TimePickerBox`, `ProgressRingBox`, `ShakeBox`, `SnapList` |
-| **atoms** | The smallest pieces of UI with meaning, built from primitives. No data access. | `Button`, `TextButton`, `IconButton`, `Badge`, `Chip`, `Checkbox`, `NuggieImage`, `Card`, `NumberInput`, `DurationInput`, `DragHandle`, `SupersetBracket`, `Toast`, `TimeLabel`, `StatusChip`, `DayMarker`, `CountdownButton`, `ElapsedTimer`, `PageDots`, `StreakDots`, `TrendArrow` |
-| **molecules** | Small groups of atoms that work as a unit. Hold local UI state at most. | `CoachFloatingButton`, `ScreenHeader`, `EmptyState`, `ChipGroup`, `SegmentedControl`, `SearchBar`, `AlphabetIndex`, `ExerciseRow`, `FormField`, `ImageUrlField`, `Stepper`, `KindChoiceCard`, `ActionCard`, `TargetSetRow`, `TargetSetTable`, `WorkoutRow`, `WorkoutNameField`, `PlanEntryRow`, `DaySectionHeader`, `PlanRow`, `RestDay`, `ActivePlanBanner`, `DayChip`, `ScheduledWorkoutCard`, `HeaderImageCard`, `WorkoutDetailExerciseRow`, `ActiveSessionBanner`, `PersonalRecordRow`, `RestTimerBar`, `SessionSetRow`, `SessionTopBar`, `StatTile`, `GreetingHeader`, `TodayWorkoutCard`, `NuggieActionCard`, `RestDayCard`, `NoPlanCard`, `WeeklyStreakTile`, `StatBarRow` |
-| **organisms** | Self-contained sections of a screen. Receive data and callbacks through props. | `NuggieLoadingScreen`, `ExerciseForm`, `ExercisePicker`, `ExerciseEditorCard`, `ReorderableExerciseList`, `ClassDetailsForm`, `CreateHub`, `WorkoutEditorFooter`, `PlanWeekEditor`, `AddPlanEntrySheet`, `ActivatePlanSheet`, `EntryTimeSheet`, `CopyDaySheet`, `WeekStrip`, `DayWorkoutList`, `IndividualWorkoutDetail`, `ClassWorkoutDetail`, `SessionLogger`, `ClassSessionView`, `SessionExerciseCard`, `SessionSummary`, `TodayCarousel`, `StatTileGrid`, `StatBarList`, `HealthMetricBarList`, `StreakBarList` |
-| **routes** | Expo Router screens. Load data through repositories and hooks, then compose organisms. | `src/app/(tabs)/index.tsx`, `src/app/(tabs)/_layout.tsx`, `src/app/coach.tsx`, `src/app/exercises/*`, `src/app/workouts/*`, `src/app/plans/*`, `src/app/workout/[workoutId].tsx`, `src/app/sessions/[sessionId]/index.tsx`, `src/app/sessions/[sessionId]/finishing.tsx`, `src/app/sessions/[sessionId]/summary.tsx`, `src/app/stats/[metric].tsx` |
+| **atoms** | The smallest pieces of UI with meaning, built from primitives. No data access. | `Button`, `TextButton`, `IconButton`, `Badge`, `Chip`, `Checkbox`, `NuggieImage`, `Card`, `NumberInput`, `DurationInput`, `DragHandle`, `SupersetBracket`, `Toast`, `TimeLabel`, `StatusChip`, `DayMarker`, `CountdownButton`, `ElapsedTimer`, `PageDots`, `StreakDots`, `TrendArrow`, `DatePickerField` |
+| **molecules** | Small groups of atoms that work as a unit. Hold local UI state at most. | `CoachFloatingButton`, `ScreenHeader`, `EmptyState`, `ChipGroup`, `SegmentedControl`, `SearchBar`, `AlphabetIndex`, `ExerciseRow`, `FormField`, `ImageUrlField`, `Stepper`, `KindChoiceCard`, `ActionCard`, `TargetSetRow`, `TargetSetTable`, `WorkoutRow`, `WorkoutNameField`, `PlanEntryRow`, `DaySectionHeader`, `PlanRow`, `RestDay`, `ActivePlanBanner`, `DayChip`, `ScheduledWorkoutCard`, `HeaderImageCard`, `WorkoutDetailExerciseRow`, `ActiveSessionBanner`, `PersonalRecordRow`, `RestTimerBar`, `SessionSetRow`, `SessionTopBar`, `StatTile`, `GreetingHeader`, `TodayWorkoutCard`, `NuggieActionCard`, `RestDayCard`, `NoPlanCard`, `WeeklyStreakTile`, `StatBarRow`, `ProfileSummaryHeader`, `SettingsRow`, `MeasurementRow`, `RangeSwitcher`, `ClassCountTile` |
+| **organisms** | Self-contained sections of a screen. Receive data and callbacks through props. | `NuggieLoadingScreen`, `ExerciseForm`, `ExercisePicker`, `ExerciseEditorCard`, `ReorderableExerciseList`, `ClassDetailsForm`, `CreateHub`, `WorkoutEditorFooter`, `PlanWeekEditor`, `AddPlanEntrySheet`, `ActivatePlanSheet`, `EntryTimeSheet`, `CopyDaySheet`, `WeekStrip`, `DayWorkoutList`, `IndividualWorkoutDetail`, `ClassWorkoutDetail`, `SessionLogger`, `ClassSessionView`, `SessionExerciseCard`, `SessionSummary`, `TodayCarousel`, `StatTileGrid`, `StatBarList`, `HealthMetricBarList`, `StreakBarList`, `ProfileForm`, `MeasurementForm`, `ProgressOverview`, `RecentRecordsSection`, `PersonalRecordItemRow`, `ClassCountSection`, `ClassStatisticsCard`, `ExerciseProgressSection`, `ExerciseHistoryList`, `ProgressChartFrame`, `ProgressLineChart`, `ProgressBarChart` |
+| **routes** | Expo Router screens. Load data through repositories and hooks, then compose organisms. | `src/app/(tabs)/index.tsx`, `src/app/(tabs)/_layout.tsx`, `src/app/coach.tsx`, `src/app/exercises/*`, `src/app/workouts/*`, `src/app/plans/*`, `src/app/workout/[workoutId].tsx`, `src/app/sessions/[sessionId]/index.tsx`, `src/app/sessions/[sessionId]/finishing.tsx`, `src/app/sessions/[sessionId]/summary.tsx`, `src/app/stats/[metric].tsx`, `src/app/(tabs)/profile.tsx`, `src/app/profile/*`, `src/app/progress/*` |
 
 Rules:
 
@@ -745,7 +771,7 @@ Once access has been asked for, the grid shows whether it was granted or denied.
 
 ### Greeting
 
-`chooseGreeting(now, displayName)` returns "Hi there" when the name is null or blank. With a name it returns "Good morning, {name}" before 12:00, "Good afternoon, {name}" before 17:00 and "Good evening, {name}" after that. Until Phase 08 adds the profile form, no name is set, so Home shows "Hi there".
+`chooseGreeting(now, displayName)` returns "Hi there" when the name is null or blank. With a name it returns "Good morning, {name}" before 12:00, "Good afternoon, {name}" before 17:00 and "Good evening, {name}" after that. The name comes from the profile form (Phase 08); until it is set, Home shows "Hi there".
 
 ### Today Carousel
 
@@ -800,7 +826,7 @@ Home owns the single `useProfile` call and passes `weeklyWorkoutTarget` in, so t
 
 The screen title is "Workouts" for `streak` (the Home tile keeps the label "This week"), because the screen covers 14 days. `StatBarRow` reads a missing value as "no data" in its accessibility label instead of the dash.
 
-Both pass rows to `StatBarList`, a `Card` of `StatBarRow` rows (date label, bar, value). The date label comes from `formatShortDate` and the bar width from `barFraction`. This is a plain bar list. Phase 08 adds a chart.
+Both pass rows to `StatBarList`, a `Card` of `StatBarRow` rows (date label, bar, value). The date label comes from `formatShortDate` and the bar width from `barFraction`. Phase 08 puts a chart above the list (see Profile and Progress).
 
 ### Layout Clearance
 
@@ -826,10 +852,131 @@ These import no React Native and are covered by `bun test`:
 
 | Hook | Behaviour |
 | --- | --- |
-| `useProfile()` | See Profile Repository |
+| `useProfile()` | See Profile Repository. Phase 08 widens it to the full profile |
 | `useWeeklyStreak(now, weeklyWorkoutTarget)` | See Weekly Streak |
 | `useHealthRange(startDate, endDate)` | See Health Range |
 | `useScheduledWorkouts(startDate, endDate)` | Phase 07 adds `hasActivePlan` (whether an active plan exists, even one that starts in the future) to its ready state. `useScheduledWorkoutsForDate` returns its own ready type with `scheduledWorkouts` and `hasActivePlan`. The Calendar still uses the lookup type from `scheduledWeekCache` |
+
+## Profile and Progress
+
+Phase 08 turns the Profile tab into a hub, adds the profile form, the body measurements log, the Progress screens and the chart components. It adds no migration: it uses the `profile` and `body_measurements` tables from v2.
+
+### Profile Hub
+
+`src/app/(tabs)/profile.tsx` is a `ScrollBox` on a `SafeAreaView` with only the top edge, with 96 points of bottom clearance for the Coach button (a local constant in the route). From top to bottom:
+
+1. `ProfileSummaryHeader`: nuggie, the display name (or "Your profile"), the goal label and weekly target, and an Edit button that opens `/profile/edit`. The stored goal `hypertrophy` is labelled "Muscle" (`fitnessGoalLabels` in `src/profile/profileLabels.ts`).
+2. Body: a `SettingsRow` "Add your first measurement" (opens `/profile/measurements/new`) when there are none, otherwise "Body measurements" with the latest weight and 30-day change from `describeWeightSummary` (opens `/profile/measurements`).
+3. Progress: a `SettingsRow` titled by `describeNewRecordCount` with the lifetime totals from `describeLifetimeTotals` as its subtitle (opens `/progress`). It appears once the lifetime totals have loaded.
+4. "Exercise library" (opens `/exercises`) and "Apple Health" (subtitle from `describeHealthAccessStatus(...).caption`, opens `/profile/apple-health`).
+
+There is no Notifications row; it waits for Phase 09. Saving the profile or a measurement, and deleting a measurement, calls `bumpDataVersion()`, so Home and the hub reload.
+
+### Routes
+
+All are registered flat on the root `Stack` in `src/app/_layout.tsx`.
+
+| Route | Presentation | Purpose |
+| --- | --- | --- |
+| `/profile/edit` | Modal | `ProfileForm` with a Save button in the header. Renders nothing until `useProfile` has loaded, and shows an `EmptyState` with a Close button when the load fails |
+| `/profile/apple-health` | Push | The access status from `useHealthAuthorization` and `describeHealthAccessStatus`, a Request access button while access has not been asked for, and the steps for getting Garmin Connect to write to Apple Health |
+| `/profile/measurements` | Push (`profile/measurements/index`) | The weight section (range switcher, `ProgressLineChart`, BMI caption) as the list header, then a swipe-to-delete `MeasurementRow` list. An Add button in the header opens the new-measurement sheet |
+| `/profile/measurements/new` | Form sheet (detent 0.9) | `MeasurementForm` with Cancel and Save in the header |
+| `/progress` | Push (`progress/index`) | `ProgressOverview` for this month, then the recent records, class counts and the searchable exercise list. Shows `NuggieLoadingScreen` (`analytics` nuggie, "Crunching your numbers") until the totals load, and an `EmptyState` when no workout has been finished |
+| `/progress/records` | Push | Every personal record event, newest first, as `PersonalRecordItemRow` rows. A row opens the session summary |
+| `/progress/exercises/[exerciseId]` | Push | Exercise history: a metric `SegmentedControl` (when the tracking type has more than one metric), a `RangeSwitcher`, one chart, and the `ExerciseHistoryList` of sessions. The title is the exercise name |
+| `/progress/classes` | Push | One `ClassStatisticsCard` per class type |
+| `/stats/[metric]` | Push (Phase 07) | Gains a chart above the 14-day list, described below |
+
+### Charts
+
+`victory-native` and `@shopify/react-native-skia` are imported only by three organisms: `ProgressChartFrame`, `ProgressLineChart` and `ProgressBarChart`. Every other file, including routes and pure modules, gets chart data as `ChartPoint` (`{ date, value }`, from `src/types/ChartPoint.ts`) and renders through these organisms. Pure modules must also not import either library.
+
+- `ProgressChartFrame` is the chart-internal module shared by the other two (no route or other organism imports it). It takes `points`, `unit`, an optional `referenceValue`, `startsAtZero`, `hasBottomPadding`, `horizontalPadding`, `selectionHint` and a `renderMarks` function. It draws the `CartesianChart` inside a `Touchable` of height `sizes.progressChartHeight`, sets the font with Skia `matchFont` on the system font (no font file is bundled), draws the dashed reference line, and handles selection.
+- `ProgressLineChart` takes `points`, `unit`, an optional `referenceValue` and optional `emphasisedDates`. It draws a linear line and a dot per point; dates in `emphasisedDates` get the larger `chartEmphasisedDot`. The Y axis is fitted to the data.
+- `ProgressBarChart` takes `points`, `unit` and an optional `referenceValue`. It draws columns with rounded top corners. The Y axis starts at zero. Column width is the narrower of `chartBarMaximumWidth` and `chartBarWidthRatio` times the pixels per day.
+- Points are placed by real date, not by index, through `toChartDayNumber` and `fromChartDayNumber` (`src/progress/chartDayNumber.ts`). The X axis shows at most three ticks from `chartDayTicks` (first, middle and last day), labelled by `formatDayMonth`.
+- Tapping selects the nearest point (`findNearestPointIndex` over the X positions) and shows its date and value in a caption above the chart. The selected point gets a `textPrimary` dot with a ring in the `surface` colour. There is no `useChartPressState`; a `Touchable` tap is used instead. The chart has `accessibilityRole="image"` and a summary label from `describeChartSummary`.
+- The series colour is the `chart` token (`#E0628F` in light and dark). Grid lines use `border`, axis and reference-line text and the dashed reference line use `textSecondary`, and the frame and X axis lines are not drawn. Text never uses the chart colour. There is one series per chart, so no legend. All chart dimensions are `sizes` tokens (`progressChartHeight`, `chartLineWidth`, `chartGridLineWidth`, `chartDot`, `chartEmphasisedDot`, `chartHighlightDot`, `chartHighlightRing`, `chartEdgePadding`, `chartReferenceDash`, `chartBarMaximumWidth`, `chartBarWidthRatio`, `chartBarCornerRadius`).
+- `fitValueAxis(values, { startsAtZero })` (`src/progress/fitValueAxis.ts`) returns `{ minimum, maximum, ticks }` with exactly three ticks (minimum, middle, maximum) on round steps. With `startsAtZero` the minimum is the lower of zero and the data. A flat series is widened by one. The frame includes `referenceValue` when fitting.
+
+| Chart | Form | Y axis | Extras |
+| --- | --- | --- | --- |
+| Measurements: body weight (30 d, 90 d, 1 y) | Line | Fitted | Shown only with 2 or more points in range; otherwise the latest weight is shown as a number. BMI caption. Body fat and girths are never plotted |
+| Exercise history: 1RM, heaviest weight, most reps, longest time, longest distance | Line | Fitted | Record dates get the larger dot |
+| Exercise history: volume | Columns | From zero | None |
+| Stats: steps | Columns | From zero | Dashed reference at the daily step goal |
+| Stats: sleep | Columns | From zero | None |
+| Stats: resting heart rate | Line | Fitted | Dashed reference at the average of the plotted days |
+| Stats: streak | No chart | None | The completed / planned list is unchanged |
+
+### Stats Detail Chart
+
+`/stats/[metric]` now builds `healthChartPoints(metric, datesOldestFirst, snapshotsByDate)` from the same 14 days and shows the chart above `HealthMetricBarList`, inside a `Box`. The chart is skipped when there are no points. Steps use `ProgressBarChart` with `referenceValue` set to `dailyStepGoal` from `useProfile`; sleep uses `ProgressBarChart` without a reference; resting heart rate uses `ProgressLineChart` with `averageOfPoints(chartPoints)` as the reference. Sleep is plotted in hours rounded to one decimal place (`healthChartUnits` gives `steps`, `h` and `bpm`). Days without a value are left out.
+
+### Progress Definitions
+
+- Volume is the sum of weight times repetitions over completed `repetitions_and_weight` sets.
+- Time trained is the sum of `finished_at - started_at` over finished sessions, classes included.
+- "This month" is the calendar month that contains today (`currentMonthRange`). `lifetimeRange` has a `null` start date.
+- The records list replays finished sessions in start order with `listPersonalRecordsFromHistory`, so each session contributes what its summary reported (`detectPersonalRecords` then `selectBestRecordPerExercise`), and an exercise's first session yields nothing. The list is newest first. `detectPersonalRecords.ts` now exports `WeightedSet` and `isWeightedSet`.
+- Exercise series metrics (`src/progress/exerciseMetrics.ts`): `estimatedOneRepMax`, `heaviestWeight` and `volume` for `repetitions_and_weight`; `mostRepetitions` for `repetitions`; `longestDuration` for `duration`; `longestDistance` for `distance`. Only `volume` is a column metric. `buildExerciseSeries` keeps one point per session date with the best value, and the 1RM only counts sets of 12 repetitions or fewer.
+
+### Component Contract Changes
+
+- `TimePickerBox` (primitive) takes an optional `maximumDate`, passed to the date picker. `DatePickerField` (atom) uses it with `mode="date"` for the birth date and the measurement date.
+- `PersonalRecordRow` keeps its compact layout (trophy icon, name and detail) when none of `imageUrl`, `recordTypeLabel` or `dateLabel` is passed, so `SessionSummary` looks as before. With any of them it draws the extended layout: exercise image (or the workout nuggie), name, `recordTypeLabel · detail`, and a `dateLabel · sessionName` caption. With `onPress` the extended row is a button.
+- `ExerciseRow` takes an optional `caption` shown under the name.
+- `SettingsRow` (molecule) takes `title`, an optional `subtitle` and an optional `onPress`. With `onPress` it is a button with a trailing chevron; without it, a plain row. The hub rows use only border and `textSecondary` colours, as the theme has no `textMuted` token.
+- `RangeSwitcher` (molecule) is a generic wrapper over `SegmentedControl` that labels `ProgressRange` values from `progressRangeLabels` (`30 d`, `90 d`, `1 y`, `3 m`, `6 m`, `All`).
+- `StatTile` is unchanged. `ProgressOverview` uses its compact layout for the four "This month" tiles.
+
+### Hooks
+
+| Hook | Behaviour |
+| --- | --- |
+| `useProfile()` | See Profile Repository |
+| `useProfileForm({ initialValues, onSaved })` | Holds the form values, validates with `validateProfileForm`, and shows errors only after the first save attempt. `save()` calls `updateProfile`, bumps the data version and calls `onSaved`; a failure shows an alert |
+| `useBodyMeasurements()` | `{ measurements, hasLoadFailed, removeMeasurement }`. Reloads on focus and on data version. `removeMeasurement` deletes and bumps the data version |
+| `useMeasurementForm({ onSaved })` | Like `useProfileForm` for a new measurement (date defaults to today). A save-in-flight guard stops double saves |
+| `useTrainingTotals(range)` | `{ totals, hasLoadFailed }` from `getTrainingTotals` |
+| `usePersonalRecords()` | `{ personalRecords, hasLoadFailed }`: `listAllFinishedSessionSets` run through `buildPersonalRecordList` |
+| `useNewRecordCount()` | The number of record events in the current month |
+| `useExercisesWithHistory()` | `{ exercises, hasLoadFailed }` from `listExercisesWithHistory` |
+| `useExerciseHistory(exerciseId)` | `{ exercise, sessions, recordSetIds, recordDates, seriesSets, isLoaded, hasLoadFailed }` from `getExercise` and `listFinishedSessionSetsForExercise`, shaped by `buildExerciseHistory` |
+| `useClassStatistics()` | `{ classStatistics, hasLoadFailed }` for the current month |
+
+The data hooks reload on focus (`useFocusReloadKey`) and when the data version changes.
+
+### Pure Modules
+
+These import no React Native, expo-sqlite, Skia, victory-native or HealthKit code, and are covered by `bun test`.
+
+`src/profile/`:
+
+- `profileFormRules.ts`: the limits (height 50 to 272 cm, weekly target 1 to 14, step goal 500 to 50000 in steps of 500) and `snapStepGoal`
+- `validateProfileForm.ts`: `validateProfileForm` and `toProfileUpdate`, which trims the name and stores a blank name as `null`
+- `profileLabels.ts`: goal and sex labels and lists
+
+`src/measurements/`:
+
+- `measurementFormRules.ts`: weight 20 to 400 kg, body fat 2 to 75 %, girths 30 to 250 cm, one decimal place
+- `validateMeasurementForm.ts`: `validateMeasurementForm` (at least one value, each in range, no future date) and `toBodyMeasurementInput`
+- `describeBodyMeasurement.ts`: the title and detail text for a row
+
+`src/progress/` (alongside the Phase 05 and 07 files):
+
+- `calculateBodyMassIndex.ts`: kilograms over metres squared, one decimal place, `null` without a height
+- `calculateWeightChange.ts`: `selectWeighIns` and `calculateWeightChange` (latest weight minus the weight at or just before the window start, else the oldest in the window, `null` under 2 weigh-ins)
+- `summarizeWeight.ts`, `describeWeightSummary.ts`, `selectWeightPoints.ts`: the hub summary and the weight chart points
+- `progressRanges.ts`: `ProgressRange`, `progressRangeLabels`, `rangeStartDate` and `filterPointsToRange`
+- `fitValueAxis.ts`, `chartDayNumber.ts`, `findNearestPointIndex.ts`, `describeChart.ts`: chart helpers (see Charts)
+- `exerciseMetrics.ts`, `buildExerciseSeries.ts`, `buildExerciseSessions.ts`: the exercise history
+- `listPersonalRecordsFromHistory.ts`, `buildPersonalRecordList.ts` (also `countPersonalRecordsInRange`), `describePersonalRecordType.ts`: the records list
+- `formatTrainingTotals.ts`, `currentMonthRange.ts`: totals text and the month and lifetime ranges
+- `filterExercisesByName.ts`, `sortClassStatistics.ts`, `formatClassStatistics.ts`: the exercise search and the class statistics
+
+Elsewhere: `src/stats/healthChartPoints.ts` (`healthChartPoints`, `healthChartUnits`, `averageOfPoints`), `src/health/describeHealthAccessStatus.ts` (caption, headline and detail for the three access states) and `src/dates/formatDayMonth.ts`. New shared types are `ChartPoint`, `ClassStatistics`, `ExerciseHistory` (with `ExerciseWithHistory`), `FinishedSessionSet` and `TrainingTotals`; `BodyMeasurement.ts` gains `BodyMeasurementInput` and `WeightMeasurement`.
 
 ## App Start
 
@@ -855,25 +1002,29 @@ src/
     workouts/               builder: _layout with WorkoutEditorProvider, new, class-details, editor, [workoutId]/edit, superset-info
     plans/                  new, [planId] editor, [planId]/add-entry, entry-time, activate, copy-day
     workout/                [workoutId] detail screen
-    stats/                  [metric] 14-day detail screen
+    stats/                  [metric] 14-day detail screen with chart
+    profile/                edit, apple-health, measurements/index, measurements/new
+    progress/               index, records, classes, exercises/[exerciseId]
     sessions/               [sessionId] logger, finishing, summary screens, [sessionId]/link-health-workout sheet
   components/
     primitives/             themed wrappers: Box, Typography, Touchable, TextField, Stack, Image, Icon, List, SectionedList, ScrollBox, AnimatedBox, SwipeableBox, LongPressDragBox, WindowMeasuredBox, TimePickerBox, PagedList, SnapList, ProgressRingBox, ShakeBox
-    atoms/                  smallest UI pieces: Button, TextButton, IconButton, Badge, Chip, Checkbox, NuggieImage, Card, NumberInput, DurationInput, DragHandle, SupersetBracket, Toast, TimeLabel, StatusChip, DayMarker, PageDots, StreakDots, TrendArrow
-    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField, PlanEntryRow, DaySectionHeader, PlanRow, RestDay, ActivePlanBanner, DayChip, ScheduledWorkoutCard, HeaderImageCard, WorkoutDetailExerciseRow, ActiveSessionBanner, PersonalRecordRow, RestTimerBar, SessionSetRow, SessionTopBar, StatTile, HealthPermissionCard, HealthWorkoutRow, LinkedHealthWorkoutRow, HealthSuggestionBanner, GreetingHeader, TodayWorkoutCard, NuggieActionCard, RestDayCard, NoPlanCard, WeeklyStreakTile, StatBarRow
-    organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter, PlanWeekEditor, AddPlanEntrySheet, ActivatePlanSheet, EntryTimeSheet, CopyDaySheet, WeekStrip, DayWorkoutList, IndividualWorkoutDetail, ClassWorkoutDetail, SessionLogger, ClassSessionView, SessionExerciseCard, SessionSummary, LinkHealthWorkoutSheet, TodayCarousel, StatTileGrid, StatBarList, HealthMetricBarList, StreakBarList
+    atoms/                  smallest UI pieces: Button, TextButton, IconButton, Badge, Chip, Checkbox, NuggieImage, Card, NumberInput, DurationInput, DragHandle, SupersetBracket, Toast, TimeLabel, StatusChip, DayMarker, PageDots, StreakDots, TrendArrow, DatePickerField
+    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField, PlanEntryRow, DaySectionHeader, PlanRow, RestDay, ActivePlanBanner, DayChip, ScheduledWorkoutCard, HeaderImageCard, WorkoutDetailExerciseRow, ActiveSessionBanner, PersonalRecordRow, RestTimerBar, SessionSetRow, SessionTopBar, StatTile, HealthPermissionCard, HealthWorkoutRow, LinkedHealthWorkoutRow, HealthSuggestionBanner, GreetingHeader, TodayWorkoutCard, NuggieActionCard, RestDayCard, NoPlanCard, WeeklyStreakTile, StatBarRow, ProfileSummaryHeader, SettingsRow, MeasurementRow, RangeSwitcher, ClassCountTile
+    organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter, PlanWeekEditor, AddPlanEntrySheet, ActivatePlanSheet, EntryTimeSheet, CopyDaySheet, WeekStrip, DayWorkoutList, IndividualWorkoutDetail, ClassWorkoutDetail, SessionLogger, ClassSessionView, SessionExerciseCard, SessionSummary, LinkHealthWorkoutSheet, TodayCarousel, StatTileGrid, StatBarList, HealthMetricBarList, StreakBarList, ProfileForm, MeasurementForm, ProgressOverview, RecentRecordsSection, PersonalRecordItemRow, ClassCountSection, ClassStatisticsCard, ExerciseProgressSection, ExerciseHistoryList, ProgressChartFrame, ProgressLineChart, ProgressBarChart
   database/
     migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2), addSessionExerciseRestSeconds (v3)
-    repositories/           one file per entity: exerciseRepository, workoutRepository, planRepository, scheduleRepository, sessionRepository, appSettingsRepository, healthSnapshotRepository, profileRepository
+    repositories/           one file per entity: exerciseRepository, workoutRepository, planRepository, scheduleRepository, sessionRepository, appSettingsRepository, healthSnapshotRepository, profileRepository, bodyMeasurementRepository, progressRepository
   exercises/                pure exercise logic with tests: validation, A–Z grouping, filtering, selection
-  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan, usePlanActions, useScheduledWorkouts, useWeekPages, useSelectedDate, useScheduledWeeks, useSession, useStartSession, useActiveSession, useFinishedSession, useRestTimer, useSessionExercisePicks, useHealthAuthorization, useDailyHealth, useOverlappingHealthWorkouts, useUnlinkHealthWorkout, useProfile, useWeeklyStreak, useHealthRange, useFocusReloadKey
+  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan, usePlanActions, useScheduledWorkouts, useWeekPages, useSelectedDate, useScheduledWeeks, useSession, useStartSession, useActiveSession, useFinishedSession, useRestTimer, useSessionExercisePicks, useHealthAuthorization, useDailyHealth, useOverlappingHealthWorkouts, useUnlinkHealthWorkout, useProfile, useWeeklyStreak, useHealthRange, useFocusReloadKey, useProfileForm, useBodyMeasurements, useMeasurementForm, useTrainingTotals, usePersonalRecords, useNewRecordCount, useExercisesWithHistory, useExerciseHistory, useClassStatistics
   stores/                   exercisePickerStore, workoutSavedStore for returning values between screens; dataVersionStore, restTimerStore for module-level state; with tests
   plans/                    pure plan logic with tests: build scheduled workouts, time of day, summaries, copy day, weekday grouping, day marker state, week cache
   workouts/                 pure builder logic with tests: reducer, normalisation, grouping blocks, target set columns, save rows, drag maths, rest presets, class type nuggies, editor context and provider, duration estimation, target set descriptions
   sessions/                 pure session logic with tests: start and resume rules, fill and change operations, rest timer control, finishing and discard logic, personal record detection
-  progress/                 personal record detection (record types, first-time rule, tie handling, superset and best-set logic) and the weekly streak (phase 07)
+  progress/                 personal record detection (record types, first-time rule, tie handling, superset and best-set logic), the weekly streak (phase 07), and totals, weight, records list, exercise series and chart helpers (phase 08)
+  profile/                  pure profile logic with tests: form rules, validation, labels (phase 08)
+  measurements/             pure measurement logic with tests: form rules, validation, row text (phase 08)
   home/                     pure Home logic with tests: greeting, carousel page index, today workout action label (phase 07)
-  stats/                    pure detail screen logic with tests: metric parsing, bar fractions (phase 07)
+  stats/                    pure detail screen logic with tests: metric parsing, bar fractions (phase 07), chart points (phase 08)
   numbers/                  pure number parsing with tests: textual input rules
   images/                   pure image URL validation with tests: error messages
   nuggies/                  nuggie selection and image system
