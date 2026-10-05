@@ -101,6 +101,10 @@ export default function RootLayout() {
                 }}
               />
               <Stack.Screen name="progress/index" options={{ title: 'Progress', headerLargeTitleEnabled: false }} />
+              <Stack.Screen
+                name="progress/records"
+                options={{ title: 'Personal records', headerLargeTitleEnabled: false }}
+              />
               <Stack.Screen name="stats/[metric]" options={{ title: '', headerLargeTitleEnabled: false }} />
               <Stack.Screen name="workout/[workoutId]" options={{ title: '', headerLargeTitleEnabled: false }} />
               <Stack.Screen name="workouts" options={{ presentation: 'modal', headerShown: false }} />
@@ -125,10 +129,7 @@ export default function RootLayout() {
                   sheetGrabberVisible: true,
                 }}
               />
-              <Stack.Screen
-                name="exercises/picker"
-                options={{ presentation: 'fullScreenModal', headerShown: false }}
-              />
+              <Stack.Screen name="exercises/picker" options={{ presentation: 'fullScreenModal', headerShown: false }} />
               <Stack.Screen
                 name="plans/new"
                 options={{ presentation: 'modal', title: 'New plan', headerLargeTitleEnabled: false }}

@@ -2,6 +2,8 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { addDays } from '@/dates/addDays';
 import { parseLocalDateString } from '@/dates/parseLocalDateString';
+import type { TrackingType } from '@/types/TrackingType';
+import type { FinishedSessionSet } from '@/types/FinishedSessionSet';
 import type { TrainingTotals } from '@/types/TrainingTotals';
 
 type SessionTotalsRow = {
@@ -51,4 +53,50 @@ export async function getTrainingTotals(
     timeTrainedSeconds: Math.max(0, sessionTotals?.time_trained_seconds ?? 0),
     volumeKilograms: volumeTotals?.volume_kilograms ?? 0,
   };
+}
+
+type FinishedSessionSetRow = {
+  session_id: number;
+  started_at: string;
+  workout_name: string;
+  exercise_id: number;
+  exercise_name: string;
+  exercise_image_url: string | null;
+  tracking_type: TrackingType;
+  repetitions: number | null;
+  weight_kilograms: number | null;
+  duration_seconds: number | null;
+  distance_meters: number | null;
+};
+
+export async function listAllFinishedSessionSets(database: SQLiteDatabase): Promise<FinishedSessionSet[]> {
+  const rows = await database.getAllAsync<FinishedSessionSetRow>(
+    `SELECT sessions.id AS session_id, sessions.started_at, sessions.workout_name,
+      session_exercises.exercise_id, exercises.name AS exercise_name, exercises.image_url AS exercise_image_url,
+      session_exercises.tracking_type, session_sets.repetitions, session_sets.weight_kilograms,
+      session_sets.duration_seconds, session_sets.distance_meters
+    FROM session_sets
+    JOIN session_exercises ON session_exercises.id = session_sets.session_exercise_id
+    JOIN sessions ON sessions.id = session_exercises.session_id
+    JOIN exercises ON exercises.id = session_exercises.exercise_id
+    WHERE session_sets.completed_at IS NOT NULL
+      AND sessions.finished_at IS NOT NULL
+    ORDER BY sessions.started_at, sessions.id, session_exercises.position, session_exercises.id,
+      session_sets.position, session_sets.id`,
+  );
+  return rows.map((row) => ({
+    sessionId: row.session_id,
+    startedAt: row.started_at,
+    workoutName: row.workout_name,
+    exerciseName: row.exercise_name,
+    exerciseImageUrl: row.exercise_image_url,
+    set: {
+      exerciseId: row.exercise_id,
+      trackingType: row.tracking_type,
+      repetitions: row.repetitions,
+      weightKilograms: row.weight_kilograms,
+      durationSeconds: row.duration_seconds,
+      distanceMeters: row.distance_meters,
+    },
+  }));
 }
