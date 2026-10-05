@@ -8,6 +8,7 @@ import { getHealthSnapshot, upsertHealthSnapshot } from '@/database/repositories
 import { clearRefreshStarted, getLastRefreshStartedAt, markRefreshStarted } from '@/health/healthRefreshThrottle';
 import { healthAuthorizationRequestedAtSettingKey } from '@/health/healthSettingKeys';
 import { isHealthSnapshotFinal } from '@/health/isHealthSnapshotFinal';
+import { pickNewerHealthSnapshot } from '@/health/pickNewerHealthSnapshot';
 import { readDailyHealth } from '@/health/readDailyHealth';
 import { shouldRefreshHealth } from '@/health/shouldRefreshHealth';
 import type { HealthSnapshot } from '@/types/HealthSnapshot';
@@ -17,10 +18,18 @@ type LoadedSnapshot = {
   snapshot: HealthSnapshot | null;
 };
 
+type RunRequest = {
+  isActive: () => boolean;
+  execute: () => Promise<void>;
+};
+
 export function useDailyHealth(date: string) {
   const database = useSQLiteContext();
   const [loadedSnapshot, setLoadedSnapshot] = useState<LoadedSnapshot | null>(null);
   const isMountedReference = useRef(true);
+  const currentDateReference = useRef(date);
+  const isRunningReference = useRef(false);
+  const queuedRequestReference = useRef<RunRequest | null>(null);
 
   useEffect(() => {
     isMountedReference.current = true;
@@ -29,13 +38,51 @@ export function useDailyHealth(date: string) {
     };
   }, []);
 
+  useEffect(() => {
+    currentDateReference.current = date;
+  }, [date]);
+
+  const requestRun = useCallback(async (request: RunRequest) => {
+    if (isRunningReference.current) {
+      queuedRequestReference.current = request;
+      return;
+    }
+    isRunningReference.current = true;
+    try {
+      let nextRequest: RunRequest | null = request;
+      while (nextRequest !== null) {
+        const runningRequest: RunRequest = nextRequest;
+        queuedRequestReference.current = null;
+        if (runningRequest.isActive()) {
+          await runningRequest.execute();
+        }
+        const queuedRequest = queuedRequestReference.current as RunRequest | null;
+        nextRequest = queuedRequest !== null && queuedRequest.isActive() ? queuedRequest : null;
+      }
+    } finally {
+      isRunningReference.current = false;
+    }
+  }, []);
+
   const loadAndRefresh = useCallback(
     async (isActive: () => boolean) => {
+      const mergeIntoCurrentDate = (incomingSnapshot: HealthSnapshot | null, shouldStartDate: boolean) => {
+        if (currentDateReference.current !== date) {
+          return;
+        }
+        setLoadedSnapshot((previousSnapshot) => {
+          if (previousSnapshot === null || previousSnapshot.date !== date) {
+            return shouldStartDate ? { date, snapshot: incomingSnapshot } : previousSnapshot;
+          }
+          return { date, snapshot: pickNewerHealthSnapshot(previousSnapshot.snapshot, incomingSnapshot) };
+        });
+      };
+
       const cachedSnapshot = await getHealthSnapshot(database, date);
       if (!isActive()) {
         return;
       }
-      setLoadedSnapshot({ date, snapshot: cachedSnapshot });
+      mergeIntoCurrentDate(cachedSnapshot, true);
 
       if (cachedSnapshot !== null && isHealthSnapshotFinal(cachedSnapshot, new Date())) {
         return;
@@ -59,7 +106,7 @@ export function useDailyHealth(date: string) {
         return;
       }
       if (isActive()) {
-        setLoadedSnapshot({ date, snapshot: freshSnapshot });
+        mergeIntoCurrentDate(freshSnapshot, false);
       }
     },
     [database, date],
@@ -69,22 +116,24 @@ export function useDailyHealth(date: string) {
     useCallback(() => {
       let isActive = true;
       const isStillActive = () => isActive;
-      loadAndRefresh(isStillActive).catch(() => {});
+      const request: RunRequest = { isActive: isStillActive, execute: () => loadAndRefresh(isStillActive) };
+      requestRun(request).catch(() => {});
       const subscription = AppState.addEventListener('change', (appState) => {
         if (appState === 'active') {
-          loadAndRefresh(isStillActive).catch(() => {});
+          requestRun(request).catch(() => {});
         }
       });
       return () => {
         isActive = false;
         subscription.remove();
       };
-    }, [loadAndRefresh]),
+    }, [loadAndRefresh, requestRun]),
   );
 
   const refresh = useCallback(() => {
-    loadAndRefresh(() => isMountedReference.current).catch(() => {});
-  }, [loadAndRefresh]);
+    const isStillMounted = () => isMountedReference.current;
+    requestRun({ isActive: isStillMounted, execute: () => loadAndRefresh(isStillMounted) }).catch(() => {});
+  }, [loadAndRefresh, requestRun]);
 
   const isCurrentDate = loadedSnapshot !== null && loadedSnapshot.date === date;
 
