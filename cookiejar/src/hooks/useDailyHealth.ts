@@ -5,13 +5,12 @@ import { AppState } from 'react-native';
 
 import { getSetting } from '@/database/repositories/appSettingsRepository';
 import { getHealthSnapshot, upsertHealthSnapshot } from '@/database/repositories/healthSnapshotRepository';
+import { clearRefreshStarted, getLastRefreshStartedAt, markRefreshStarted } from '@/health/healthRefreshThrottle';
 import { healthAuthorizationRequestedAtSettingKey } from '@/health/healthSettingKeys';
 import { isHealthSnapshotFinal } from '@/health/isHealthSnapshotFinal';
 import { readDailyHealth } from '@/health/readDailyHealth';
 import { shouldRefreshHealth } from '@/health/shouldRefreshHealth';
 import type { HealthSnapshot } from '@/types/HealthSnapshot';
-
-const lastRefreshStartedAtByDate = new Map<string, number>();
 
 type LoadedSnapshot = {
   date: string;
@@ -46,17 +45,17 @@ export function useDailyHealth(date: string) {
         return;
       }
       const now = new Date();
-      if (!shouldRefreshHealth(lastRefreshStartedAtByDate.get(date) ?? null, now.getTime())) {
+      if (!shouldRefreshHealth(getLastRefreshStartedAt(date), now.getTime())) {
         return;
       }
-      lastRefreshStartedAtByDate.set(date, now.getTime());
+      markRefreshStarted(date, now.getTime());
 
       let freshSnapshot: HealthSnapshot;
       try {
         const dailyHealth = await readDailyHealth(date, now);
         freshSnapshot = await upsertHealthSnapshot(database, dailyHealth);
       } catch {
-        lastRefreshStartedAtByDate.delete(date);
+        clearRefreshStarted(date);
         return;
       }
       if (isActive()) {
