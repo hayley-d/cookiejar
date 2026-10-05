@@ -347,6 +347,99 @@ These hold the plans logic, import no React Native, and are covered by `bun test
 - `src/workouts/workoutNuggie.ts`: the `workout` nuggie, or the class nuggie for a class
 - `src/workouts/filterWorkouts.ts`: workout search by name
 
+## Calendar and Workout Detail
+
+### Routes
+
+The Calendar tab is registered in `src/app/(tabs)/calendar.tsx`. Tapping a day's workout card pushes the detail route.
+
+| Route | Presentation | Purpose |
+| --- | --- | --- |
+| `/(tabs)/calendar` | Tab | The calendar week strip with the selected day's workouts in time order |
+| `/workout/[workoutId]` | Stack push | Workout detail, with optional `date` and `planEntryId` params. Switches on `kind` (individual or class). Loading, missing and failed states show `EmptyState`. Edit pushes the builder edit modal (`/workouts/[workoutId]/edit`). Start opens a Phase 05 placeholder alert |
+
+### Calendar Hooks
+
+Three hooks manage the calendar's state:
+
+| Hook | Behaviour |
+| --- | --- |
+| `useWeekPages(centreDate)` | Returns `{ weekStarts, initialWeekIndex, currentWeekIndex, currentWeekStart, visibleWeekStart, showWeek, prependWeeks, appendWeeks }`. Starts with 8 weeks on each side of centre. `currentWeekIndex` is the week containing centre. `visibleWeekStart` is the week whose days are displayed below the strip. `prependWeeks()` and `appendWeeks()` add 8 weeks at the start or end |
+| `useSelectedDate(today)` | Returns `{ selectedDate, selectDate, followVisibleWeek }`. Tracks the selected day on the strip. When a swipe settles, `followVisibleWeek(weekStart)` keeps the selection if it is already in that week, otherwise picks today if the week contains it, otherwise the same weekday in that week |
+| `useScheduledWeeks(visibleWeekStart)` | Returns `{ lookupDate }`. Caches scheduled workouts by week. On mount it loads the visible week ±1. When `visibleWeekStart` changes it loads only the weeks out of the visible week ±1 that are not cached. On a later focus or a `dataVersion` change it empties the cache and reloads the visible week ±1, dropping results from loads started before the reset. `lookupDate(date)` returns a `ScheduledWorkoutsForDateLookup`: `loading`, `failed`, or `ready` with `scheduledWorkouts`. Failed weeks stay failed until the next reset |
+
+### Week Cache
+
+`src/plans/scheduledWeekCache.ts` holds the week cache and its lookup functions. The cache is a `Map<string, ScheduledWeek>`, where each week key is a Monday's `YYYY-MM-DD` date string. Each week is either `{ outcome: 'ready'; scheduledWorkoutsByDate }` or `{ outcome: 'failed' }`. `missingWeekStarts(cache, visibleWeekStart)` returns the weeks around visible (visible ±1) that are not in the cache. `mergeLoadedWeeks(cache, loadedWeeks)` merges new weeks in. `scheduledWorkoutsForDate(cache, date)` returns a lookup for a single date. `ScheduledWorkoutsForDateLookup` is the result type. It is declared here, and `useScheduledWorkouts` re-exports it.
+
+### Summary Columns and Duration
+
+`PlanEntryWorkout` and `ScheduledWorkoutSummary` gained `targetSetCount` and `targetRestSeconds`. Both are populated by `getPlanWithEntries` and `listSessionsBetween` with SQL:
+- `targetSetCount`: count of all `target_sets` rows for the workout
+- `targetRestSeconds`: sum of `COALESCE(workout_items.rest_seconds, ?)` for each target set, using a bound `defaultRestSeconds` parameter (90 seconds)
+
+`getWorkoutWithItems` now selects the exercise's `body_part`.
+
+`useWorkoutWithItems` reloads on focus and when `dataVersion` changes. If a reload fails after a successful load, it keeps the earlier result instead of returning `failed`, so a failed focus doesn't hide loaded data from the detail.
+
+### Workout Detail
+
+`estimateWorkoutMinutes({ targetSetCount, targetRestSeconds })` estimates workout duration in minutes by calculating `(targetSetCount * 90 + targetRestSeconds) / 60`, then rounding to the nearest 5 minutes. `estimateMinutesForWorkoutWithItems(workout)` sums target sets and rest from a workout's items and calls the above.
+
+`describeTargetSets(trackingType, targetSets)` returns a text summary:
+- Empty: `"No sets"`
+- Missing primary value on any set: `"N sets"`
+- Uniform: `"N × value [@ weight kg]"` (weight shown for `repetitions_and_weight`)
+- Varied: `"value / value / … [@ weight kg]"` (weight range shown when present)
+
+Distances of 1000 m and over are shown as km.
+
+### Placeholder for Phase 05
+
+`src/workouts/startWorkout.ts` exports `startWorkout({ workoutId, date, planEntryId })`, which shows an alert saying "Workout sessions arrive in Phase 05". Phase 05 replaces this function with the actual session creation flow.
+
+### Pure Modules
+
+These hold the calendar logic, import no React Native, and are covered by `bun test`:
+
+- `src/dates/weekPages.ts`: building starting pages (±8 weeks), prepending and appending, finding a week's index, selected-day-after-page-change rule, month label (Thursday's month), and the page-alignment tolerance for momentum events
+- `src/dates/calendarNames.ts`: month names and weekday names for formatted dates
+- `src/dates/formatFullDate.ts`: "Monday 5 October" format for a date string
+- `src/plans/scheduledWeekCache.ts`: week cache structure, merging loaded weeks, and looking up a date
+- `src/plans/dayMarkerState.ts`: marker state (none | completed | missed | planned) by workout status, date and today
+- `src/workouts/describeTargetSets.ts`: text summaries of target set ranges by tracking type, with or without weight
+- `src/workouts/estimateWorkoutMinutes.ts`: workout duration estimate from target set and rest totals
+
+### Atoms, Molecules and Organisms
+
+| Component | Purpose |
+| --- | --- |
+| `StatusChip` (atom) | Shows the status (Done green, In progress pink, Missed grey for past dates, none otherwise) as a small labelled chip |
+| `DayMarker` (atom) | Renders under the date in a day chip's fixed-height marker slot: checkmark for completed, pink dot for planned, grey dot for missed (past with a missed entry), nothing for no workouts |
+| `DayChip` (molecule) | A day on the week strip: weekday letter, date number in a rounded box (selected fill), today ring, and a marker slot. Tappable |
+| `ScheduledWorkoutCard` (molecule) | A workout card for a day: image or nuggie, time and kind, name, summary (exercise count and estimated duration for individual; duration for class), status, and play button for planned entries today or earlier |
+| `HeaderImageCard` (molecule) | A large card at the top of the detail screen: image if loaded, otherwise a nuggie. Can use `background: 'surface'` or `'accentSoft'` (soft pink for classes) |
+| `WorkoutDetailExerciseRow` (molecule) | An exercise in the detail: image or nuggie, name, target summary, and optional superset label and bracket. Tappable to expand a read-only target set table |
+| `PagedList` (primitive) | A horizontally paged `FlatList` with `contentInsetAdjustmentBehavior: 'never'`. Used for the week strip to avoid padding in the paged content |
+| `WeekStrip` (organism) | Horizontal paged list of weeks. Renders 7 day chips per page. Uses `getItemLayout`, `initialScrollIndex` and `maintainVisibleContentPosition`. Calls `onReachEarliestWeeks` on start reached, deferred until the scroll settles so the offset adjusts while still, `onReachLatestWeeks` on end reached straight away, and `onVisibleWeekChange` with the most visible week (tracked through viewability, not offset) when a scroll settles. Takes `renderMarker(date)` for each day. Calls `onSelectDate` when a day is tapped. Exposes `scrollToWeekIndex` via ref |
+| `DayWorkoutList` (organism) | The workouts for the selected day. Cards tap through to the detail route and the play button calls `startWorkout`. An empty day shows the rest-day nuggie and a "Browse workouts" button that navigates to Create. Loading and failed states show a message |
+| `IndividualWorkoutDetail` (organism) | Detail for individual workouts: header image, name, summary (exercise count, estimated duration, body parts), exercise rows with target summaries and expandable set tables, and a sticky "START WORKOUT" button |
+| `ClassWorkoutDetail` (organism) | Detail for class workouts: header image, or the class nuggie on a soft pink card, name, class type badge, duration, description, and a sticky "START CLASS" button |
+
+ScreenHeader gained an optional `action` slot for the "Today" button.
+
+### New Theme Size Tokens
+
+| Token | Value | Purpose |
+| --- | --- | --- |
+| `dayChipCircle` | 36 | Diameter of the date number circle on a day chip |
+| `todayRingWidth` | 2 | Border width of the today ring |
+| `dayMarkerSlot` | 10 | Height reserved for the marker (checkmark or dot) on a day chip |
+| `dayMarkerDot` | 6 | Diameter of the marker dot (planned or missed) |
+| `headerCardImageHeight` | 200 | Height of the header image card on detail screens |
+| `headerCardNuggie` | 140 | Size of the nuggie image in the header card |
+| `detailBottomBarClearance` | 96 | Space at the bottom of scrollable detail content for the sticky button |
+
 ## App Start
 
 When the app launches:
@@ -370,23 +463,24 @@ src/
     exercises/              library (index), new, [exerciseId] edit, picker
     workouts/               builder: _layout with WorkoutEditorProvider, new, class-details, editor, [workoutId]/edit, superset-info
     plans/                  new, [planId] editor, [planId]/add-entry, entry-time, activate, copy-day
+    workout/                [workoutId] detail screen
   components/
-    primitives/             themed wrappers: Box, Typography, Touchable, TextField, Stack, Image, Icon, List, SectionedList, ScrollBox, AnimatedBox, SwipeableBox, LongPressDragBox, WindowMeasuredBox, TimePickerBox
-    atoms/                  smallest UI pieces: Button, TextButton, IconButton, Badge, Chip, Checkbox, NuggieImage, Card, NumberInput, DurationInput, DragHandle, SupersetBracket, Toast, TimeLabel
-    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField, PlanEntryRow, DaySectionHeader, PlanRow, RestDay, ActivePlanBanner
-    organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter, PlanWeekEditor, AddPlanEntrySheet, ActivatePlanSheet, EntryTimeSheet, CopyDaySheet
+    primitives/             themed wrappers: Box, Typography, Touchable, TextField, Stack, Image, Icon, List, SectionedList, ScrollBox, AnimatedBox, SwipeableBox, LongPressDragBox, WindowMeasuredBox, TimePickerBox, PagedList
+    atoms/                  smallest UI pieces: Button, TextButton, IconButton, Badge, Chip, Checkbox, NuggieImage, Card, NumberInput, DurationInput, DragHandle, SupersetBracket, Toast, TimeLabel, StatusChip, DayMarker
+    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField, PlanEntryRow, DaySectionHeader, PlanRow, RestDay, ActivePlanBanner, DayChip, ScheduledWorkoutCard, HeaderImageCard, WorkoutDetailExerciseRow
+    organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter, PlanWeekEditor, AddPlanEntrySheet, ActivatePlanSheet, EntryTimeSheet, CopyDaySheet, WeekStrip, DayWorkoutList, IndividualWorkoutDetail, ClassWorkoutDetail
   database/
     migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2)
     repositories/           one file per entity: exerciseRepository, workoutRepository, planRepository, scheduleRepository
   exercises/                pure exercise logic with tests: validation, A–Z grouping, filtering, selection
-  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan, usePlanActions, useScheduledWorkouts
+  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan, usePlanActions, useScheduledWorkouts, useWeekPages, useSelectedDate, useScheduledWeeks
   stores/                   exercisePickerStore and workoutSavedStore for returning values between screens, dataVersionStore, with tests
-  plans/                    pure plan logic with tests: build scheduled workouts, time of day, summaries, copy day, weekday grouping
-  workouts/                 pure builder logic with tests: reducer, normalisation, grouping blocks, target set columns, save rows, drag maths, rest presets, class type nuggies, editor context and provider
+  plans/                    pure plan logic with tests: build scheduled workouts, time of day, summaries, copy day, weekday grouping, day marker state, week cache
+  workouts/                 pure builder logic with tests: reducer, normalisation, grouping blocks, target set columns, save rows, drag maths, rest presets, class type nuggies, editor context and provider, duration estimation, target set descriptions, start workout placeholder
   numbers/                  pure number parsing with tests: textual input rules
   images/                   pure image URL validation with tests: error messages
   nuggies/                  nuggie selection and image system
-  dates/                    pure date/duration helpers with tests
+  dates/                    pure date/duration helpers with tests: week paging, calendar names, formatted dates
   types/                    shared domain types (Exercise, Workout, Session, Plan, ScheduledWorkout, etc.)
   theme/                    design tokens and theme provider
   health/                   Apple Health integration (phase 06)
