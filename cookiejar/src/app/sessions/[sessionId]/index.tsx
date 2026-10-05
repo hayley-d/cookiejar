@@ -32,7 +32,8 @@ function chooseStartingNuggie() {
 export default function SessionLoggerScreen() {
   const { sessionId: sessionIdParameter, isStarting } = useLocalSearchParams<SessionLoggerParameters>();
   const sessionId = Number(sessionIdParameter);
-  const { sessionLookup, changeSetValues, toggleSetCompletion, finish, discard } = useSession(sessionId);
+  const { sessionLookup, previousSetsByExerciseId, changeSetValues, toggleSetCompletion, finish, discard } =
+    useSession(sessionId);
   const [startingNuggie] = useState(chooseStartingNuggie);
   const [isLoadingScreenVisible, setIsLoadingScreenVisible] = useState(isStarting === 'true');
   const [isFinishing, setIsFinishing] = useState(false);
@@ -103,6 +104,7 @@ export default function SessionLoggerScreen() {
       <SessionLogger
         session={sessionLookup.session}
         isFinishing={isFinishing}
+        previousSetsByExerciseId={previousSetsByExerciseId}
         onChangeSetValues={changeSetValues}
         onToggleSetCompletion={toggleSetCompletion}
         onFinish={requestFinish}

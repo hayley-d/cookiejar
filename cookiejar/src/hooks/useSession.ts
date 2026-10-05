@@ -6,18 +6,16 @@ import {
   completeSessionSet,
   discardSession,
   finishSession,
+  getPreviousSessionSets,
   getSessionWithExercises,
   uncompleteSessionSet,
   updateSessionSet,
 } from '@/database/repositories/sessionRepository';
-import {
-  actualValuesOf,
-  fillSetForTick,
-  type SetCompletionOutcome,
-  type SetValues,
-} from '@/sessions/fillSetForTick';
+import { actualValuesOf, fillSetForTick, type SetCompletionOutcome, type SetValues } from '@/sessions/fillSetForTick';
+import { resolveRestTimerStart } from '@/sessions/resolveRestTimerStart';
 import { findSessionSet, withSessionSetChanges } from '@/sessions/sessionSetChanges';
 import { bumpDataVersion } from '@/stores/dataVersionStore';
+import { clearRestTimer, startRestTimer } from '@/stores/restTimerStore';
 import type { SessionWithExercises } from '@/types/SessionWithExercises';
 
 export type SessionLookup =
@@ -31,6 +29,10 @@ type LoadedSession = {
   lookup: Exclude<SessionLookup, { status: 'loading' }>;
 };
 
+type PreviousSetsByExerciseId = Map<number, SetValues[]>;
+
+const noPreviousSets: PreviousSetsByExerciseId = new Map();
+
 type WriteTask = () => Promise<void>;
 
 const textInputDebounceMilliseconds = 400;
@@ -42,6 +44,10 @@ function alertWriteFailure() {
 export function useSession(sessionId: number) {
   const database = useSQLiteContext();
   const [loadedSession, setLoadedSession] = useState<LoadedSession | null>(null);
+  const [previousSets, setPreviousSets] = useState<{
+    sessionId: number;
+    byExerciseId: PreviousSetsByExerciseId;
+  } | null>(null);
   const sessionReference = useRef<SessionWithExercises | null>(null);
   const pendingValueWrites = useRef(new Map<number, ReturnType<typeof setTimeout>>());
   const writeQueue = useRef<Promise<void>>(Promise.resolve());
@@ -69,6 +75,41 @@ export function useSession(sessionId: number) {
       isActive = false;
     };
   }, [database, sessionId]);
+
+  const exerciseIdsKey =
+    loadedSession !== null && loadedSession.lookup.status === 'found'
+      ? [...new Set(loadedSession.lookup.session.exercises.map((sessionExercise) => sessionExercise.exerciseId))].join(
+          ',',
+        )
+      : '';
+
+  useEffect(() => {
+    if (!Number.isInteger(sessionId) || exerciseIdsKey.length === 0) {
+      return;
+    }
+    let isActive = true;
+    const exerciseIds = exerciseIdsKey.split(',').map(Number);
+    Promise.all(
+      exerciseIds.map(async (exerciseId): Promise<[number, SetValues[]]> => [
+        exerciseId,
+        await getPreviousSessionSets(database, exerciseId, sessionId),
+      ]),
+    ).then(
+      (entries) => {
+        if (isActive) {
+          setPreviousSets({ sessionId, byExerciseId: new Map(entries) });
+        }
+      },
+      () => {
+        if (isActive) {
+          setPreviousSets({ sessionId, byExerciseId: noPreviousSets });
+        }
+      },
+    );
+    return () => {
+      isActive = false;
+    };
+  }, [database, sessionId, exerciseIdsKey]);
 
   const enqueueWrite = useCallback((task: WriteTask) => {
     writeQueue.current = writeQueue.current.then(task).then(bumpDataVersion, alertWriteFailure);
@@ -165,6 +206,13 @@ export function useSession(sessionId: number) {
         await updateSessionSet(database, sessionSetId, tickResult.values);
         await completeSessionSet(database, sessionSetId, completedAt);
       });
+      const tickedSession = sessionReference.current;
+      if (tickedSession !== null) {
+        const restTimerStart = resolveRestTimerStart(tickedSession.exercises, sessionSetId);
+        if (restTimerStart.shouldStart) {
+          startRestTimer(restTimerStart.restSeconds);
+        }
+      }
       return 'ticked';
     },
     [applySessionChange, cancelPendingValueWrite, database, enqueueWrite],
@@ -173,6 +221,7 @@ export function useSession(sessionId: number) {
   const finish = useCallback(async () => {
     await flushPendingValueWrites();
     await finishSession(database, sessionId);
+    clearRestTimer();
     bumpDataVersion();
   }, [database, flushPendingValueWrites, sessionId]);
 
@@ -182,6 +231,7 @@ export function useSession(sessionId: number) {
     }
     await writeQueue.current;
     await discardSession(database, sessionId);
+    clearRestTimer();
     bumpDataVersion();
   }, [cancelPendingValueWrite, database, sessionId]);
 
@@ -194,5 +244,8 @@ export function useSession(sessionId: number) {
     sessionLookup = loadedSession.lookup;
   }
 
-  return { sessionLookup, changeSetValues, toggleSetCompletion, finish, discard };
+  const previousSetsByExerciseId =
+    previousSets !== null && previousSets.sessionId === sessionId ? previousSets.byExerciseId : noPreviousSets;
+
+  return { sessionLookup, previousSetsByExerciseId, changeSetValues, toggleSetCompletion, finish, discard };
 }

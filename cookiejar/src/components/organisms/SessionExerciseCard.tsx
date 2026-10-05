@@ -2,23 +2,32 @@ import { useState } from 'react';
 
 import { Card } from '@/components/atoms/Card';
 import { NuggieImage } from '@/components/atoms/NuggieImage';
+import { SupersetBracket } from '@/components/atoms/SupersetBracket';
 import { SessionSetRow } from '@/components/molecules/SessionSetRow';
 import { Box } from '@/components/primitives/Box';
 import { Image } from '@/components/primitives/Image';
 import { Typography } from '@/components/primitives/Typography';
+import { describePreviousSet, matchPreviousSets } from '@/sessions/describePreviousSet';
 import type { SetCompletionOutcome, SetValues } from '@/sessions/fillSetForTick';
 import { useTheme } from '@/theme/useTheme';
 import type { SessionExerciseWithSets } from '@/types/SessionWithExercises';
+import type { SupersetBracketPosition } from '@/workouts/supersetCardPositions';
 import { targetSetColumns } from '@/workouts/targetSetColumns';
 
 type SessionExerciseCardProperties = {
   sessionExercise: SessionExerciseWithSets;
+  label: string | null;
+  bracket: SupersetBracketPosition | null;
+  previousSets: SetValues[];
   onChangeSetValues: (sessionSetId: number, changes: Partial<SetValues>) => void;
   onToggleSetCompletion: (sessionSetId: number) => SetCompletionOutcome;
 };
 
 export function SessionExerciseCard({
   sessionExercise,
+  label,
+  bracket,
+  previousSets,
   onChangeSetValues,
   onToggleSetCompletion,
 }: SessionExerciseCardProperties) {
@@ -28,67 +37,79 @@ export function SessionExerciseCard({
   const { imageUrl } = exercise;
   const showsImage = imageUrl !== null && imageUrl !== failedImageUrl;
   const columns = targetSetColumns(sessionExercise.trackingType);
+  const matchedPreviousSets = matchPreviousSets(sessionExercise.sets.length, previousSets);
 
   return (
-    <Card>
-      <Box gap="medium">
-        <Box direction="row" gap="medium" align="center">
-          {showsImage ? (
-            <Image
-              source={{ uri: imageUrl }}
-              contentFit="cover"
-              style={{
-                width: theme.sizes.exerciseEditorImage,
-                height: theme.sizes.exerciseEditorImage,
-                borderRadius: theme.radii.medium,
-              }}
-              onError={() => setFailedImageUrl(imageUrl)}
-            />
-          ) : (
-            <NuggieImage name="workout" size={theme.sizes.exerciseEditorImage} shape="rounded" />
-          )}
-          <Box flex={1}>
-            <Typography variant="heading">{exercise.name.toUpperCase()}</Typography>
-          </Box>
-        </Box>
-        <Box gap="small">
-          <Box direction="row" gap="small">
-            <Box style={{ width: theme.sizes.setNumberColumn }}>
-              <Typography variant="caption" color="textSecondary" align="center">
-                SET
+    <Box style={bracket === null ? undefined : { paddingLeft: theme.spacing.medium }}>
+      {bracket === null ? null : <SupersetBracket position={bracket} />}
+      <Card>
+        <Box gap="medium">
+          <Box direction="row" gap="medium" align="center">
+            {showsImage ? (
+              <Image
+                source={{ uri: imageUrl }}
+                contentFit="cover"
+                style={{
+                  width: theme.sizes.exerciseEditorImage,
+                  height: theme.sizes.exerciseEditorImage,
+                  borderRadius: theme.radii.medium,
+                }}
+                onError={() => setFailedImageUrl(imageUrl)}
+              />
+            ) : (
+              <NuggieImage name="workout" size={theme.sizes.exerciseEditorImage} shape="rounded" />
+            )}
+            <Box flex={1}>
+              <Typography variant="heading">
+                {label === null ? exercise.name.toUpperCase() : `${label}  ${exercise.name.toUpperCase()}`}
               </Typography>
             </Box>
-            {columns.map((column) => (
-              <Box key={column.field} flex={1}>
+          </Box>
+          <Box gap="small">
+            <Box direction="row" gap="small">
+              <Box style={{ width: theme.sizes.setNumberColumn }}>
                 <Typography variant="caption" color="textSecondary" align="center">
-                  {column.label.toUpperCase()}
+                  SET
                 </Typography>
               </Box>
-            ))}
-            <Box style={{ width: theme.sizes.setCompletionColumn }}>
-              <Typography variant="caption" color="textSecondary" align="center">
-                ✓
-              </Typography>
+              <Box style={{ width: theme.sizes.previousColumn }}>
+                <Typography variant="caption" color="textSecondary" align="center">
+                  PREVIOUS
+                </Typography>
+              </Box>
+              {columns.map((column) => (
+                <Box key={column.field} flex={1}>
+                  <Typography variant="caption" color="textSecondary" align="center">
+                    {column.label.toUpperCase()}
+                  </Typography>
+                </Box>
+              ))}
+              <Box style={{ width: theme.sizes.setCompletionColumn }}>
+                <Typography variant="caption" color="textSecondary" align="center">
+                  ✓
+                </Typography>
+              </Box>
             </Box>
+            {sessionExercise.sets.length === 0 ? (
+              <Typography variant="caption" color="textSecondary">
+                No sets
+              </Typography>
+            ) : (
+              sessionExercise.sets.map((set, index) => (
+                <SessionSetRow
+                  key={set.id}
+                  setNumber={index + 1}
+                  previousText={describePreviousSet(sessionExercise.trackingType, matchedPreviousSets[index] ?? null)}
+                  columns={columns}
+                  set={set}
+                  onChangeValues={(changes) => onChangeSetValues(set.id, changes)}
+                  onToggleCompletion={() => onToggleSetCompletion(set.id)}
+                />
+              ))
+            )}
           </Box>
-          {sessionExercise.sets.length === 0 ? (
-            <Typography variant="caption" color="textSecondary">
-              No sets
-            </Typography>
-          ) : (
-            sessionExercise.sets.map((set, index) => (
-              <SessionSetRow
-                key={set.id}
-                setNumber={index + 1}
-                columns={columns}
-                set={set}
-                onChangeValues={(changes) => onChangeSetValues(set.id, changes)}
-                onToggleCompletion={() => onToggleSetCompletion(set.id)}
-              />
-            ))
-          )}
         </Box>
-      </Box>
-    </Card>
+      </Card>
+    </Box>
   );
 }
