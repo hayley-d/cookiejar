@@ -585,3 +585,47 @@ describe('restChanged', () => {
     expect(reducer(state, { type: 'restChanged', itemKey: 'missing', restSeconds: 60 })).toBe(state);
   });
 });
+
+describe('itemsReordered', () => {
+  function stateWithTwoSupersets() {
+    const { reducer, state, keys } = stateWithThreeItems();
+    const linkedState = reducer(state, { type: 'supersetCreated', itemKey: keys[0] });
+    const nextState = reducer(linkedState, {
+      type: 'exercisesAdded',
+      exercises: [
+        { ...plank, id: 11 },
+        { ...rowing, id: 12 },
+      ],
+      asSuperset: true,
+    });
+    return { reducer, state: { ...nextState, hasUnsavedChanges: false } };
+  }
+
+  function itemKeysOf(state: WorkoutEditorState) {
+    return state.items.map((item) => item.key);
+  }
+
+  test('moves a single card past a superset block and marks unsaved changes', () => {
+    const { reducer, state, keys } = stateWithThreeItems();
+    const linkedState = reducer(state, { type: 'supersetCreated', itemKey: keys[1] });
+    const nextState = reducer(linkedState, { type: 'itemsReordered', blockKeys: [keys[1], keys[0]] });
+    expect(itemKeysOf(nextState)).toEqual([keys[1], keys[2], keys[0]]);
+    expect(groupsOf(nextState)).toEqual(['A', 'A', null]);
+    expect(nextState.hasUnsavedChanges).toBe(true);
+  });
+
+  test('moves a superset as one block and reletters from top to bottom', () => {
+    const { reducer, state } = stateWithTwoSupersets();
+    const [firstKey, secondKey, thirdKey, fourthKey, fifthKey] = itemKeysOf(state);
+    const nextState = reducer(state, { type: 'itemsReordered', blockKeys: [fourthKey, thirdKey, firstKey] });
+    expect(itemKeysOf(nextState)).toEqual([fourthKey, fifthKey, thirdKey, firstKey, secondKey]);
+    expect(groupsOf(nextState)).toEqual(['A', 'A', null, 'B', 'B']);
+  });
+
+  test('an unchanged order changes nothing', () => {
+    const { reducer, state } = stateWithTwoSupersets();
+    const [firstKey, , thirdKey, fourthKey] = itemKeysOf(state);
+    expect(reducer(state, { type: 'itemsReordered', blockKeys: [firstKey, thirdKey, fourthKey] })).toBe(state);
+    expect(reducer(state, { type: 'itemsReordered', blockKeys: ['missing'] })).toBe(state);
+  });
+});

@@ -1,18 +1,19 @@
 import type { ViewProps } from 'react-native';
-import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeOutDown, LinearTransition } from 'react-native-reanimated';
 
-type AnimatedBoxMotion = 'rise';
+type AnimatedBoxMotion = 'rise' | 'reorder';
 
 type AnimatedBoxProperties = ViewProps & {
   motion: AnimatedBoxMotion;
 };
 
 const motionAnimations = {
-  rise: { entering: FadeInDown, exiting: FadeOutDown },
+  rise: { entering: FadeInDown, exiting: FadeOutDown, layout: undefined },
+  reorder: { entering: undefined, exiting: undefined, layout: LinearTransition },
 };
 
 export function AnimatedBox({ motion, ...viewProperties }: AnimatedBoxProperties) {
-  const { entering, exiting } = motionAnimations[motion];
+  const { entering, exiting, layout } = motionAnimations[motion];
 
-  return <Animated.View entering={entering} exiting={exiting} {...viewProperties} />;
+  return <Animated.View entering={entering} exiting={exiting} layout={layout} {...viewProperties} />;
 }

@@ -2,6 +2,7 @@ import type { ClassType } from '@/types/ClassType';
 import type { Exercise } from '@/types/Exercise';
 import type { TrackingType } from '@/types/TrackingType';
 import type { WorkoutKind } from '@/types/WorkoutKind';
+import { applyBlockOrder } from '@/workouts/groupIntoBlocks';
 import { normaliseSupersets } from '@/workouts/normaliseSupersets';
 import { clearUntrackedFields, emptyTargetSetValues, type TargetSetValues } from '@/workouts/targetSetColumns';
 
@@ -61,6 +62,7 @@ export type WorkoutEditorAction =
   | { type: 'targetSetAdded'; itemKey: string }
   | { type: 'targetSetRemoved'; itemKey: string; targetSetKey: string }
   | { type: 'targetSetChanged'; itemKey: string; targetSetKey: string; changes: Partial<TargetSetValues> }
+  | { type: 'itemsReordered'; blockKeys: string[] }
   | { type: 'loaded'; workout: LoadedWorkout };
 
 export type CreateKey = () => string;
@@ -241,6 +243,13 @@ export function createWorkoutEditorReducer(createKey: CreateKey) {
             targetSet.key === action.targetSetKey ? { ...targetSet, ...action.changes } : targetSet,
           ),
         }));
+      case 'itemsReordered': {
+        const reorderedItems = applyBlockOrder(state.items, action.blockKeys);
+        if (reorderedItems === state.items) {
+          return state;
+        }
+        return { ...state, items: reorderedItems, hasUnsavedChanges: true };
+      }
       case 'loaded':
         return {
           workoutId: action.workout.workoutId,

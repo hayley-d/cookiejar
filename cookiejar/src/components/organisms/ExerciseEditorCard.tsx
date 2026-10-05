@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ActionSheetIOS, Alert } from 'react-native';
 
 import { Card } from '@/components/atoms/Card';
@@ -21,6 +21,7 @@ import type { EditorItem } from '@/workouts/workoutEditorReducer';
 type ExerciseEditorCardProperties = {
   item: EditorItem;
   supersetPosition: SupersetCardPosition;
+  dragHandle: ReactNode;
   onChangeTrackingType: (trackingType: TrackingType) => void;
   onChangeTargetSet: (targetSetKey: string, changes: Partial<TargetSetValues>) => void;
   onAddTargetSet: () => void;
@@ -45,6 +46,7 @@ const trackingTypeMenuOptions = [...trackingTypes.map((trackingType) => tracking
 export function ExerciseEditorCard({
   item,
   supersetPosition,
+  dragHandle,
   onChangeTrackingType,
   onChangeTargetSet,
   onAddTargetSet,
@@ -133,6 +135,7 @@ export function ExerciseEditorCard({
       {bracket === null ? null : <SupersetBracket position={bracket} />}
       <Stack gap="small">
         <Card>
+          {dragHandle}
           <Stack gap="medium">
             <Stack direction="horizontal" gap="medium" align="center">
               {showsImage ? (

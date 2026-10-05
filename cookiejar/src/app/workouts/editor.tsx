@@ -2,13 +2,14 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 
 import { EmptyState } from '@/components/molecules/EmptyState';
 import { ExerciseEditorCard } from '@/components/organisms/ExerciseEditorCard';
+import { ReorderableExerciseList } from '@/components/organisms/ReorderableExerciseList';
 import { WorkoutEditorFooter } from '@/components/organisms/WorkoutEditorFooter';
 import { Box } from '@/components/primitives/Box';
-import { ScrollBox } from '@/components/primitives/ScrollBox';
 import { useExercisePicks } from '@/hooks/useExercisePicks';
 import { useSaveWorkout } from '@/hooks/useSaveWorkout';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useWorkoutEditor } from '@/hooks/useWorkoutEditor';
+import { groupIntoBlocks } from '@/workouts/groupIntoBlocks';
 import { toSupersetCardPositions } from '@/workouts/supersetCardPositions';
 import { workoutNameError } from '@/workouts/workoutNameError';
 
@@ -52,12 +53,14 @@ export default function WorkoutEditorScreen() {
             />
           )
         ) : (
-          <ScrollBox automaticallyAdjustKeyboardInsets>
-            {state.items.map((item, itemIndex) => (
+          <ReorderableExerciseList
+            blocks={groupIntoBlocks(state.items)}
+            onReorder={(blockKeys) => dispatch({ type: 'itemsReordered', blockKeys })}
+            renderItem={(item, itemIndex, dragHandle) => (
               <ExerciseEditorCard
-                key={item.key}
                 item={item}
                 supersetPosition={supersetPositions[itemIndex]}
+                dragHandle={dragHandle}
                 onChangeTrackingType={(trackingType) =>
                   dispatch({ type: 'trackingTypeChanged', itemKey: item.key, trackingType })
                 }
@@ -75,8 +78,8 @@ export default function WorkoutEditorScreen() {
                 onRemoveSuperset={() => dispatch({ type: 'supersetRemoved', itemKey: item.key })}
                 onShowSupersetInfo={() => router.push('/workouts/superset-info')}
               />
-            ))}
-          </ScrollBox>
+            )}
+          />
         )}
         <WorkoutEditorFooter
           canSave={canSave}

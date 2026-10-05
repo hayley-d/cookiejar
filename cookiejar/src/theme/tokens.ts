@@ -66,6 +66,15 @@ export const radii = {
   round: 999,
 };
 
+export const sizes = {
+  dragHandleIcon: 20,
+  reorderRow: 56,
+};
+
+export const durations = {
+  dragLongPress: 300,
+};
+
 export const typography = {
   display: { fontSize: 32, lineHeight: 38, fontWeight: '800' },
   title: { fontSize: 22, lineHeight: 28, fontWeight: '700' },
@@ -105,6 +114,8 @@ export type Theme = {
   colors: Palette;
   spacing: typeof spacing;
   radii: typeof radii;
+  sizes: typeof sizes;
+  durations: typeof durations;
   typography: typeof typography;
   shadows: ReturnType<typeof createShadows>;
 };
@@ -115,6 +126,8 @@ export function createTheme(colorScheme: ColorSchemeName): Theme {
     colors: palettes[colorScheme],
     spacing,
     radii,
+    sizes,
+    durations,
     typography,
     shadows: createShadows(palettes[colorScheme]),
   };
