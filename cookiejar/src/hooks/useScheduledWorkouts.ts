@@ -5,22 +5,31 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getActivePlanWithEntries } from '@/database/repositories/planRepository';
 import { listSessionsBetween } from '@/database/repositories/scheduleRepository';
 import { buildScheduledWorkouts } from '@/plans/buildScheduledWorkouts';
-import type { ScheduledWorkoutsForDateLookup } from '@/plans/scheduledWeekCache';
 import { useDataVersion } from '@/stores/dataVersionStore';
 import type { ScheduledWorkout } from '@/types/ScheduledWorkout';
 
 export type ScheduledWorkoutsLookup =
   | { status: 'loading' }
   | { status: 'failed' }
-  | { status: 'ready'; scheduledWorkoutsByDate: Map<string, ScheduledWorkout[]> };
+  | { status: 'ready'; scheduledWorkoutsByDate: Map<string, ScheduledWorkout[]>; hasActivePlan: boolean };
 
-export type { ScheduledWorkoutsForDateLookup };
+export type UseScheduledWorkoutsForDateReadyLookup = {
+  status: 'ready';
+  scheduledWorkouts: ScheduledWorkout[];
+  hasActivePlan: boolean;
+};
+
+export type UseScheduledWorkoutsForDateLookup =
+  | { status: 'loading' }
+  | { status: 'failed' }
+  | UseScheduledWorkoutsForDateReadyLookup;
 
 type LoadedRange = {
   startDate: string;
   endDate: string;
   outcome: 'failed' | 'ready';
   scheduledWorkoutsByDate: Map<string, ScheduledWorkout[]>;
+  hasActivePlan: boolean;
 };
 
 export function useScheduledWorkouts(startDate: string, endDate: string): ScheduledWorkoutsLookup {
@@ -53,12 +62,19 @@ export function useScheduledWorkouts(startDate: string, endDate: string): Schedu
             endDate,
             outcome: 'ready',
             scheduledWorkoutsByDate: buildScheduledWorkouts({ startDate, endDate, activePlan, sessions }),
+            hasActivePlan: activePlan !== null,
           });
         }
       },
       () => {
         if (isActive) {
-          setLoadedRange({ startDate, endDate, outcome: 'failed', scheduledWorkoutsByDate: new Map() });
+          setLoadedRange({
+            startDate,
+            endDate,
+            outcome: 'failed',
+            scheduledWorkoutsByDate: new Map(),
+            hasActivePlan: false,
+          });
         }
       },
     );
@@ -73,10 +89,14 @@ export function useScheduledWorkouts(startDate: string, endDate: string): Schedu
   if (loadedRange.outcome === 'failed') {
     return { status: 'failed' };
   }
-  return { status: 'ready', scheduledWorkoutsByDate: loadedRange.scheduledWorkoutsByDate };
+  return {
+    status: 'ready',
+    scheduledWorkoutsByDate: loadedRange.scheduledWorkoutsByDate,
+    hasActivePlan: loadedRange.hasActivePlan,
+  };
 }
 
-export function useScheduledWorkoutsForDate(date: string): ScheduledWorkoutsForDateLookup {
+export function useScheduledWorkoutsForDate(date: string): UseScheduledWorkoutsForDateLookup {
   const scheduledWorkoutsLookup = useScheduledWorkouts(date, date);
   if (scheduledWorkoutsLookup.status !== 'ready') {
     return scheduledWorkoutsLookup;
@@ -84,5 +104,6 @@ export function useScheduledWorkoutsForDate(date: string): ScheduledWorkoutsForD
   return {
     status: 'ready',
     scheduledWorkouts: scheduledWorkoutsLookup.scheduledWorkoutsByDate.get(date) ?? [],
+    hasActivePlan: scheduledWorkoutsLookup.hasActivePlan,
   };
 }

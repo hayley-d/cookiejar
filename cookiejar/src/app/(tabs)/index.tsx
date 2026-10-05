@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -5,6 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/molecules/EmptyState';
 import { GreetingHeader } from '@/components/molecules/GreetingHeader';
 import { HealthPermissionCard } from '@/components/molecules/HealthPermissionCard';
+import { NoPlanCard } from '@/components/molecules/NoPlanCard';
+import { RestDayCard } from '@/components/molecules/RestDayCard';
 import { StatTile } from '@/components/molecules/StatTile';
 import { TodayCarousel } from '@/components/organisms/TodayCarousel';
 import { Box } from '@/components/primitives/Box';
@@ -53,6 +56,14 @@ export default function HomeScreen() {
     refresh();
   };
 
+  const navigateToCreate = () => {
+    router.navigate('/create');
+  };
+
+  const navigateToPlanNew = () => {
+    router.navigate('/plans/new');
+  };
+
   const shouldShowHint = shouldShowHealthAccessHint(hasRequestedAuthorization, snapshot);
 
   return (
@@ -61,7 +72,16 @@ export default function HomeScreen() {
         <ScrollBox showsVerticalScrollIndicator={false}>
           <GreetingHeader displayName={displayName} now={now} />
           {todayWorkouts.status === 'ready' ? (
-            <TodayCarousel scheduledWorkouts={todayWorkouts.scheduledWorkouts} onStartWorkout={startScheduledWorkout} />
+            todayWorkouts.scheduledWorkouts.length > 0 ? (
+              <TodayCarousel
+                scheduledWorkouts={todayWorkouts.scheduledWorkouts}
+                onStartWorkout={startScheduledWorkout}
+              />
+            ) : todayWorkouts.hasActivePlan ? (
+              <RestDayCard onPickWorkout={navigateToCreate} />
+            ) : (
+              <NoPlanCard onCreatePlan={navigateToPlanNew} />
+            )
           ) : null}
           {hasRequestedAuthorization === false ? (
             <HealthPermissionCard onConnect={connectHealth} isConnecting={isRequesting} />
