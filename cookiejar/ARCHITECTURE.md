@@ -106,7 +106,7 @@ Read the versioned docs at https://docs.expo.dev/versions/v57.0.0/ before using 
 
 | Function | Behaviour |
 | --- | --- |
-| `getProfile(database)` | The profile row mapped to a `Profile` (`displayName`, `birthDate`, `sex`, `heightCentimetres`, `goal`, `weeklyWorkoutTarget`, `dailyStepGoal`, `updatedAt`), or `null` when the row is missing. It reads with a bound `id` parameter |
+| `getProfile(database)` | The profile row mapped to a `Profile` (`id`, `displayName`, `birthDate`, `sex`, `heightCentimetres`, `goal`, `weeklyWorkoutTarget`, `dailyStepGoal`, `updatedAt`), or `null` when the row is missing. It reads with a bound `id` parameter |
 
 Phase 07 only reads the profile. Nothing writes it yet; Phase 08 adds the form that sets the name.
 
@@ -667,7 +667,7 @@ These hold Apple Health logic and are covered by `bun test`:
 - `describeWorkoutActivity.ts`: activity name from HealthKit activity type code (Running, Cycling, Swimming, etc.)
 - `groupHealthWorkouts.ts`: split workouts into `garminWorkouts` and `otherWorkouts` by source, each sorted by start time
 - `findSuggestedHealthWorkout.ts`: return a Garmin workout only when exactly one overlaps at least 50% of the session duration, otherwise null
-- `isHealthSnapshotFinal.ts`: determine if a snapshot is final (its `fetchedAt` is after noon on the day after its date)
+- `isHealthSnapshotFinal.ts`: determine if a snapshot is final (its `fetchedAt` is after noon on the day after its date, and at least one of steps, sleep and resting heart rate has a value; an all-null snapshot is never final, so a day fetched before the watch synced or before Health access was granted is read again)
 - `shouldRefreshHealth.ts`: rate-limit reads with a 5-minute throttle per date
 - `shouldShowHealthAccessHint.ts`: show the access hint when authorization has been requested but no data is available
 - `formatSteps.ts`, `formatSleepMinutes.ts`, `formatRestingHeartRate.ts`: format health values for display
@@ -688,7 +688,7 @@ Health-specific hooks manage data loading and caching:
 | Hook | Behaviour |
 | --- | --- |
 | `useHealthAuthorization()` | Returns `{ hasRequestedAuthorization, isRequesting, requestAuthorization }`. Loads the request timestamp from app settings on focus. `hasRequestedAuthorization` is `null` while loading, `true` if authorization has been requested (outcome was `authorized` or `denied`), `false` if not requested. `requestAuthorization()` calls the adapter, saves the request timestamp and returns the outcome |
-| `useDailyHealth(date)` | Returns `{ snapshot, isLoading, refresh }`. Loads the snapshot from the database cache. Per-date refresh timestamps are held in module-level memory; the snapshot cache is the database. On mount it loads the cached snapshot. On focus and when the app returns to the foreground, only queries HealthKit if the `healthAuthorizationRequestedAtSettingKey` setting exists, then checks if a refresh is needed: skips refresh if the cached snapshot is final or if the 5-minute throttle per date blocks it. When a refresh runs, reads through `readDailyHealth` and upserts the snapshot. A snapshot is final when its `fetchedAt` is after noon on the day after its date; final snapshots do not refresh. `isLoading` is true until a snapshot has been loaded for the requested date |
+| `useDailyHealth(date)` | Returns `{ snapshot, isLoading, refresh }`. Loads the snapshot from the database cache. Per-date refresh timestamps are held in module-level memory; the snapshot cache is the database. On mount it loads the cached snapshot. On focus and when the app returns to the foreground, only queries HealthKit if the `healthAuthorizationRequestedAtSettingKey` setting exists, then checks if a refresh is needed: skips refresh if the cached snapshot is final or if the 5-minute throttle per date blocks it. When a refresh runs, reads through `readDailyHealth` and upserts the snapshot. A snapshot is final when its `fetchedAt` is after noon on the day after its date and it has at least one value (steps, sleep or resting heart rate); an all-null snapshot is never final. Final snapshots do not refresh. `isLoading` is true until a snapshot has been loaded for the requested date |
 | `useOverlappingHealthWorkouts(sessionId)` | Returns `{ lookup, refresh, link, isLinking }` where lookup is `{ status: 'loading' | 'unavailable' | 'failed' | 'ready' }`. On mount loads the session and its time window, then finds overlapping workouts and groups them. Returns `unavailable` when Apple Health access was never requested and `failed` when the session or the read fails. Reloads on focus. `refresh()` forces a reload. `link(workout)` reads the workout's heart rate range, updates the session with `linkHealthWorkout`, bumps dataVersion and returns `'linked'`, `'busy'` (another link is already in flight, nothing was changed) or `'failed'`. Callers alert only on `'failed'` |
 | `useUnlinkHealthWorkout(sessionId)` | Returns an async callback that calls `unlinkHealthWorkout(database, sessionId)` and bumps dataVersion. Used by the session summary to unlink a previously linked health workout |
 
@@ -748,19 +748,19 @@ Once access has been asked for, the grid shows whether it was granted or denied.
 
 ### Today Carousel
 
-`TodayCarousel` shows a "TODAY'S WORKOUTS" header with the count, a `SnapList` of `TodayWorkoutCard`, and `PageDots` when there is more than one workout. The card width is `todayCardWidthRatio` of the window width, and the list snaps every card width plus the medium gap. The active dot comes from `carouselPageIndex` on the scroll offset. The list bleeds to the screen edges with a negative horizontal margin on its wrapper.
+`TodayCarousel` shows a "TODAY'S WORKOUTS" header with the count, a `SnapList` of `TodayWorkoutCard`, and `PageDots` when there is more than one workout. The card width is `todayCardWidthRatio` of the window width, and the list snaps every card width plus the medium gap. The active dot comes from `carouselPageIndex` on the scroll offset, clamped to the last workout when the list shrinks. The list bleeds to the screen edges with a negative horizontal margin on its wrapper.
 
 `TodayWorkoutCard` shows the workout image (or the workout's nuggie when it has none or the image fails to load), the kind line, the name and the summary. The kind line and the summary come from `describeScheduledWorkoutKind` and `describeScheduledWorkoutSummary` in `src/workouts/describeScheduledWorkout.ts`, which `ScheduledWorkoutCard` on the Calendar now uses too. The action button label comes from `todayWorkoutActionLabel`: "▶ Start" for planned, "Resume" for in progress and "✓ Done" for completed. Pressing it on a planned workout calls `onStart`, which Home wires to `useStartSession`. For the other statuses it calls `onPress`, which opens the route from `resolveScheduledWorkoutRoute`. The button is a separate accessible element beside the text block, and the card's outer touchable is hidden from VoiceOver. A planned workout whose workout was deleted has no button and cannot be opened.
 
 ### Stat Tiles
 
-`StatTile` keeps its compact layout when none of `icon`, `caption`, `accessory` or `nuggie` is passed, so `SessionSummary` looks as before. With any of them it draws the detailed layout: icon and label, an optional nuggie in the corner, the value, and a row of accessory and caption. Its `tone` is `default`, `positive` or `attention`, which picks the text and background colours. With `onPress` it is a button.
+`StatTile` keeps its compact layout when none of `icon`, `caption`, `accessory` or `nuggie` is passed, so `SessionSummary` looks as before. With any of them it draws the detailed layout: icon and label, an optional nuggie in the corner, the value, and a row of accessory and caption. Its `tone` is `default`, `positive` or `attention`, which picks the text and background colours. With `onPress` the detailed layout is a button; the compact layout ignores `onPress`. The button's label is the label, value and caption, followed by the optional `accessibilityDetail` string, because the button groups its children and VoiceOver would otherwise never reach the trend arrow or the streak dots. The resting HR tile fills it with `describeRestingHeartRateTrend` (for example "down 2 beats per minute from 7-day average" or "level with 7-day average"), and the weekly tile fills it with `describeStreakDays`, the same text `StreakDots` uses as its own label. Tone text uses the `successText` and `attentionText` palette tokens (not `success` and `attention`), which are dark enough to read on `successSoft` and `attentionSoft` in the light palette. The soft backgrounds and icons are unchanged.
 
 | Tile | Value and caption | Accessory and tone |
 | --- | --- | --- |
 | Steps | `formatSteps`, and the `describeStepProgress` caption, or "No data yet" | A `ProgressRingBox` at `statTileRing`. `positive` and the `stepGoalReached` nuggie when the goal is reached |
 | Sleep | `formatSleepMinutes`, with caption "Last night", or "No data yet" | `attention` and the `lowSleep` nuggie below 360 minutes |
-| Resting HR | `formatRestingHeartRate`, with caption "vs 7-day avg" when a trend exists, or "No data yet" | A `TrendArrow`, and the trend's tone |
+| Resting HR | `formatRestingHeartRate`, with caption "vs 7-day avg" when a trend exists, "No data yet" when there is no value, and no caption when there is a value but no trend | A `TrendArrow`, and the trend's tone |
 | This week | `{completed} / {planned}`, or a dash and "No data yet" before the week loads | `StreakDots`. `positive` and the `weeklyTargetMet` nuggie (`goodJob`) when the target is met |
 
 Home passes the resting HR trend from `compareToAverage(today, previous 7 days)`, where the previous days are read with `useHealthRange` and a missing day counts as no value. `TrendArrow` shows an up, down or equals symbol and the absolute difference. `StreakDots` shows one dot per day: filled for `completed` and `unplanned`, an outline for `pending`, a grey fill for `missed` and a small dot for `rest`.
@@ -773,7 +773,7 @@ Home passes the resting HR trend from `compareToAverage(today, previous 7 days)`
 
 ### Weekly Streak
 
-`useWeeklyStreak(now)` returns `{ status: 'loading' }`, `{ status: 'failed' }` or `{ status: 'ready', streak, isTargetMet }`. It builds the seven dates of the current week from `startOfWeek` (Monday to Sunday), reads them with `useScheduledWorkouts`, and passes them with the `weeklyWorkoutTarget` from `useProfile` to `calculateWeeklyStreak` and `isWeeklyTargetMet`.
+`useWeeklyStreak(now, weeklyWorkoutTarget)` returns `{ status: 'loading' }`, `{ status: 'failed' }` or `{ status: 'ready', streak, isTargetMet }`. It builds the seven dates of the current week from `startOfWeek` (Monday to Sunday), reads them with `useScheduledWorkouts`, and passes them with the `weeklyWorkoutTarget` to `calculateWeeklyStreak` and `isWeeklyTargetMet`.
 
 `calculateWeeklyStreak` (in `src/progress/calculateWeeklyStreak.ts`) is pure. A workout counts as planned when it has a `planEntryId`, and as completed when its status is `completed`. `countScheduledWorkouts` counts per list of workouts: a completed workout adds 1 to both counts, an unfinished planned one adds 1 to the planned count only, and an unfinished unplanned one adds to neither. Each day gets the first state that applies:
 
@@ -781,6 +781,8 @@ Home passes the resting HR trend from `compareToAverage(today, previous 7 days)`
 2. `missed` (a past day) or `pending` (today or later), when a planned workout is not completed
 3. `completed`, when a completed workout is planned, or `unplanned`, when the completed ones are all unplanned
 4. `rest` (a past day) or `pending` (today or later), for anything left, such as an unfinished unplanned session
+
+Home owns the single `useProfile` call and passes `weeklyWorkoutTarget` in, so the hook does not read the profile itself. Its result is memoised on the lookup status, the scheduled workouts map, today, the week dates and the target.
 
 `isWeeklyTargetMet` is true when completed is at least the weekly target, or when planned is above 0 and completed is at least planned.
 
@@ -790,10 +792,12 @@ Home passes the resting HR trend from `compareToAverage(today, previous 7 days)`
 
 ### Stats Detail Route
 
-`/stats/[metric]` is registered flat on the root `Stack` with an empty title and no large title (the screen sets its own title). `parseStatsMetric` (in `src/stats/parseStatsMetric.ts`) accepts `steps`, `sleep`, `restingHeartRate` and `streak`. Any other value shows an `EmptyState` titled "Nothing to show". Otherwise the route builds the last 14 days, today included, newest first with `datesBetween`, and renders one of two organisms:
+`/stats/[metric]` is registered flat on the root `Stack` with an empty title and no large title (the screen sets its own title). `parseStatsMetric` (in `src/stats/parseStatsMetric.ts`) accepts `steps`, `sleep`, `restingHeartRate` and `streak`. Any other value shows an `EmptyState` titled "Nothing to show". Otherwise the route builds the last 14 days, today included, newest first with `datesBetween`. The day count and the tile hint ("Opens the last 14 days") are exported from `src/stats/statsDetail.ts` as `statsDetailDayCount` and `statsDetailHint`, so the route and both tile owners share one source. The route calls `useHealthRange` and `useScheduledWorkouts` unconditionally at the top, before the invalid-metric early return, and passes the results to one of two presentational organisms:
 
-- `HealthMetricBarList` (for `steps`, `sleep` and `restingHeartRate`): reads the range with `useHealthRange`, formats each value with the matching formatter, and sizes each bar against the largest value in the 14 days
-- `StreakBarList` (for `streak`): reads the range with `useScheduledWorkouts`, and shows completed / planned for each day. The bar is the completed share of the planned count
+- `HealthMetricBarList` (for `steps`, `sleep` and `restingHeartRate`): receives `snapshotsByDate` as a prop, formats each value with the matching formatter, and sizes each bar against the largest value in the 14 days
+- `StreakBarList` (for `streak`): receives `scheduledWorkoutsByDate` (or `null` while it loads or after it fails, which shows a dash), and shows completed / planned for each day. The bar is the completed share of the planned count
+
+The screen title is "Workouts" for `streak` (the Home tile keeps the label "This week"), because the screen covers 14 days. `StatBarRow` reads a missing value as "no data" in its accessibility label instead of the dash.
 
 Both pass rows to `StatBarList`, a `Card` of `StatBarRow` rows (date label, bar, value). The date label comes from `formatShortDate` and the bar width from `barFraction`. This is a plain bar list. Phase 08 adds a chart.
 
@@ -822,7 +826,7 @@ These import no React Native and are covered by `bun test`:
 | Hook | Behaviour |
 | --- | --- |
 | `useProfile()` | See Profile Repository |
-| `useWeeklyStreak(now)` | See Weekly Streak |
+| `useWeeklyStreak(now, weeklyWorkoutTarget)` | See Weekly Streak |
 | `useHealthRange(startDate, endDate)` | See Health Range |
 | `useScheduledWorkouts(startDate, endDate)` | Phase 07 adds `hasActivePlan` (whether an active plan exists, even one that starts in the future) to its ready state. `useScheduledWorkoutsForDate` returns its own ready type with `scheduledWorkouts` and `hasActivePlan`. The Calendar still uses the lookup type from `scheduledWeekCache` |
 

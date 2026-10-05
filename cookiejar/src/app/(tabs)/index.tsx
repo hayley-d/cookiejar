@@ -39,7 +39,7 @@ export default function HomeScreen() {
   const theme = useTheme();
   const now = new Date();
   const today = toLocalDateString(now);
-  const { displayName, dailyStepGoal } = useProfile();
+  const { displayName, dailyStepGoal, weeklyWorkoutTarget } = useProfile();
   const { hasRequestedAuthorization, isRequesting, requestAuthorization } = useHealthAuthorization();
   const { snapshot, refresh } = useDailyHealth(today);
   const previousDays = datesBetween(
@@ -53,7 +53,7 @@ export default function HomeScreen() {
   );
   const todayWorkouts = useScheduledWorkoutsForDate(today);
   const { startSession } = useStartSession();
-  const weeklyStreak = useWeeklyStreak(now);
+  const weeklyStreak = useWeeklyStreak(now, weeklyWorkoutTarget);
 
   const startScheduledWorkout = useCallback(
     (scheduledWorkout: ScheduledWorkout) => {

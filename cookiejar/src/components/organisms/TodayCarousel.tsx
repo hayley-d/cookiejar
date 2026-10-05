@@ -82,7 +82,9 @@ export function TodayCarousel({ scheduledWorkouts, onStartWorkout }: TodayCarous
           )}
         />
       </Box>
-      {scheduledWorkouts.length > 1 ? <PageDots count={scheduledWorkouts.length} activeIndex={activeIndex} /> : null}
+      {scheduledWorkouts.length > 1 ? (
+        <PageDots count={scheduledWorkouts.length} activeIndex={Math.min(activeIndex, scheduledWorkouts.length - 1)} />
+      ) : null}
     </Box>
   );
 }

@@ -3,7 +3,6 @@ import { useMemo } from 'react';
 import { addDays } from '@/dates/addDays';
 import { startOfWeek } from '@/dates/startOfWeek';
 import { toLocalDateString } from '@/dates/toLocalDateString';
-import { useProfile } from '@/hooks/useProfile';
 import { useScheduledWorkouts } from '@/hooks/useScheduledWorkouts';
 import { calculateWeeklyStreak, isWeeklyTargetMet, type WeeklyStreak } from '@/progress/calculateWeeklyStreak';
 
@@ -12,10 +11,9 @@ const daysPerWeek = 7;
 export type WeeklyStreakLookup =
   { status: 'loading' } | { status: 'failed' } | { status: 'ready'; streak: WeeklyStreak; isTargetMet: boolean };
 
-export function useWeeklyStreak(now: Date): WeeklyStreakLookup {
+export function useWeeklyStreak(now: Date, weeklyWorkoutTarget: number): WeeklyStreakLookup {
   const today = toLocalDateString(now);
   const mondayDate = toLocalDateString(startOfWeek(now));
-  const { weeklyWorkoutTarget } = useProfile();
 
   const weekDates = useMemo(() => {
     const [year, month, day] = mondayDate.split('-').map(Number);
@@ -25,15 +23,15 @@ export function useWeeklyStreak(now: Date): WeeklyStreakLookup {
 
   const scheduledWorkoutsLookup = useScheduledWorkouts(weekDates[0], weekDates[daysPerWeek - 1]);
 
+  const status = scheduledWorkoutsLookup.status;
+  const scheduledWorkoutsByDate =
+    scheduledWorkoutsLookup.status === 'ready' ? scheduledWorkoutsLookup.scheduledWorkoutsByDate : null;
+
   return useMemo<WeeklyStreakLookup>(() => {
-    if (scheduledWorkoutsLookup.status !== 'ready') {
-      return { status: scheduledWorkoutsLookup.status };
+    if (scheduledWorkoutsByDate === null) {
+      return { status: status === 'failed' ? 'failed' : 'loading' };
     }
-    const streak = calculateWeeklyStreak({
-      today,
-      weekDates,
-      scheduledWorkoutsByDate: scheduledWorkoutsLookup.scheduledWorkoutsByDate,
-    });
+    const streak = calculateWeeklyStreak({ today, weekDates, scheduledWorkoutsByDate });
     return { status: 'ready', streak, isTargetMet: isWeeklyTargetMet(streak, weeklyWorkoutTarget) };
-  }, [scheduledWorkoutsLookup, today, weekDates, weeklyWorkoutTarget]);
+  }, [status, scheduledWorkoutsByDate, today, weekDates, weeklyWorkoutTarget]);
 }

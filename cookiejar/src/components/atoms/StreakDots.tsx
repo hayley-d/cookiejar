@@ -1,19 +1,12 @@
 import { View } from 'react-native';
 
 import { Typography } from '@/components/primitives/Typography';
-import type { WeeklyStreakDay, WeeklyStreakDayState } from '@/progress/calculateWeeklyStreak';
+import type { WeeklyStreakDay } from '@/progress/calculateWeeklyStreak';
+import { describeStreakDays } from '@/progress/describeStreakDays';
 import { useTheme } from '@/theme/useTheme';
 
 type StreakDotsProperties = {
   days: readonly WeeklyStreakDay[];
-};
-
-const stateDescriptions: Record<WeeklyStreakDayState, string> = {
-  completed: 'done',
-  unplanned: 'done',
-  pending: 'to do',
-  missed: 'missed',
-  rest: 'rest',
 };
 
 export function StreakDots({ days }: StreakDotsProperties) {
@@ -56,7 +49,7 @@ export function StreakDots({ days }: StreakDotsProperties) {
   return (
     <View
       accessible
-      accessibilityLabel={days.map((day) => stateDescriptions[day.state]).join(', ')}
+      accessibilityLabel={describeStreakDays(days)}
       style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.extraSmall }}
     >
       {days.map(renderDot)}

@@ -1,5 +1,6 @@
 import { Box } from '@/components/primitives/Box';
 import { Typography } from '@/components/primitives/Typography';
+import { describeStatValue } from '@/stats/describeStatValue';
 import { useTheme } from '@/theme/useTheme';
 
 type StatBarRowProperties = {
@@ -17,7 +18,7 @@ export function StatBarRow({ dateLabel, valueText, fraction }: StatBarRowPropert
       align="center"
       gap="small"
       accessible
-      accessibilityLabel={`${dateLabel}, ${valueText}`}
+      accessibilityLabel={`${dateLabel}, ${describeStatValue(valueText)}`}
     >
       <Box style={{ width: theme.sizes.statBarDateColumn }}>
         <Typography variant="caption" color="textSecondary">
