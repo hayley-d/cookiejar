@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { addDays } from '@/dates/addDays';
 import { dayOfWeekNumber } from '@/dates/dayOfWeekNumber';
+import { formatFullDate } from '@/dates/formatFullDate';
 import { isSameLocalDay } from '@/dates/isSameLocalDay';
 import { parseLocalDateString } from '@/dates/parseLocalDateString';
 import { startOfWeek } from '@/dates/startOfWeek';
@@ -103,5 +104,19 @@ describe('isSameLocalDay', () => {
 
   test('false for the same day in a different month', () => {
     expect(isSameLocalDay(new Date(2026, 8, 4), new Date(2026, 9, 4))).toBe(false);
+  });
+});
+
+describe('formatFullDate', () => {
+  test('names the weekday, day and month', () => {
+    expect(formatFullDate('2026-10-07')).toBe('Wednesday 7 October');
+  });
+
+  test('does not pad the day and handles Sunday', () => {
+    expect(formatFullDate('2027-01-03')).toBe('Sunday 3 January');
+  });
+
+  test('rejects an invalid date', () => {
+    expect(() => formatFullDate('2026-02-30')).toThrow();
   });
 });

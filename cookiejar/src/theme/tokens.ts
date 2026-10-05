@@ -83,6 +83,9 @@ export const sizes = {
   planEntryImage: 44,
   restDayNuggie: 44,
   planRowChevron: 14,
+  dayChipCircle: 36,
+  todayRingWidth: 2,
+  dayMarkerSlot: 10,
 };
 
 export const durations = {
