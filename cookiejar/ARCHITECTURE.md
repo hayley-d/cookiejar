@@ -34,6 +34,7 @@ This app is built in phases. See [docs/README.md](docs/README.md) for the full p
 | Animations & gestures | `react-native-gesture-handler`, `react-native-reanimated`, `react-native-worklets` |
 | Haptics | `expo-haptics` for button feedback |
 | Icons | `expo-symbols` for SF Symbols in tabs and buttons |
+| SVG | `react-native-svg` for the progress ring in class session view (used only in the `ProgressRingBox` primitive) |
 | Date/time picker | `@react-native-community/datetimepicker` (native platform pickers for time and date selection) |
 | Splash screen | `expo-splash-screen` |
 | Package manager | bun |
@@ -81,10 +82,11 @@ Read the versioned docs at https://docs.expo.dev/versions/v57.0.0/ before using 
 
 ### Migrations
 
-Migrations run in order through `src/database/migrations/migrations.ts` array: `[createInitialSchema, createTrainingSchema]`. The `user_version` PRAGMA tracks which migrations have run.
+Migrations run in order through `src/database/migrations/migrations.ts` array: `[createInitialSchema, createTrainingSchema, addSessionExerciseRestSeconds]`. The `user_version` PRAGMA tracks which migrations have run.
 
 - **v1 (createInitialSchema)**: Draft schema with exercises, workouts, workout_exercises and sets tables. Never edited. Kept so the migration order stays the same on every device.
 - **v2 (createTrainingSchema)**: Drops draft tables and creates the full training schema for production use.
+- **v3 (addSessionExerciseRestSeconds)**: Adds `rest_seconds` column to `session_exercises` table to allow per-session rest customization.
 
 ### Schema v2
 
@@ -97,7 +99,7 @@ Migrations run in order through `src/database/migrations/migrations.ts` array: `
 | **plans** | Training plans | `id`, `name`, `is_active` (0\|1 unique), `starts_on`, `created_at` |
 | **plan_entries** | Workouts scheduled in a plan | `id`, `plan_id`, `workout_id`, `day_of_week`, `time_of_day` |
 | **sessions** | Started or finished workout sessions (copies workout_name/kind/class_type at time of session) | `id`, `workout_id`, `workout_name`, `workout_kind`, `class_type`, `scheduled_date`, `started_at`, `finished_at`, `health_*` fields, `notes` |
-| **session_exercises** | Exercises in a session | `id`, `session_id`, `exercise_id`, `replaced_exercise_id`, `position`, `superset_group`, `tracking_type` |
+| **session_exercises** | Exercises in a session | `id`, `session_id`, `exercise_id`, `replaced_exercise_id`, `position`, `superset_group`, `tracking_type`, `rest_seconds` (added by v3) |
 | **session_sets** | Completed sets in a session | `id`, `session_exercise_id`, `position`, `target_*` columns, `repetitions`, `weight_kilograms`, `duration_seconds`, `distance_meters`, `completed_at` |
 | **profile** | Single user profile (id=1) | `id`, `display_name`, `birth_date`, `sex`, `height_centimetres`, `goal`, `weekly_workout_target`, `daily_step_goal`, `updated_at` |
 | **body_measurements** | Weight and body composition history | `id`, `measured_on`, `weight_kilograms`, `body_fat_percent`, waist/hip/chest measurements, `notes` |
@@ -123,11 +125,11 @@ routes (src/app)  →  organisms  →  molecules  →  atoms  →  primitives  �
 
 | Layer | Responsibility | Examples |
 | --- | --- | --- |
-| **primitives** | Thin themed wrappers over React Native elements. The only layer that touches raw `View`, `Text`, `Pressable`, `TextInput`, `ScrollView`, `FlatList`, `SectionList`, `expo-image`, `expo-symbols` and `@react-native-community/datetimepicker`. They apply theme tokens and nothing else. | `Box`, `Typography`, `Touchable`, `TextField`, `Stack`, `Image`, `Icon`, `List`, `SectionedList`, `ScrollBox`, `AnimatedBox`, `SwipeableBox`, `LongPressDragBox`, `WindowMeasuredBox`, `TimePickerBox` |
-| **atoms** | The smallest pieces of UI with meaning, built from primitives. No data access. | `Button`, `TextButton`, `IconButton`, `Badge`, `Chip`, `Checkbox`, `NuggieImage`, `Card`, `NumberInput`, `DurationInput`, `DragHandle`, `SupersetBracket`, `Toast`, `TimeLabel` |
-| **molecules** | Small groups of atoms that work as a unit. Hold local UI state at most. | `CoachFloatingButton`, `ScreenHeader`, `EmptyState`, `ChipGroup`, `SegmentedControl`, `SearchBar`, `AlphabetIndex`, `ExerciseRow`, `FormField`, `ImageUrlField`, `Stepper`, `KindChoiceCard`, `ActionCard`, `TargetSetRow`, `TargetSetTable`, `WorkoutRow`, `WorkoutNameField`, `PlanEntryRow`, `DaySectionHeader`, `PlanRow`, `RestDay`, `ActivePlanBanner` |
-| **organisms** | Self-contained sections of a screen. Receive data and callbacks through props. | `NuggieLoadingScreen`, `ExerciseForm`, `ExercisePicker`, `ExerciseEditorCard`, `ReorderableExerciseList`, `ClassDetailsForm`, `CreateHub`, `WorkoutEditorFooter`, `PlanWeekEditor`, `AddPlanEntrySheet`, `ActivatePlanSheet`, `EntryTimeSheet`, `CopyDaySheet` |
-| **routes** | Expo Router screens. Load data through repositories and hooks, then compose organisms. | `src/app/(tabs)/index.tsx`, `src/app/(tabs)/_layout.tsx`, `src/app/coach.tsx`, `src/app/exercises/*`, `src/app/workouts/*`, `src/app/plans/*` |
+| **primitives** | Thin themed wrappers over React Native elements. The only layer that touches raw `View`, `Text`, `Pressable`, `TextInput`, `ScrollView`, `FlatList`, `SectionList`, `expo-image`, `expo-symbols`, `react-native-svg` and `@react-native-community/datetimepicker`. They apply theme tokens and nothing else. | `Box`, `Typography`, `Touchable`, `TextField`, `Stack`, `Image`, `Icon`, `List`, `SectionedList`, `ScrollBox`, `AnimatedBox`, `SwipeableBox`, `LongPressDragBox`, `WindowMeasuredBox`, `TimePickerBox`, `ProgressRingBox`, `ShakeBox` |
+| **atoms** | The smallest pieces of UI with meaning, built from primitives. No data access. | `Button`, `TextButton`, `IconButton`, `Badge`, `Chip`, `Checkbox`, `NuggieImage`, `Card`, `NumberInput`, `DurationInput`, `DragHandle`, `SupersetBracket`, `Toast`, `TimeLabel`, `StatusChip`, `DayMarker`, `CountdownButton`, `ElapsedTimer` |
+| **molecules** | Small groups of atoms that work as a unit. Hold local UI state at most. | `CoachFloatingButton`, `ScreenHeader`, `EmptyState`, `ChipGroup`, `SegmentedControl`, `SearchBar`, `AlphabetIndex`, `ExerciseRow`, `FormField`, `ImageUrlField`, `Stepper`, `KindChoiceCard`, `ActionCard`, `TargetSetRow`, `TargetSetTable`, `WorkoutRow`, `WorkoutNameField`, `PlanEntryRow`, `DaySectionHeader`, `PlanRow`, `RestDay`, `ActivePlanBanner`, `DayChip`, `ScheduledWorkoutCard`, `HeaderImageCard`, `WorkoutDetailExerciseRow`, `ActiveSessionBanner`, `PersonalRecordRow`, `RestTimerBar`, `SessionSetRow`, `StatTile` |
+| **organisms** | Self-contained sections of a screen. Receive data and callbacks through props. | `NuggieLoadingScreen`, `ExerciseForm`, `ExercisePicker`, `ExerciseEditorCard`, `ReorderableExerciseList`, `ClassDetailsForm`, `CreateHub`, `WorkoutEditorFooter`, `PlanWeekEditor`, `AddPlanEntrySheet`, `ActivatePlanSheet`, `EntryTimeSheet`, `CopyDaySheet`, `WeekStrip`, `DayWorkoutList`, `IndividualWorkoutDetail`, `ClassWorkoutDetail`, `SessionLogger`, `ClassSessionView`, `SessionExerciseCard`, `SessionSummary` |
+| **routes** | Expo Router screens. Load data through repositories and hooks, then compose organisms. | `src/app/(tabs)/index.tsx`, `src/app/(tabs)/_layout.tsx`, `src/app/coach.tsx`, `src/app/exercises/*`, `src/app/workouts/*`, `src/app/plans/*`, `src/app/workout/[workoutId].tsx`, `src/app/sessions/[sessionId]/index.tsx`, `src/app/sessions/[sessionId]/finishing.tsx`, `src/app/sessions/[sessionId]/summary.tsx` |
 
 Rules:
 
@@ -356,7 +358,7 @@ The Calendar tab is registered in `src/app/(tabs)/calendar.tsx`. Tapping a day's
 | Route | Presentation | Purpose |
 | --- | --- | --- |
 | `/(tabs)/calendar` | Tab | The calendar week strip with the selected day's workouts in time order |
-| `/workout/[workoutId]` | Stack push | Workout detail, with optional `date` and `planEntryId` params. Switches on `kind` (individual or class). Loading, missing and failed states show `EmptyState`. Edit pushes the builder edit modal (`/workouts/[workoutId]/edit`). Start opens a Phase 05 placeholder alert |
+| `/workout/[workoutId]` | Stack push | Workout detail, with optional `date` and `planEntryId` params. Switches on `kind` (individual or class). Loading, missing and failed states show `EmptyState`. Edit pushes the builder edit modal (`/workouts/[workoutId]/edit`). Start button calls `useStartSession` to begin a new session |
 
 ### Calendar Hooks
 
@@ -394,9 +396,9 @@ Three hooks manage the calendar's state:
 
 Distances of 1000 m and over are shown as km.
 
-### Placeholder for Phase 05
+### Session Starting
 
-`src/workouts/startWorkout.ts` exports `startWorkout({ workoutId, date, planEntryId })`, which shows an alert saying "Workout sessions arrive in Phase 05". Phase 05 replaces this function with the actual session creation flow.
+`useStartSession` handles starting a new session. It calls `startSession(request)` with `workoutId`, `date`, and `planEntryId`. The hook checks for an active session with `getActiveSession`: if found, it shows a single-open-session prompt (Resume, Discard, or Cancel). Resume opens the logger for the existing session. Discard deletes it with `discardSession` and starts the new one. If no active session exists, it creates a new session with `startSession` and opens the logger.
 
 ### Pure Modules
 
@@ -422,7 +424,7 @@ These hold the calendar logic, import no React Native, and are covered by `bun t
 | `WorkoutDetailExerciseRow` (molecule) | An exercise in the detail: image or nuggie, name, target summary, and optional superset label and bracket. Tappable to expand a read-only target set table |
 | `PagedList` (primitive) | A horizontally paged `FlatList` with `contentInsetAdjustmentBehavior: 'never'`. Used for the week strip to avoid padding in the paged content |
 | `WeekStrip` (organism) | Horizontal paged list of weeks. Renders 7 day chips per page. Uses `getItemLayout`, `initialScrollIndex` and `maintainVisibleContentPosition`. Calls `onReachEarliestWeeks` on start reached, deferred until the scroll settles so the offset adjusts while still, `onReachLatestWeeks` on end reached straight away, and `onVisibleWeekChange` with the most visible week (tracked through viewability, not offset) when a scroll settles. Takes `renderMarker(date)` for each day. Calls `onSelectDate` when a day is tapped. Exposes `scrollToWeekIndex` via ref |
-| `DayWorkoutList` (organism) | The workouts for the selected day. Cards tap through to the detail route and the play button calls `startWorkout`. An empty day shows the rest-day nuggie and a "Browse workouts" button that navigates to Create. Loading and failed states show a message |
+| `DayWorkoutList` (organism) | The workouts for the selected day. For planned entries, tapping the card opens the detail route and the play button calls `startSession` through `useStartSession`. For in-progress or completed sessions, tapping the card opens the logger or summary. An empty day shows the rest-day nuggie and a "Browse workouts" button that navigates to Create. Loading and failed states show a message |
 | `IndividualWorkoutDetail` (organism) | Detail for individual workouts: header image, name, summary (exercise count, estimated duration, body parts), exercise rows with target summaries and expandable set tables, and a sticky "START WORKOUT" button |
 | `ClassWorkoutDetail` (organism) | Detail for class workouts: header image, or the class nuggie on a soft pink card, name, class type badge, duration, description, and a sticky "START CLASS" button |
 
@@ -439,6 +441,148 @@ ScreenHeader gained an optional `action` slot for the "Today" button.
 | `headerCardImageHeight` | 200 | Height of the header image card on detail screens |
 | `headerCardNuggie` | 140 | Size of the nuggie image in the header card |
 | `detailBottomBarClearance` | 96 | Space at the bottom of scrollable detail content for the sticky button |
+
+## Workout Session
+
+Session management lets users log completed sets, rest times and notes while working out, then finish to view a summary with personal records.
+
+### Routes
+
+Four routes handle sessions and summaries:
+
+| Route | Presentation | Purpose |
+| --- | --- | --- |
+| `/sessions/[sessionId]` | Stack push | Session logger for active sessions or resumed sessions. Displays exercise cards with set rows and controls for editing values, adding sets, and marking completion. Shows a rest timer bar when active. Sticky header with elapsed time and Finish/Discard buttons. Header area shows no timer on class sessions; class sessions show a `ClassSessionView` with a progress ring instead |
+| `/sessions/[sessionId]/finishing` | Modal | Prompted on Finish tap. Shows the unticked set count and confirm/edit buttons. If nothing is ticked it prompts Discard instead |
+| `/sessions/[sessionId]/summary` | Stack push | Finished session summary with a large nuggie, personal record list (one row per exercise, best record by priority), and elapsed time. Opens from calendar cards that tap completed sessions or from the finishing screen |
+
+Completed and in-progress sessions opened from calendar cards route directly to their summary or logger through `resolveScheduledWorkoutRoute`, which switches on `status` and `sessionId`.
+
+### Starting a Session
+
+`useStartSession` creates a session and opens the logger. It calls `getActiveSession` first: if there is an existing open session, it shows a single-open-session prompt with three options. **Resume** opens the existing session's logger (same sessionId, `isStarting` is not set). **Discard** deletes the existing session with `discardSession`, clears the rest timer with `clearRestTimer`, then creates the new session. **Cancel** closes the prompt. The single-open-session guard prevents multiple concurrent workouts. If no active session exists, `useStartSession` calls `startSession` (the repository function, which inserts a new session row) and opens the logger with `isStarting: 'true'`.
+
+When starting a session linked to a plan entry, `startSession` finds any finished session for that entry on the same date and links the new session to the same entry (not creating a duplicate plan entry). When starting a planned entry that already has a finished session on that date, a new session is created without a plan entry link, so it shows as an unplanned extra session.
+
+### Session Logger and Write Queue
+
+`useSession(sessionId)` loads the session and manages all writes. It keeps a write queue (`writeQueue.current` is a `Promise<void>`) and debounces text input with `textInputDebounceMilliseconds` (400 ms). When the user edits a set's numeric values or notes, the hook schedules a write with `setTimeout`. If the user edits the same field again before the timeout, it cancels the pending write and reschedules. This debounce keeps writes out of the way of typing.
+
+Structural changes (adding or removing sets, replacing exercises) go through `enqueueStructuralChange`, which runs the database operation, then reloads the session with `getSessionWithExercises` and merges it back using `mergeReloadedSession`. The merge keeps any pending value writes and notes edits from the UI while updating the structure and values that changed server-side.
+
+### Rest Timer Store
+
+`src/stores/restTimerStore.ts` holds a module-level rest timer state read with `useSyncExternalStore` like the exercise picker store. `startRestTimer(restSeconds)` begins a countdown. The timer state tracks whether it is running, paused or idle, with remaining seconds and pause offset. At 0 seconds it gives a light haptic and hides. `pauseRestTimer` and `resumeRestTimer` toggle pause. `clearRestTimer` resets to idle.
+
+`resolveRestTimerStart(exercises, tickedSessionSetId)` decides when ticking a set should start rest. For non-superset exercises, rest starts immediately after the ticked set completes. For superset members, rest only starts after the last member in the group completes, and only if all members completed that same set position (a full round). The rest time used is the last member's `rest_seconds` or the default 90 seconds.
+
+### Session Exercise Rest Seconds
+
+Starting a session copies `rest_seconds` from the workout item. Exercises added mid-session get the default 90 seconds. The card's ⋯ menu offers a "Rest time" picker to edit `rest_seconds` for that session's exercise. The edit calls `updateSessionExerciseRest`, which bumps `dataVersion` so the calendar markers recompute.
+
+### Finishing and Personal Records
+
+When Finish is tapped, `resolveFinishPrompt` counts unticked sets and returns the prompt outcome: Finish if ticks exist, Discard if nothing is ticked. A tapped set stays editable and can be unticked.
+
+`useFinishedSession(sessionId)` loads a finished session and detects personal records by calling `detectPersonalRecords(currentSets, earlierSets)`. Current sets come from the finished session, flattened with `flattenCompletedSets`. Earlier sets load with `getPreviousSessionSets`, which queries all earlier sessions for the same exercises in order by date.
+
+`detectPersonalRecords` returns `PersonalRecord[]` (exerciseId, recordType, set) with priority: heaviestWeight, bestEstimatedOneRepMax, mostRepetitionsAtWeight, mostRepetitions, longestDuration, longestDistance. It compares current sets to earlier ones by type and only counts improvements (never ties). For weighted sets (repetitions_and_weight), it detects six record types: weight records, estimated one-rep-max records by the Epley formula (capped at 12 reps), and most reps at or above a weight. For other types, it detects single-value records: most reps, longest duration, or furthest distance. No record is added if earlier sets exist but the current set doesn't exceed them.
+
+The summary route `selectBestRecordPerExercise` picks one record per exercise by priority order. This list is shown as one row per exercise. Personal records are detected only when the session is finished, not when it is started.
+
+### Finishing Nuggie and Caption
+
+`chooseFinishingPresentation(input, random?)` picks a nuggie and caption for the finished-session summary. Input includes `workoutKind`, `classType` and `personalRecordCount`. If records exist, the caption is "New personal record!". For individual workouts, it is "Workout complete!". For classes, yoga shows "Namaste — class complete!" and others show "Class complete!".
+
+The nuggie is chosen by `chooseNuggie` with `kind: 'sessionFinished'`. Two nuggie sources are used: when arriving at the summary from the finishing screen (`nuggie` param set by the finishing route), the nuggie is parsed and passed through; otherwise the summary calls `chooseStableFinishingPresentation(sessionId, input)`, which uses `randomFromSessionId(sessionId)` to seed a deterministic PRNG so the same session always shows the same nuggie no matter when it is opened.
+
+### Class Session View
+
+For class sessions, the logger shows a `ClassSessionView` instead of exercise cards. It displays the class nuggie, elapsed time, a progress ring scaled to the planned duration, the ring's label (time elapsed / planned), and a notes field. At or past the planned duration the ring stays full while the timer continues. The progress ring uses the `ProgressRingBox` primitive with `react-native-svg`.
+
+### Calendar Card Routing
+
+Completed sessions opened from calendar cards tap into `/sessions/[sessionId]/summary`. In-progress sessions open the logger at `/sessions/[sessionId]`. Planned entries open the detail route. `resolveScheduledWorkoutRoute(scheduledWorkout)` switches on the status and returns the route.
+
+### Resume Banner
+
+The tabs layout shows an `ActiveSessionBanner` on the Home and Calendar tabs when there is an active session. The banner displays the elapsed time and is tappable to open the logger. It updates every 15 seconds (`bannerRefresh` duration token). Tapping navigates to `/sessions/[sessionId]` without `isStarting` param.
+
+### Pure Modules
+
+These hold the session logic, import no React Native, and are covered by `bun test`:
+
+- `src/sessions/resolveStartAgainstActiveSession.ts`: single-open-session logic and prompt title by workout name
+- `src/sessions/resolveSessionStart.ts`: linking new sessions to plan entries and the redo-a-done-entry rule
+- `src/sessions/describeActiveSessionBanner.ts`: elapsed time text for the resume banner
+- `src/sessions/resolveRestTimerStart.ts`: rest timer trigger and rest-time selection by superset structure
+- `src/sessions/fillSetForTick.ts`: set value filling on first tick and validation rules
+- `src/sessions/valuesForAddedSet.ts`: copying last set's actual or target values when adding a set
+- `src/sessions/replaceExercise.ts`: which actual values are cleared when changing an exercise
+- `src/sessions/describePreviousSet.ts`: format text for the previous set row in each exercise
+- `src/sessions/describeExerciseBestSet.ts`: best set text for an exercise in a finished session
+- `src/sessions/mergeReloadedSession.ts`: merge reloaded structure and values with pending writes
+- `src/sessions/normaliseSessionExercises.ts`: clear superset groups for single exercises on reload
+- `src/sessions/sessionSetChanges.ts`: editing operations (change, find, toggle completion)
+- `src/sessions/calculateSessionTotals.ts`: elapsed seconds, total volume and completed set count
+- `src/sessions/finishPrompt.ts`: finish prompt outcome (Finish, Discard) by ticked set count
+- `src/sessions/classRingProgress.ts`: progress ratio (elapsed / planned) and duration label for the class ring
+- `src/sessions/countdownProgress.ts`: progress ratio for a countdown-duration set
+- `src/sessions/chooseFinishingNuggie.ts`: nuggie and caption choice with stable picking by session id
+- `src/sessions/restTimerState.ts`: rest timer state transitions (start, pause, resume, clear)
+- `src/sessions/formatSessionValues.ts`: format display text for set values by tracking type
+- `src/progress/detectPersonalRecords.ts`: all record detection types, comparisons and priority
+- `src/progress/flattenCompletedSets.ts`: flatten session exercises and sets into completed set rows
+
+### Hooks
+
+Session-specific hooks manage the logger state and rest timer:
+
+| Hook | Behaviour |
+| --- | --- |
+| `useSession(sessionId)` | Returns `{ sessionLookup, previousSetsByExerciseId, changeSetValues, toggleSetCompletion, addSet, removeSet, changeExerciseRest, changeNotes, finish, discard, addExercises, replaceExercise, removeExercise }`. Loads the session on mount, debounces set value and notes writes with a 400 ms delay, and queues structural changes through `getSessionWithExercises` and merge. If a write fails it shows an alert |
+| `useRestTimer()` | Returns `{ remainingSeconds, isPaused, pause, resume }` or `null` if not running. Reads the module-level rest timer store with `useSyncExternalStore`. Updates every 250 ms (`fastTimerTick` duration) or when `startRestTimer` is called |
+| `useActiveSession()` | Returns `{ status: 'loading' } \| { status: 'failed' } \| { status: 'active', activeSession } \| { status: 'none' }`. Loads the active session on mount with `getActiveSession`, returns null if none, and reloads on focus. Used by the resume banner |
+| `useFinishedSession(sessionId)` | Returns `{ status: 'loading' } \| { status: 'missing' } \| { status: 'failed' } \| { status: 'found', session, personalRecords }`. Loads a finished session with `getSessionWithExercises` and its previous sets with `getPreviousSessionSets`, then detects records. Reloads on focus |
+| `useStartSession()` | Returns `{ startSession }`. Starts a new session or shows the single-open-session prompt. See above for details |
+| `useSessionExercisePicks()` | Returns `{ exerciseIds, clearExerciseIds }` for the exercise picker opened from the logger. Uses the same pick store pattern as the builder |
+
+### Session Repository
+
+`src/database/repositories/sessionRepository.ts` holds all session SQL:
+
+| Function | Behaviour |
+| --- | --- |
+| `startSession(database, request)` | Inserts a new session row with snapshot fields (name, kind, class_type) copied from the workout. Inserts session_exercises rows copied from the workout with their rest_seconds. Returns the new session id. Runs in one transaction. Links the new session to a plan entry if the entry has a finished session on the same date (redo rule). Returns the new session id |
+| `getActiveSession(database)` | The first unfinished session, or null. Returns an `ActiveSession` summary with id, workoutId, workoutName, scheduledDate, startedAt, planEntryId |
+| `getSessionWithExercises(database, sessionId)` | One session with all exercises and sets, or null. Returns a `SessionWithExercises` with exercises, each with sets. Joins to exercises and workouts for metadata |
+| `updateSessionSet(database, sessionSetId, changes)` | Updates numeric values (repetitions, weight, duration, distance) and triggers write queue validation |
+| `completeSessionSet(database, sessionSetId)` | Sets `completed_at` to now. Resolved rest timer after completion |
+| `uncompleteSessionSet(database, sessionSetId)` | Clears `completed_at`. Clears rest timer |
+| `addSessionSet(database, sessionExerciseId, values)` | Inserts a new set with the given values. Returns the new set id |
+| `removeSessionSet(database, sessionExerciseId, sessionSetId)` | Deletes the set and any pending writes for it |
+| `addSessionExercises(database, sessionId, exerciseIds)` | Inserts new exercise rows for the session, each with position at the end, no superset group, the exercise's tracking type, and default 90 s rest |
+| `replaceSessionExercise(database, sessionId, sessionExerciseId, newExerciseId)` | Updates the exercise, clears relevant actual values per `actualValuesAfterReplace`, and updates completed sets' values |
+| `removeSessionExercise(database, sessionId, sessionExerciseId)` | Deletes the exercise and all its sets |
+| `updateSessionExerciseRest(database, sessionExerciseId, restSeconds)` | Updates rest_seconds. Bumps dataVersion |
+| `updateSessionNotes(database, sessionId, notes)` | Updates notes |
+| `getPreviousSessionSets(database, exerciseIds)` | Completed sets from earlier sessions, for each exercise. Returns `PreviousSessionSet[]` with session date, set values and body part |
+| `finishSession(database, sessionId)` | Sets `finished_at` to now. Bumps dataVersion |
+| `discardSession(database, sessionId)` | Deletes the session and all its rows. Bumps dataVersion |
+
+### New Theme Size Tokens
+
+| Token | Value | Purpose |
+| --- | --- | --- |
+| `sessionClassNuggie` | 140 | Size of the nuggie on a class session view |
+| `restBarNuggie` | 36 | Size of the nuggie in the rest timer bar |
+| `classRing` | 220 | Diameter of the progress ring on a class session view |
+| `classRingStroke` | 12 | Stroke width of the progress ring |
+| `countdownButtonHeight` | 36 | Height of the countdown-duration set button |
+| `countdownButtonIcon` | 14 | Icon size in the countdown button |
+| `previousColumn` | 72 | Width of the previous set column in session set rows |
+| `shakeDistance` | 8 | Horizontal distance for the shake animation |
+| `statTileMinimumHeight` | 88 | Minimum height of a stat tile in the summary |
 
 ## App Start
 
@@ -464,19 +608,22 @@ src/
     workouts/               builder: _layout with WorkoutEditorProvider, new, class-details, editor, [workoutId]/edit, superset-info
     plans/                  new, [planId] editor, [planId]/add-entry, entry-time, activate, copy-day
     workout/                [workoutId] detail screen
+    sessions/               [sessionId] logger, finishing, summary screens
   components/
-    primitives/             themed wrappers: Box, Typography, Touchable, TextField, Stack, Image, Icon, List, SectionedList, ScrollBox, AnimatedBox, SwipeableBox, LongPressDragBox, WindowMeasuredBox, TimePickerBox, PagedList
+    primitives/             themed wrappers: Box, Typography, Touchable, TextField, Stack, Image, Icon, List, SectionedList, ScrollBox, AnimatedBox, SwipeableBox, LongPressDragBox, WindowMeasuredBox, TimePickerBox, PagedList, ProgressRingBox, ShakeBox
     atoms/                  smallest UI pieces: Button, TextButton, IconButton, Badge, Chip, Checkbox, NuggieImage, Card, NumberInput, DurationInput, DragHandle, SupersetBracket, Toast, TimeLabel, StatusChip, DayMarker
-    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField, PlanEntryRow, DaySectionHeader, PlanRow, RestDay, ActivePlanBanner, DayChip, ScheduledWorkoutCard, HeaderImageCard, WorkoutDetailExerciseRow
-    organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter, PlanWeekEditor, AddPlanEntrySheet, ActivatePlanSheet, EntryTimeSheet, CopyDaySheet, WeekStrip, DayWorkoutList, IndividualWorkoutDetail, ClassWorkoutDetail
+    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField, PlanEntryRow, DaySectionHeader, PlanRow, RestDay, ActivePlanBanner, DayChip, ScheduledWorkoutCard, HeaderImageCard, WorkoutDetailExerciseRow, ActiveSessionBanner, PersonalRecordRow, RestTimerBar, SessionSetRow, StatTile
+    organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter, PlanWeekEditor, AddPlanEntrySheet, ActivatePlanSheet, EntryTimeSheet, CopyDaySheet, WeekStrip, DayWorkoutList, IndividualWorkoutDetail, ClassWorkoutDetail, SessionLogger, ClassSessionView, SessionExerciseCard, SessionSummary
   database/
-    migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2)
-    repositories/           one file per entity: exerciseRepository, workoutRepository, planRepository, scheduleRepository
+    migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2), addSessionExerciseRestSeconds (v3)
+    repositories/           one file per entity: exerciseRepository, workoutRepository, planRepository, scheduleRepository, sessionRepository
   exercises/                pure exercise logic with tests: validation, A–Z grouping, filtering, selection
-  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan, usePlanActions, useScheduledWorkouts, useWeekPages, useSelectedDate, useScheduledWeeks
-  stores/                   exercisePickerStore and workoutSavedStore for returning values between screens, dataVersionStore, with tests
+  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan, usePlanActions, useScheduledWorkouts, useWeekPages, useSelectedDate, useScheduledWeeks, useSession, useStartSession, useActiveSession, useFinishedSession, useRestTimer, useSessionExercisePicks
+  stores/                   exercisePickerStore, workoutSavedStore for returning values between screens; dataVersionStore, restTimerStore for module-level state; with tests
   plans/                    pure plan logic with tests: build scheduled workouts, time of day, summaries, copy day, weekday grouping, day marker state, week cache
-  workouts/                 pure builder logic with tests: reducer, normalisation, grouping blocks, target set columns, save rows, drag maths, rest presets, class type nuggies, editor context and provider, duration estimation, target set descriptions, start workout placeholder
+  workouts/                 pure builder logic with tests: reducer, normalisation, grouping blocks, target set columns, save rows, drag maths, rest presets, class type nuggies, editor context and provider, duration estimation, target set descriptions
+  sessions/                 pure session logic with tests: start and resume rules, fill and change operations, rest timer control, finishing and discard logic, personal record detection
+  progress/                 personal record detection: record types, first-time rule, tie handling, superset and best-set logic
   numbers/                  pure number parsing with tests: textual input rules
   images/                   pure image URL validation with tests: error messages
   nuggies/                  nuggie selection and image system
