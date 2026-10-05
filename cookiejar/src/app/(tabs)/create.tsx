@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CreateHub, type CreateHubToast } from '@/components/organisms/CreateHub';
 import { Box } from '@/components/primitives/Box';
+import { useWorkoutActions } from '@/hooks/useWorkoutActions';
 import { useWorkouts } from '@/hooks/useWorkouts';
 import { useWorkoutSavedNoticeOnFocus } from '@/hooks/useWorkoutSavedNoticeOnFocus';
 import type { WorkoutSavedNotice } from '@/stores/workoutSavedStore';
@@ -11,7 +12,8 @@ import type { WorkoutSavedNotice } from '@/stores/workoutSavedStore';
 const coachButtonClearance = 96;
 
 export default function CreateScreen() {
-  const workouts = useWorkouts();
+  const { workouts, reloadWorkouts } = useWorkouts();
+  const { editWorkout, duplicateWorkout, confirmDeleteWorkout } = useWorkoutActions({ reloadWorkouts });
   const savedNotice = useWorkoutSavedNoticeOnFocus();
   const [lastSavedNotice, setLastSavedNotice] = useState<WorkoutSavedNotice | null>(null);
   const [toastCount, setToastCount] = useState(0);
@@ -34,6 +36,9 @@ export default function CreateScreen() {
           toast={toast}
           onNewWorkout={() => router.push('/workouts/new')}
           onOpenExerciseLibrary={() => router.push('/exercises')}
+          onEditWorkout={editWorkout}
+          onDuplicateWorkout={duplicateWorkout}
+          onDeleteWorkout={confirmDeleteWorkout}
           onToastDismissed={dismissToast}
         />
       </Box>

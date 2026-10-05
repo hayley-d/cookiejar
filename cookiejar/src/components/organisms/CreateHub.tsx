@@ -1,3 +1,5 @@
+import { ActionSheetIOS } from 'react-native';
+
 import { Toast } from '@/components/atoms/Toast';
 import { ActionCard } from '@/components/molecules/ActionCard';
 import { ScreenHeader } from '@/components/molecules/ScreenHeader';
@@ -24,12 +26,41 @@ type CreateHubProperties = {
   toast: CreateHubToast | null;
   onNewWorkout: () => void;
   onOpenExerciseLibrary: () => void;
+  onEditWorkout: (workout: WorkoutSummary) => void;
+  onDuplicateWorkout: (workout: WorkoutSummary) => void;
+  onDeleteWorkout: (workout: WorkoutSummary) => void;
   onToastDismissed: () => void;
 };
 
 const chevronSize = 14;
 
-function renderWorkout({ item: workout }: { item: WorkoutSummary }) {
+const workoutMenuOptions = ['Edit', 'Duplicate', 'Delete', 'Cancel'];
+const workoutMenuDeleteIndex = 2;
+const workoutMenuCancelIndex = 3;
+
+type WorkoutMenuHandlers = Pick<CreateHubProperties, 'onEditWorkout' | 'onDuplicateWorkout' | 'onDeleteWorkout'>;
+
+function openWorkoutMenu(workout: WorkoutSummary, handlers: WorkoutMenuHandlers) {
+  ActionSheetIOS.showActionSheetWithOptions(
+    {
+      title: workout.name,
+      options: workoutMenuOptions,
+      destructiveButtonIndex: workoutMenuDeleteIndex,
+      cancelButtonIndex: workoutMenuCancelIndex,
+    },
+    (optionIndex) => {
+      if (optionIndex === 0) {
+        handlers.onEditWorkout(workout);
+      } else if (optionIndex === 1) {
+        handlers.onDuplicateWorkout(workout);
+      } else if (optionIndex === workoutMenuDeleteIndex) {
+        handlers.onDeleteWorkout(workout);
+      }
+    },
+  );
+}
+
+function renderWorkout(workout: WorkoutSummary, handlers: WorkoutMenuHandlers) {
   return (
     <WorkoutRow
       name={workout.name}
@@ -37,6 +68,7 @@ function renderWorkout({ item: workout }: { item: WorkoutSummary }) {
       imageUrl={workout.imageUrl}
       nuggie={workout.classType === null ? 'workout' : classTypeNuggie(workout.classType)}
       badgeLabel={workout.classType === null ? undefined : classTypeLabels[workout.classType]}
+      onLongPress={() => openWorkoutMenu(workout, handlers)}
     />
   );
 }
@@ -46,6 +78,9 @@ export function CreateHub({
   toast,
   onNewWorkout,
   onOpenExerciseLibrary,
+  onEditWorkout,
+  onDuplicateWorkout,
+  onDeleteWorkout,
   onToastDismissed,
 }: CreateHubProperties) {
   const theme = useTheme();
@@ -56,7 +91,9 @@ export function CreateHub({
       <List
         data={workouts ?? []}
         keyExtractor={(workout) => String(workout.id)}
-        renderItem={renderWorkout}
+        renderItem={({ item: workout }) =>
+          renderWorkout(workout, { onEditWorkout, onDuplicateWorkout, onDeleteWorkout })
+        }
         ListHeaderComponent={
           <Stack gap="large">
             <ActionCard title="New workout" icon="dumbbell.fill" onPress={onNewWorkout} />

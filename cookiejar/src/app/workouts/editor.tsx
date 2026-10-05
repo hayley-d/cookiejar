@@ -8,7 +8,8 @@ import { WorkoutEditorFooter } from '@/components/organisms/WorkoutEditorFooter'
 import { Box } from '@/components/primitives/Box';
 import { ScrollBox } from '@/components/primitives/ScrollBox';
 import { getExercise } from '@/database/repositories/exerciseRepository';
-import { saveWorkout } from '@/database/repositories/workoutRepository';
+import { useSaveWorkout } from '@/hooks/useSaveWorkout';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useWorkoutEditor } from '@/hooks/useWorkoutEditor';
 import {
   beginExercisePick,
@@ -16,7 +17,6 @@ import {
   useExercisePickResult,
   type ExercisePickResult,
 } from '@/stores/exercisePickerStore';
-import { announceWorkoutSaved } from '@/stores/workoutSavedStore';
 import type { Exercise } from '@/types/Exercise';
 import { workoutNameError } from '@/workouts/workoutNameError';
 
@@ -45,6 +45,8 @@ export default function WorkoutEditorScreen() {
   const database = useSQLiteContext();
   const { pickOnOpen } = useLocalSearchParams<WorkoutEditorParameters>();
   const { state, dispatch } = useWorkoutEditor();
+  const { isSaving, save: saveEditorState } = useSaveWorkout();
+  useUnsavedChangesGuard(state.hasUnsavedChanges);
   const [openingRequestIdentifier] = useState(() =>
     pickOnOpen === 'true' && state.items.length === 0 ? startExercisePick() : null,
   );
@@ -52,7 +54,6 @@ export default function WorkoutEditorScreen() {
   const pickResult = useExercisePickResult(pickRequestIdentifier);
   const [lastPickResult, setLastPickResult] = useState<ExercisePickResult | null>(null);
   const [pickedExerciseIds, setPickedExerciseIds] = useState<number[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
   const hasOpenedPickerOnOpen = useRef(false);
 
   if (pickResult !== null && pickResult !== lastPickResult) {
@@ -99,14 +100,7 @@ export default function WorkoutEditorScreen() {
     if (!canSave || workoutNameError(state.name) !== null) {
       return;
     }
-    setIsSaving(true);
-    try {
-      await saveWorkout(database, state);
-      announceWorkoutSaved(state.name.trim());
-      router.dismissTo('/create');
-    } finally {
-      setIsSaving(false);
-    }
+    await saveEditorState(state);
   };
 
   return (

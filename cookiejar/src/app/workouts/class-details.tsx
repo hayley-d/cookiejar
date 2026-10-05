@@ -1,21 +1,20 @@
-import { router, Stack } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
+import { Stack } from 'expo-router';
 import { useState } from 'react';
 
 import { TextButton } from '@/components/atoms/TextButton';
 import { ClassDetailsForm, type ClassDetailsErrors } from '@/components/organisms/ClassDetailsForm';
-import { saveWorkout } from '@/database/repositories/workoutRepository';
+import { useSaveWorkout } from '@/hooks/useSaveWorkout';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useWorkoutEditor } from '@/hooks/useWorkoutEditor';
 import { imageUrlError } from '@/images/imageUrls';
-import { announceWorkoutSaved } from '@/stores/workoutSavedStore';
 import { defaultClassDetails } from '@/workouts/workoutEditorReducer';
 import { workoutNameError } from '@/workouts/workoutNameError';
 
 export default function ClassDetailsScreen() {
-  const database = useSQLiteContext();
   const { state, dispatch } = useWorkoutEditor();
+  const { isSaving, save: saveEditorState } = useSaveWorkout();
+  useUnsavedChangesGuard(state.hasUnsavedChanges);
   const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const classDetails = state.classDetails ?? defaultClassDetails;
   const imageUrlProblem = imageUrlError(classDetails.imageUrl);
   const errors: ClassDetailsErrors = hasAttemptedSave && imageUrlProblem !== null ? { imageUrl: imageUrlProblem } : {};
@@ -25,14 +24,7 @@ export default function ClassDetailsScreen() {
     if (imageUrlProblem !== null || workoutNameError(state.name) !== null) {
       return;
     }
-    setIsSaving(true);
-    try {
-      await saveWorkout(database, state);
-      announceWorkoutSaved(state.name.trim());
-      router.dismissTo('/create');
-    } finally {
-      setIsSaving(false);
-    }
+    await saveEditorState(state);
   };
 
   return (

@@ -20,6 +20,7 @@ export default function WorkoutBuilderLayout() {
         <Stack.Screen name="new" options={{ title: 'New workout' }} />
         <Stack.Screen name="class-details" options={{ title: 'Class details' }} />
         <Stack.Screen name="editor" />
+        <Stack.Screen name="[workoutId]/edit" options={{ title: 'Edit workout' }} />
       </Stack>
     </WorkoutEditorProvider>
   );

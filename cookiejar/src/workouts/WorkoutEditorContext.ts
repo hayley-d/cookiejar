@@ -5,6 +5,8 @@ import type { WorkoutEditorAction, WorkoutEditorState } from '@/workouts/workout
 export type WorkoutEditor = {
   state: WorkoutEditorState;
   dispatch: Dispatch<WorkoutEditorAction>;
+  isLeavingPermitted: boolean;
+  leaveWithoutPrompt: (leave: () => void) => void;
 };
 
 export const WorkoutEditorContext = createContext<WorkoutEditor | null>(null);

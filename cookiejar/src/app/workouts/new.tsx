@@ -6,12 +6,14 @@ import { FormField } from '@/components/molecules/FormField';
 import { KindChoiceCard } from '@/components/molecules/KindChoiceCard';
 import { ScrollBox } from '@/components/primitives/ScrollBox';
 import { TextField } from '@/components/primitives/TextField';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useWorkoutEditor } from '@/hooks/useWorkoutEditor';
 import type { WorkoutKind } from '@/types/WorkoutKind';
 import { workoutNameError } from '@/workouts/workoutNameError';
 
 export default function NewWorkoutScreen() {
   const { state, dispatch } = useWorkoutEditor();
+  useUnsavedChangesGuard(state.hasUnsavedChanges);
   const [selectedKind, setSelectedKind] = useState<WorkoutKind | null>(null);
   const [hasAttemptedNext, setHasAttemptedNext] = useState(false);
   const nameError = workoutNameError(state.name);

@@ -6,6 +6,7 @@ import { NuggieImage } from '@/components/atoms/NuggieImage';
 import { Box } from '@/components/primitives/Box';
 import { Image } from '@/components/primitives/Image';
 import { Stack } from '@/components/primitives/Stack';
+import { Touchable } from '@/components/primitives/Touchable';
 import { Typography } from '@/components/primitives/Typography';
 import type { NuggieName } from '@/nuggies/NuggieName';
 import { useTheme } from '@/theme/useTheme';
@@ -16,36 +17,43 @@ type WorkoutRowProperties = {
   imageUrl: string | null;
   nuggie: NuggieName;
   badgeLabel?: string;
+  onLongPress?: () => void;
 };
 
 const imageSize = 72;
 
-export function WorkoutRow({ name, summary, imageUrl, nuggie, badgeLabel }: WorkoutRowProperties) {
+export function WorkoutRow({ name, summary, imageUrl, nuggie, badgeLabel, onLongPress }: WorkoutRowProperties) {
   const theme = useTheme();
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
   const showsImage = imageUrl !== null && imageUrl !== failedImageUrl;
 
   return (
-    <Card padding="small" accessible accessibilityLabel={`${name}, ${summary}`}>
-      <Stack direction="horizontal" gap="medium" align="center">
-        {showsImage ? (
-          <Image
-            source={{ uri: imageUrl }}
-            contentFit="cover"
-            style={{ width: imageSize, height: imageSize, borderRadius: theme.radii.medium }}
-            onError={() => setFailedImageUrl(imageUrl)}
-          />
-        ) : (
-          <NuggieImage name={nuggie} size={imageSize} shape="rounded" />
-        )}
-        <Box flex={1} gap="extraSmall">
-          <Typography variant="label">{name}</Typography>
-          {badgeLabel ? <Badge label={badgeLabel} /> : null}
-          <Typography variant="caption" color="textSecondary">
-            {summary}
-          </Typography>
-        </Box>
-      </Stack>
-    </Card>
+    <Touchable
+      onLongPress={onLongPress}
+      accessibilityLabel={`${name}, ${summary}`}
+      accessibilityHint="Long press for edit, duplicate and delete"
+    >
+      <Card padding="small">
+        <Stack direction="horizontal" gap="medium" align="center">
+          {showsImage ? (
+            <Image
+              source={{ uri: imageUrl }}
+              contentFit="cover"
+              style={{ width: imageSize, height: imageSize, borderRadius: theme.radii.medium }}
+              onError={() => setFailedImageUrl(imageUrl)}
+            />
+          ) : (
+            <NuggieImage name={nuggie} size={imageSize} shape="rounded" />
+          )}
+          <Box flex={1} gap="extraSmall">
+            <Typography variant="label">{name}</Typography>
+            {badgeLabel ? <Badge label={badgeLabel} /> : null}
+            <Typography variant="caption" color="textSecondary">
+              {summary}
+            </Typography>
+          </Box>
+        </Stack>
+      </Card>
+    </Touchable>
   );
 }

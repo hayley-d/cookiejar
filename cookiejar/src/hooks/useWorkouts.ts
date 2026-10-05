@@ -9,6 +9,10 @@ export function useWorkouts() {
   const database = useSQLiteContext();
   const [workouts, setWorkouts] = useState<WorkoutSummary[] | null>(null);
 
+  const reloadWorkouts = useCallback(async () => {
+    setWorkouts(await listWorkouts(database));
+  }, [database]);
+
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
@@ -23,5 +27,5 @@ export function useWorkouts() {
     }, [database]),
   );
 
-  return workouts;
+  return { workouts, reloadWorkouts };
 }
