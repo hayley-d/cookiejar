@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EmptyState } from '@/components/molecules/EmptyState';
 import { ClassSessionView } from '@/components/organisms/ClassSessionView';
@@ -34,6 +34,7 @@ function chooseStartingNuggie() {
 export default function SessionLoggerScreen() {
   const { sessionId: sessionIdParameter, isStarting } = useLocalSearchParams<SessionLoggerParameters>();
   const sessionId = Number(sessionIdParameter);
+  const safeAreaInsets = useSafeAreaInsets();
   const {
     sessionLookup,
     previousSetsByExerciseId,
@@ -116,17 +117,19 @@ export default function SessionLoggerScreen() {
   let content = null;
   if (sessionLookup.status === 'missing' || sessionLookup.status === 'failed') {
     content = (
-      <EmptyState
-        nuggie="workout"
-        title={sessionLookup.status === 'missing' ? 'Workout not found' : 'Could not open the workout'}
-        message={
-          sessionLookup.status === 'missing'
-            ? 'This workout session may have been discarded.'
-            : 'Something went wrong while loading it. Please try again.'
-        }
-        actionLabel="Close"
-        onAction={() => router.back()}
-      />
+      <Box flex={1} style={{ paddingTop: safeAreaInsets.top, paddingBottom: safeAreaInsets.bottom }}>
+        <EmptyState
+          nuggie="workout"
+          title={sessionLookup.status === 'missing' ? 'Workout not found' : 'Could not open the workout'}
+          message={
+            sessionLookup.status === 'missing'
+              ? 'This workout session may have been discarded.'
+              : 'Something went wrong while loading it. Please try again.'
+          }
+          actionLabel="Close"
+          onAction={() => router.back()}
+        />
+      </Box>
     );
   } else if (sessionLookup.status === 'found' && sessionLookup.session.workoutKind === 'class') {
     content = (
@@ -170,9 +173,7 @@ export default function SessionLoggerScreen() {
 
   return (
     <Box flex={1} background="background">
-      <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1 }}>
-        {content}
-      </SafeAreaView>
+      {content}
       {isLoadingScreenVisible ? (
         <NuggieLoadingScreen
           nuggie={startingNuggie}

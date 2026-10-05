@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/atoms/Button';
 import { ElapsedTimer } from '@/components/atoms/ElapsedTimer';
@@ -31,6 +32,7 @@ export function ClassSessionView({
   onDiscard,
 }: ClassSessionViewProperties) {
   const theme = useTheme();
+  const safeAreaInsets = useSafeAreaInsets();
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -47,7 +49,13 @@ export function ClassSessionView({
 
   return (
     <Box flex={1} background="background">
-      <Box direction="row" align="center" gap="small" paddingHorizontal="medium" paddingVertical="small">
+      <Box
+        direction="row"
+        align="center"
+        gap="small"
+        paddingHorizontal="medium"
+        style={{ paddingTop: safeAreaInsets.top + theme.spacing.small, paddingBottom: theme.spacing.small }}
+      >
         <TextButton label="✕ Discard" color="danger" onPress={onDiscard} disabled={isFinishing} />
         <Box flex={1}>
           <Typography variant="heading" numberOfLines={1} accessibilityRole="header">
@@ -75,7 +83,7 @@ export function ClassSessionView({
           style={{ minHeight: theme.sizes.sessionNotesMinimumHeight }}
         />
       </ScrollBox>
-      <Box padding="medium">
+      <Box padding="medium" style={{ paddingBottom: safeAreaInsets.bottom + theme.spacing.medium }}>
         <Button label="MARK COMPLETE" onPress={onMarkComplete} disabled={isFinishing} />
       </Box>
     </Box>

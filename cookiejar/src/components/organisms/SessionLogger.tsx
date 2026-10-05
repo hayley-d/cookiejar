@@ -1,3 +1,5 @@
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { ElapsedTimer } from '@/components/atoms/ElapsedTimer';
 import { TextButton } from '@/components/atoms/TextButton';
 import { RestTimerBar } from '@/components/molecules/RestTimerBar';
@@ -47,12 +49,19 @@ export function SessionLogger({
   onDiscard,
 }: SessionLoggerProperties) {
   const theme = useTheme();
+  const safeAreaInsets = useSafeAreaInsets();
   const restTimer = useRestTimer();
   const cardPositions = toSupersetCardPositions(session.exercises);
 
   return (
     <Box flex={1} background="background">
-      <Box direction="row" align="center" gap="small" paddingHorizontal="medium" paddingVertical="small">
+      <Box
+        direction="row"
+        align="center"
+        gap="small"
+        paddingHorizontal="medium"
+        style={{ paddingTop: safeAreaInsets.top + theme.spacing.small, paddingBottom: theme.spacing.small }}
+      >
         <TextButton label="✕ Discard" color="danger" onPress={onDiscard} disabled={isFinishing} />
         <Box flex={1}>
           <Typography variant="heading" numberOfLines={1} accessibilityRole="header">
@@ -69,7 +78,7 @@ export function SessionLogger({
           onTogglePause={restTimer.isPaused ? restTimer.resume : restTimer.pause}
         />
       )}
-      <ScrollBox automaticallyAdjustKeyboardInsets>
+      <ScrollBox automaticallyAdjustKeyboardInsets contentInsetAdjustmentBehavior="never">
         {session.exercises.length === 0 ? (
           <Typography color="textSecondary" align="center">
             This workout has no exercises.
@@ -104,6 +113,7 @@ export function SessionLogger({
           textAlignVertical="top"
           style={{ minHeight: theme.sizes.sessionNotesMinimumHeight }}
         />
+        <Box style={{ height: safeAreaInsets.bottom }} />
       </ScrollBox>
     </Box>
   );
