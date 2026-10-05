@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test';
 
 import { classTypeNuggie } from '@/workouts/classTypeNuggie';
 import { describeWorkout } from '@/workouts/describeWorkout';
+import { filterWorkouts } from '@/workouts/filterWorkouts';
 import { workoutNameError } from '@/workouts/workoutNameError';
+import { workoutNuggie } from '@/workouts/workoutNuggie';
 
 describe('workoutNameError', () => {
   test('a name is required', () => {
@@ -51,5 +53,33 @@ describe('classTypeNuggie', () => {
     expect(classTypeNuggie('spin')).toBe('workout');
     expect(classTypeNuggie('barre')).toBe('workout');
     expect(classTypeNuggie('other')).toBe('workout');
+  });
+});
+
+describe('workoutNuggie', () => {
+  test('an individual workout shows the workout nuggie', () => {
+    expect(workoutNuggie(null)).toBe('workout');
+  });
+
+  test('a class shows its class nuggie', () => {
+    expect(workoutNuggie('yoga')).toBe('yoga');
+    expect(workoutNuggie('spin')).toBe('workout');
+  });
+});
+
+describe('filterWorkouts', () => {
+  const workouts = [{ name: 'Morning Spin' }, { name: 'Push Day' }, { name: 'Leg Day' }];
+
+  test('empty search keeps every workout', () => {
+    expect(filterWorkouts(workouts, '  ')).toEqual(workouts);
+  });
+
+  test('matches part of the name ignoring case and spaces', () => {
+    expect(filterWorkouts(workouts, ' day ').map((workout) => workout.name)).toEqual(['Push Day', 'Leg Day']);
+    expect(filterWorkouts(workouts, 'SPIN').map((workout) => workout.name)).toEqual(['Morning Spin']);
+  });
+
+  test('no match gives an empty list', () => {
+    expect(filterWorkouts(workouts, 'yoga')).toEqual([]);
   });
 });

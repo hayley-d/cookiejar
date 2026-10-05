@@ -122,10 +122,10 @@ routes (src/app)  →  organisms  →  molecules  →  atoms  →  primitives  �
 
 | Layer | Responsibility | Examples |
 | --- | --- | --- |
-| **primitives** | Thin themed wrappers over React Native elements. The only layer that touches raw `View`, `Text`, `Pressable`, `TextInput`, `ScrollView`, `FlatList`, `SectionList`, `expo-image` and `expo-symbols`. They apply theme tokens and nothing else. | `Box`, `Typography`, `Touchable`, `TextField`, `Stack`, `Image`, `Icon`, `List`, `SectionedList`, `ScrollBox`, `AnimatedBox`, `SwipeableBox`, `LongPressDragBox`, `WindowMeasuredBox` |
-| **atoms** | The smallest pieces of UI with meaning, built from primitives. No data access. | `Button`, `TextButton`, `IconButton`, `Badge`, `Chip`, `Checkbox`, `NuggieImage`, `Card`, `NumberInput`, `DurationInput`, `DragHandle`, `SupersetBracket`, `Toast` |
-| **molecules** | Small groups of atoms that work as a unit. Hold local UI state at most. | `CoachFloatingButton`, `ScreenHeader`, `EmptyState`, `ChipGroup`, `SegmentedControl`, `SearchBar`, `AlphabetIndex`, `ExerciseRow`, `FormField`, `ImageUrlField`, `Stepper`, `KindChoiceCard`, `ActionCard`, `TargetSetRow`, `TargetSetTable`, `WorkoutRow`, `WorkoutNameField` |
-| **organisms** | Self-contained sections of a screen. Receive data and callbacks through props. | `NuggieLoadingScreen`, `ExerciseForm`, `ExercisePicker`, `ExerciseEditorCard`, `ReorderableExerciseList`, `ClassDetailsForm`, `CreateHub`, `WorkoutEditorFooter` |
+| **primitives** | Thin themed wrappers over React Native elements. The only layer that touches raw `View`, `Text`, `Pressable`, `TextInput`, `ScrollView`, `FlatList`, `SectionList`, `expo-image` and `expo-symbols`. They apply theme tokens and nothing else. | `Box`, `Typography`, `Touchable`, `TextField`, `Stack`, `Image`, `Icon`, `List`, `SectionedList`, `ScrollBox`, `AnimatedBox`, `SwipeableBox`, `LongPressDragBox`, `WindowMeasuredBox`, `TimePickerBox` |
+| **atoms** | The smallest pieces of UI with meaning, built from primitives. No data access. | `Button`, `TextButton`, `IconButton`, `Badge`, `Chip`, `Checkbox`, `NuggieImage`, `Card`, `NumberInput`, `DurationInput`, `DragHandle`, `SupersetBracket`, `Toast`, `TimeLabel` |
+| **molecules** | Small groups of atoms that work as a unit. Hold local UI state at most. | `CoachFloatingButton`, `ScreenHeader`, `EmptyState`, `ChipGroup`, `SegmentedControl`, `SearchBar`, `AlphabetIndex`, `ExerciseRow`, `FormField`, `ImageUrlField`, `Stepper`, `KindChoiceCard`, `ActionCard`, `TargetSetRow`, `TargetSetTable`, `WorkoutRow`, `WorkoutNameField`, `PlanEntryRow`, `DaySectionHeader`, `PlanRow` |
+| **organisms** | Self-contained sections of a screen. Receive data and callbacks through props. | `NuggieLoadingScreen`, `ExerciseForm`, `ExercisePicker`, `ExerciseEditorCard`, `ReorderableExerciseList`, `ClassDetailsForm`, `CreateHub`, `WorkoutEditorFooter`, `PlanWeekEditor`, `AddPlanEntrySheet` |
 | **routes** | Expo Router screens. Load data through repositories and hooks, then compose organisms. | `src/app/(tabs)/index.tsx`, `src/app/(tabs)/_layout.tsx`, `src/app/coach.tsx`, `src/app/exercises/*`, `src/app/workouts/*` |
 
 Rules:
@@ -244,6 +244,42 @@ These hold the builder's logic, import no React Native, and are covered by `bun 
 - `src/numbers/numberText.ts`: parsing rules for number inputs (kg one decimal, distance in km)
 - `src/images/imageUrls.ts`: image URL validation and error (shared with exercise form)
 
+## Plans
+
+### Routes
+
+Registered flat on the root `Stack`. Every change writes straight through `planRepository` (no draft, no Save button) and the editor reloads on focus.
+
+| Route | Presentation | Purpose |
+| --- | --- | --- |
+| `/plans/new` | Modal | Name the plan (required, trimmed), then replace the modal with the editor |
+| `/plans/[planId]` | Stack push | `PlanWeekEditor`: Monday to Sunday, entries in time order, an empty day shows the `restDay` nuggie and "Rest day" |
+| `/plans/[planId]/add-entry` | Form sheet | `AddPlanEntrySheet`: a time picker (default from `defaultTimeOfDayForNewEntry`) and a searchable `WorkoutRow` list; tapping a workout adds it and closes |
+
+The Create hub has a "New plan" `ActionCard` under "New workout", and "My plans" between it and "My workouts" (active first with an `ACTIVE` badge, summary from `describePlanSummary`).
+
+### Plan Repository
+
+`src/database/repositories/planRepository.ts`: `listPlans` (entry count, active first, then newest), `getPlanWithEntries` (entries joined to the workout summary fields including `exerciseCount`, or `null`), `createPlan` and `addPlanEntry`. `usePlans` and `usePlan` reload on focus, and their writes call `bumpDataVersion()`.
+
+### Data Version Store
+
+`src/stores/dataVersionStore.ts` is an app-wide counter with `bumpDataVersion`, `subscribeToDataVersion` and the `useDataVersion` hook. Plan writes, workout save and workout delete bump it, because they change what is scheduled.
+
+### Time Picker
+
+`TimePickerBox` is the only place that renders `@react-native-community/datetimepicker`. It takes `mode` (`time` or `date`) and `display` and applies the theme's accent, text colour and colour scheme.
+
+### Pure Modules
+
+- `src/plans/timeOfDay.ts`: `HH:MM` to and from minutes and `Date`, display formatting, comparing and sorting, and the default time for a new entry (07:00 on an empty day, otherwise the last entry + 1 hour, capped at 23:30)
+- `src/plans/describePlanSummary.ts`: "n workouts / week" or "No workouts yet"
+- `src/plans/groupEntriesByWeekday.ts` and `src/plans/weekdays.ts`: Monday to Sunday sections in time order
+- `src/plans/describePlanEntryWorkout.ts`: the class type label or "n ex."
+- `src/plans/planNameError.ts`: plan name is required
+- `src/workouts/workoutNuggie.ts`: the `workout` nuggie, or the class nuggie for a class
+- `src/workouts/filterWorkouts.ts`: workout search by name
+
 ## App Start
 
 When the app launches:
@@ -266,17 +302,19 @@ src/
     coach.tsx               Coach modal screen
     exercises/              library (index), new, [exerciseId] edit, picker
     workouts/               builder: _layout with WorkoutEditorProvider, new, class-details, editor, [workoutId]/edit, superset-info
+    plans/                  new, [planId] editor, [planId]/add-entry
   components/
-    primitives/             themed wrappers: Box, Typography, Touchable, TextField, Stack, Image, Icon, List, SectionedList, ScrollBox, AnimatedBox, SwipeableBox, LongPressDragBox, WindowMeasuredBox
-    atoms/                  smallest UI pieces: Button, TextButton, IconButton, Badge, Chip, Checkbox, NuggieImage, Card, NumberInput, DurationInput, DragHandle, SupersetBracket, Toast
-    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField
-    organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter
+    primitives/             themed wrappers: Box, Typography, Touchable, TextField, Stack, Image, Icon, List, SectionedList, ScrollBox, AnimatedBox, SwipeableBox, LongPressDragBox, WindowMeasuredBox, TimePickerBox
+    atoms/                  smallest UI pieces: Button, TextButton, IconButton, Badge, Chip, Checkbox, NuggieImage, Card, NumberInput, DurationInput, DragHandle, SupersetBracket, Toast, TimeLabel
+    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField, PlanEntryRow, DaySectionHeader, PlanRow
+    organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter, PlanWeekEditor, AddPlanEntrySheet
   database/
     migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2)
-    repositories/           one file per entity: exerciseRepository, workoutRepository
+    repositories/           one file per entity: exerciseRepository, workoutRepository, planRepository
   exercises/                pure exercise logic with tests: validation, A–Z grouping, filtering, selection
-  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus
-  stores/                   exercisePickerStore and workoutSavedStore for returning values between screens, with tests
+  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan
+  stores/                   exercisePickerStore and workoutSavedStore for returning values between screens, dataVersionStore, with tests
+  plans/                    pure plan logic with tests: time of day, summaries, weekday grouping
   workouts/                 pure builder logic with tests: reducer, normalisation, grouping blocks, target set columns, save rows, drag maths, rest presets, class type nuggies, editor context and provider
   numbers/                  pure number parsing with tests: textual input rules
   images/                   pure image URL validation with tests: error messages

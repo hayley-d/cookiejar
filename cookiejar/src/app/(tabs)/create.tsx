@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CreateHub, type CreateHubToast } from '@/components/organisms/CreateHub';
 import { Box } from '@/components/primitives/Box';
+import { usePlans } from '@/hooks/usePlans';
 import { useWorkoutActions } from '@/hooks/useWorkoutActions';
 import { useWorkouts } from '@/hooks/useWorkouts';
 import { useWorkoutSavedNoticeOnFocus } from '@/hooks/useWorkoutSavedNoticeOnFocus';
@@ -13,6 +14,7 @@ import { useTheme } from '@/theme/useTheme';
 export default function CreateScreen() {
   const theme = useTheme();
   const { workouts, reloadWorkouts } = useWorkouts();
+  const { plans } = usePlans();
   const { editWorkout, duplicateWorkout, confirmDeleteWorkout } = useWorkoutActions({ reloadWorkouts });
   const savedNotice = useWorkoutSavedNoticeOnFocus();
   const [lastSavedNotice, setLastSavedNotice] = useState<WorkoutSavedNotice | null>(null);
@@ -33,8 +35,13 @@ export default function CreateScreen() {
       <Box flex={1} background="background" style={{ paddingBottom: theme.sizes.coachButtonClearance }}>
         <CreateHub
           workouts={workouts}
+          plans={plans}
           toast={toast}
           onNewWorkout={() => router.push('/workouts/new')}
+          onNewPlan={() => router.push('/plans/new')}
+          onOpenPlan={(plan) =>
+            router.push({ pathname: '/plans/[planId]', params: { planId: String(plan.id) } })
+          }
           onOpenExerciseLibrary={() => router.push('/exercises')}
           onEditWorkout={editWorkout}
           onDuplicateWorkout={duplicateWorkout}

@@ -84,6 +84,20 @@ export default function RootLayout() {
                 name="exercises/picker"
                 options={{ presentation: 'fullScreenModal', headerShown: false }}
               />
+              <Stack.Screen
+                name="plans/new"
+                options={{ presentation: 'modal', title: 'New plan', headerLargeTitleEnabled: false }}
+              />
+              <Stack.Screen name="plans/[planId]" options={{ title: '', headerLargeTitleEnabled: false }} />
+              <Stack.Screen
+                name="plans/[planId]/add-entry"
+                options={{
+                  presentation: 'formSheet',
+                  headerShown: false,
+                  sheetAllowedDetents: [0.75, 1],
+                  sheetGrabberVisible: true,
+                }}
+              />
             </Stack>
           </GestureHandlerRootView>
         </SQLiteProvider>

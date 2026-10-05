@@ -7,6 +7,7 @@ import {
   deleteWorkout,
   duplicateWorkout,
 } from '@/database/repositories/workoutRepository';
+import { bumpDataVersion } from '@/stores/dataVersionStore';
 import type { WorkoutSummary } from '@/types/WorkoutSummary';
 
 type UseWorkoutActionsOptions = {
@@ -54,6 +55,7 @@ export function useWorkoutActions({ reloadWorkouts }: UseWorkoutActionsOptions) 
           onPress: async () => {
             try {
               await deleteWorkout(database, workout.id);
+              bumpDataVersion();
               await reloadWorkouts();
             } catch {
               showFailure('Could not delete the workout');

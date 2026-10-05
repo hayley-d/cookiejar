@@ -79,6 +79,10 @@ export const sizes = {
   coachButtonClearance: 96,
   createHubChevron: 14,
   setNumberColumn: 40,
+  timeLabelColumn: 48,
+  planEntryImage: 44,
+  restDayNuggie: 44,
+  planRowChevron: 14,
 };
 
 export const durations = {

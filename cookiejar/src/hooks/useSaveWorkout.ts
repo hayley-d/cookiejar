@@ -5,6 +5,7 @@ import { Alert } from 'react-native';
 
 import { saveWorkout } from '@/database/repositories/workoutRepository';
 import { useWorkoutEditor } from '@/hooks/useWorkoutEditor';
+import { bumpDataVersion } from '@/stores/dataVersionStore';
 import { announceWorkoutSaved } from '@/stores/workoutSavedStore';
 import type { WorkoutEditorState } from '@/workouts/workoutEditorReducer';
 
@@ -22,6 +23,7 @@ export function useSaveWorkout() {
     setIsSaving(true);
     try {
       await saveWorkout(database, editorState);
+      bumpDataVersion();
       announceWorkoutSaved(editorState.name.trim());
       leaveWithoutPrompt(() => router.dismissTo('/create'));
     } catch {

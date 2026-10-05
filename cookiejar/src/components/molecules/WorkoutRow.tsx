@@ -17,20 +17,33 @@ type WorkoutRowProperties = {
   imageUrl: string | null;
   nuggie: NuggieName;
   badgeLabel?: string;
+  onPress?: () => void;
   onLongPress?: () => void;
+  disabled?: boolean;
 };
 
 
-export function WorkoutRow({ name, summary, imageUrl, nuggie, badgeLabel, onLongPress }: WorkoutRowProperties) {
+export function WorkoutRow({
+  name,
+  summary,
+  imageUrl,
+  nuggie,
+  badgeLabel,
+  onPress,
+  onLongPress,
+  disabled,
+}: WorkoutRowProperties) {
   const theme = useTheme();
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
   const showsImage = imageUrl !== null && imageUrl !== failedImageUrl;
 
   return (
     <Touchable
+      onPress={onPress}
       onLongPress={onLongPress}
+      disabled={disabled}
       accessibilityLabel={`${name}, ${summary}`}
-      accessibilityHint="Long press for edit, duplicate and delete"
+      accessibilityHint={onLongPress ? 'Long press for edit, duplicate and delete' : undefined}
     >
       <Card padding="small">
         <Stack direction="horizontal" gap="medium" align="center">
