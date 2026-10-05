@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { calculateWeeklyStreak, isWeeklyTargetMet } from '@/progress/calculateWeeklyStreak';
+import { calculateWeeklyStreak, countScheduledWorkouts, isWeeklyTargetMet } from '@/progress/calculateWeeklyStreak';
 import type { ScheduledWorkout, ScheduledWorkoutStatus } from '@/types/ScheduledWorkout';
 
 const weekDates = ['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11'];
@@ -199,5 +199,19 @@ describe('isWeeklyTargetMet', () => {
 
   test('an empty week is not met by the planned rule', () => {
     expect(isWeeklyTargetMet({ completedCount: 0, plannedCount: 0 }, 4)).toBe(false);
+  });
+});
+
+describe('countScheduledWorkouts', () => {
+  test('counts completed, planned and unplanned workouts', () => {
+    expect(countScheduledWorkouts([])).toEqual({ completedCount: 0, plannedCount: 0 });
+    expect(
+      countScheduledWorkouts([
+        workoutOf('2026-10-05', 'completed', 1),
+        workoutOf('2026-10-05', 'planned', 2),
+        workoutOf('2026-10-05', 'completed', null),
+        workoutOf('2026-10-05', 'inProgress', null),
+      ]),
+    ).toEqual({ completedCount: 2, plannedCount: 3 });
   });
 });

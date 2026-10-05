@@ -3,15 +3,25 @@ import { StatTile } from '@/components/molecules/StatTile';
 import { chooseNuggie } from '@/nuggies/chooseNuggie';
 import type { WeeklyStreak } from '@/progress/calculateWeeklyStreak';
 
+const detailHint = 'Opens the last 14 days';
+
 type WeeklyStreakTileProperties = {
   streak: WeeklyStreak | null;
   isTargetMet: boolean;
   now: Date;
+  onPress?: () => void;
 };
 
-export function WeeklyStreakTile({ streak, isTargetMet, now }: WeeklyStreakTileProperties) {
+export function WeeklyStreakTile({ streak, isTargetMet, now, onPress }: WeeklyStreakTileProperties) {
   if (streak === null) {
-    return <StatTile icon="flame.fill" label="This week" value="—" caption="No data yet" />;
+    return <StatTile
+        icon="flame.fill"
+        label="This week"
+        value="—"
+        caption="No data yet"
+        onPress={onPress}
+        accessibilityHint={detailHint}
+      />;
   }
 
   return (
@@ -22,6 +32,8 @@ export function WeeklyStreakTile({ streak, isTargetMet, now }: WeeklyStreakTileP
       accessory={<StreakDots days={streak.days} />}
       tone={isTargetMet ? 'positive' : 'default'}
       nuggie={isTargetMet ? chooseNuggie({ kind: 'weeklyTargetMet' }, now) : undefined}
+      onPress={onPress}
+      accessibilityHint={detailHint}
     />
   );
 }

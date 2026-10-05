@@ -125,6 +125,9 @@ export const sizes = {
   statTileNuggie: 32,
   streakDot: 12,
   streakDotOutlineWidth: 2,
+  statBarHeight: 12,
+  statBarDateColumn: 88,
+  statBarValueColumn: 72,
 };
 
 export const durations = {

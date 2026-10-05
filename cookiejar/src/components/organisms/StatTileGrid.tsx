@@ -11,11 +11,13 @@ import { formatRestingHeartRate } from '@/health/formatRestingHeartRate';
 import { formatSleepMinutes } from '@/health/formatSleepMinutes';
 import { formatSteps } from '@/health/formatSteps';
 import { chooseNuggie } from '@/nuggies/chooseNuggie';
+import type { HealthStatsMetric } from '@/stats/parseStatsMetric';
 import { useTheme } from '@/theme/useTheme';
 
 const lowSleepMinutes = 360;
 const noDataCaption = 'No data yet';
 const trendCaption = 'vs 7-day avg';
+const detailHint = 'Opens the last 14 days';
 
 type StatTileGridProperties = {
   hasRequestedAuthorization: boolean | null;
@@ -28,6 +30,7 @@ type StatTileGridProperties = {
   dailyStepGoal: number;
   now: Date;
   weeklyTile?: ReactNode;
+  onOpenMetric?: (metric: HealthStatsMetric) => void;
 };
 
 export function StatTileGrid({
@@ -41,8 +44,12 @@ export function StatTileGrid({
   dailyStepGoal,
   now,
   weeklyTile,
+  onOpenMetric,
 }: StatTileGridProperties) {
   const theme = useTheme();
+
+  const openMetric = (metric: HealthStatsMetric) =>
+    onOpenMetric === undefined ? undefined : () => onOpenMetric(metric);
 
   const renderHalfWidthRow = (tile: ReactNode) => (
     <Box direction="row" gap="small">
@@ -86,6 +93,8 @@ export function StatTileGrid({
       }
       tone={stepProgress?.isGoalReached ? 'positive' : 'default'}
       nuggie={stepProgress?.isGoalReached ? chooseNuggie({ kind: 'stepGoalReached' }, now) : undefined}
+      onPress={openMetric('steps')}
+      accessibilityHint={detailHint}
     />
   );
 
@@ -97,6 +106,8 @@ export function StatTileGrid({
       caption={sleepMinutes === null ? noDataCaption : 'Last night'}
       tone={isSleepLow ? 'attention' : 'default'}
       nuggie={isSleepLow ? chooseNuggie({ kind: 'lowSleep' }, now) : undefined}
+      onPress={openMetric('sleep')}
+      accessibilityHint={detailHint}
     />
   );
 
@@ -116,6 +127,8 @@ export function StatTileGrid({
         )
       }
       tone={restingHeartRate === null || restingHeartRateTrend === null ? 'default' : restingHeartRateTrend.tone}
+      onPress={openMetric('restingHeartRate')}
+      accessibilityHint={detailHint}
     />
   );
 

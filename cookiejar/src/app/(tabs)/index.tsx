@@ -24,6 +24,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useScheduledWorkoutsForDate } from '@/hooks/useScheduledWorkouts';
 import { useStartSession } from '@/hooks/useStartSession';
 import { useWeeklyStreak } from '@/hooks/useWeeklyStreak';
+import type { StatsMetric } from '@/stats/parseStatsMetric';
 import type { ScheduledWorkout } from '@/types/ScheduledWorkout';
 
 const coachButtonClearance = 96;
@@ -73,6 +74,10 @@ export default function HomeScreen() {
     router.navigate('/create');
   };
 
+  const openMetric = (metric: StatsMetric) => {
+    router.navigate({ pathname: '/stats/[metric]', params: { metric } });
+  };
+
   const navigateToPlanNew = () => {
     router.navigate('/plans/new');
   };
@@ -106,11 +111,13 @@ export default function HomeScreen() {
             restingHeartRateTrend={restingHeartRateTrend}
             dailyStepGoal={dailyStepGoal}
             now={now}
+            onOpenMetric={openMetric}
             weeklyTile={
               <WeeklyStreakTile
                 streak={weeklyStreak.status === 'ready' ? weeklyStreak.streak : null}
                 isTargetMet={weeklyStreak.status === 'ready' && weeklyStreak.isTargetMet}
                 now={now}
+                onPress={() => openMetric('streak')}
               />
             }
           />

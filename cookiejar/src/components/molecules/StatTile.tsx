@@ -5,6 +5,7 @@ import { Card } from '@/components/atoms/Card';
 import { NuggieImage } from '@/components/atoms/NuggieImage';
 import { Box } from '@/components/primitives/Box';
 import { Icon } from '@/components/primitives/Icon';
+import { Touchable } from '@/components/primitives/Touchable';
 import { Typography } from '@/components/primitives/Typography';
 import type { NuggieName } from '@/nuggies/NuggieName';
 import type { ColorName } from '@/theme/tokens';
@@ -20,6 +21,8 @@ type StatTileProperties = {
   accessory?: ReactNode;
   tone?: StatTileTone;
   nuggie?: NuggieName;
+  onPress?: () => void;
+  accessibilityHint?: string;
 };
 
 const toneColors: Record<StatTileTone, { text: ColorName; background: ColorName }> = {
@@ -28,7 +31,17 @@ const toneColors: Record<StatTileTone, { text: ColorName; background: ColorName 
   attention: { text: 'attention', background: 'attentionSoft' },
 };
 
-export function StatTile({ value, label, icon, caption, accessory, tone = 'default', nuggie }: StatTileProperties) {
+export function StatTile({
+  value,
+  label,
+  icon,
+  caption,
+  accessory,
+  tone = 'default',
+  nuggie,
+  onPress,
+  accessibilityHint,
+}: StatTileProperties) {
   const theme = useTheme();
   const colors = toneColors[tone];
   const isDetailed = icon !== undefined || caption !== undefined || accessory !== undefined || nuggie !== undefined;
@@ -56,11 +69,11 @@ export function StatTile({ value, label, icon, caption, accessory, tone = 'defau
     );
   }
 
-  return (
+  const detailedTile = (
     <Card
       padding="small"
-      accessible
-      accessibilityLabel={accessibilityLabel}
+      accessible={onPress === undefined}
+      accessibilityLabel={onPress === undefined ? accessibilityLabel : undefined}
       style={{
         flex: 1,
         minHeight: theme.sizes.statTileMinimumHeight,
@@ -91,5 +104,21 @@ export function StatTile({ value, label, icon, caption, accessory, tone = 'defau
         )}
       </Box>
     </Card>
+  );
+
+  if (onPress === undefined) {
+    return detailedTile;
+  }
+
+  return (
+    <Touchable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
+      style={{ flex: 1 }}
+    >
+      {detailedTile}
+    </Touchable>
   );
 }
