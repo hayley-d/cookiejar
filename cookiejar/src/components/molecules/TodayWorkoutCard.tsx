@@ -41,7 +41,7 @@ export function TodayWorkoutCard({ scheduledWorkout, width, onPress, onStart }: 
     <Touchable
       onPress={onPress}
       disabled={!hasWorkout}
-      accessibilityLabel={summary === null ? `${kindText}, ${workout.name}` : `${kindText}, ${workout.name}, ${summary}`}
+      accessible={false}
       style={{ width }}
     >
       <Card
@@ -73,23 +73,31 @@ export function TodayWorkoutCard({ scheduledWorkout, width, onPress, onStart }: 
               <NuggieImage name={workoutNuggie(workout.classType)} size={theme.sizes.todayCardNuggie} />
             )}
           </View>
-          <Box padding="medium" gap="small">
-            <Typography variant="caption" color="textSecondary">
-              {kindText.toLocaleUpperCase()}
-            </Typography>
-            <Typography variant="heading" numberOfLines={2}>
-              {workout.name}
-            </Typography>
-            <Box direction="row" align="center" justify="space-between" gap="small">
+          <Box padding="medium" direction="row" align="flex-end" justify="space-between" gap="small">
+            <Box
+              flex={1}
+              gap="small"
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel={
+                summary === null ? `${kindText}, ${workout.name}` : `${kindText}, ${workout.name}, ${summary}`
+              }
+            >
+              <Typography variant="caption" color="textSecondary">
+                {kindText.toLocaleUpperCase()}
+              </Typography>
+              <Typography variant="heading" numberOfLines={2}>
+                {workout.name}
+              </Typography>
               <Typography color="textSecondary">{summary ?? ''}</Typography>
-              {showsAction ? (
-                <Button
-                  label={todayWorkoutActionLabel(status)}
-                  variant={status === 'completed' ? 'secondary' : 'primary'}
-                  onPress={status === 'planned' ? onStart : onPress}
-                />
-              ) : null}
             </Box>
+            {showsAction ? (
+              <Button
+                label={todayWorkoutActionLabel(status)}
+                variant={status === 'completed' ? 'secondary' : 'primary'}
+                onPress={status === 'planned' ? onStart : onPress}
+              />
+            ) : null}
           </Box>
         </View>
       </Card>
