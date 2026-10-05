@@ -34,6 +34,7 @@ This app is built in phases. See [docs/README.md](docs/README.md) for the full p
 | Animations & gestures | `react-native-gesture-handler`, `react-native-reanimated`, `react-native-worklets` |
 | Haptics | `expo-haptics` for button feedback |
 | Icons | `expo-symbols` for SF Symbols in tabs and buttons |
+| Date/time picker | `@react-native-community/datetimepicker` (native platform pickers for time and date selection) |
 | Splash screen | `expo-splash-screen` |
 | Package manager | bun |
 | Test runner | `bun test` for TypeScript modules |
@@ -122,10 +123,10 @@ routes (src/app)  →  organisms  →  molecules  →  atoms  →  primitives  �
 
 | Layer | Responsibility | Examples |
 | --- | --- | --- |
-| **primitives** | Thin themed wrappers over React Native elements. The only layer that touches raw `View`, `Text`, `Pressable`, `TextInput`, `ScrollView`, `FlatList`, `SectionList`, `expo-image` and `expo-symbols`. They apply theme tokens and nothing else. | `Box`, `Typography`, `Touchable`, `TextField`, `Stack`, `Image`, `Icon`, `List`, `SectionedList`, `ScrollBox`, `AnimatedBox`, `SwipeableBox`, `LongPressDragBox`, `WindowMeasuredBox`, `TimePickerBox` |
+| **primitives** | Thin themed wrappers over React Native elements. The only layer that touches raw `View`, `Text`, `Pressable`, `TextInput`, `ScrollView`, `FlatList`, `SectionList`, `expo-image`, `expo-symbols` and `@react-native-community/datetimepicker`. They apply theme tokens and nothing else. | `Box`, `Typography`, `Touchable`, `TextField`, `Stack`, `Image`, `Icon`, `List`, `SectionedList`, `ScrollBox`, `AnimatedBox`, `SwipeableBox`, `LongPressDragBox`, `WindowMeasuredBox`, `TimePickerBox` |
 | **atoms** | The smallest pieces of UI with meaning, built from primitives. No data access. | `Button`, `TextButton`, `IconButton`, `Badge`, `Chip`, `Checkbox`, `NuggieImage`, `Card`, `NumberInput`, `DurationInput`, `DragHandle`, `SupersetBracket`, `Toast`, `TimeLabel` |
-| **molecules** | Small groups of atoms that work as a unit. Hold local UI state at most. | `CoachFloatingButton`, `ScreenHeader`, `EmptyState`, `ChipGroup`, `SegmentedControl`, `SearchBar`, `AlphabetIndex`, `ExerciseRow`, `FormField`, `ImageUrlField`, `Stepper`, `KindChoiceCard`, `ActionCard`, `TargetSetRow`, `TargetSetTable`, `WorkoutRow`, `WorkoutNameField`, `PlanEntryRow`, `DaySectionHeader`, `PlanRow`, `RestDay` |
-| **organisms** | Self-contained sections of a screen. Receive data and callbacks through props. | `NuggieLoadingScreen`, `ExerciseForm`, `ExercisePicker`, `ExerciseEditorCard`, `ReorderableExerciseList`, `ClassDetailsForm`, `CreateHub`, `WorkoutEditorFooter`, `PlanWeekEditor`, `AddPlanEntrySheet` |
+| **molecules** | Small groups of atoms that work as a unit. Hold local UI state at most. | `CoachFloatingButton`, `ScreenHeader`, `EmptyState`, `ChipGroup`, `SegmentedControl`, `SearchBar`, `AlphabetIndex`, `ExerciseRow`, `FormField`, `ImageUrlField`, `Stepper`, `KindChoiceCard`, `ActionCard`, `TargetSetRow`, `TargetSetTable`, `WorkoutRow`, `WorkoutNameField`, `PlanEntryRow`, `DaySectionHeader`, `PlanRow`, `RestDay`, `ActivePlanBanner` |
+| **organisms** | Self-contained sections of a screen. Receive data and callbacks through props. | `NuggieLoadingScreen`, `ExerciseForm`, `ExercisePicker`, `ExerciseEditorCard`, `ReorderableExerciseList`, `ClassDetailsForm`, `CreateHub`, `WorkoutEditorFooter`, `PlanWeekEditor`, `AddPlanEntrySheet`, `ActivatePlanSheet`, `EntryTimeSheet`, `CopyDaySheet` |
 | **routes** | Expo Router screens. Load data through repositories and hooks, then compose organisms. | `src/app/(tabs)/index.tsx`, `src/app/(tabs)/_layout.tsx`, `src/app/coach.tsx`, `src/app/exercises/*`, `src/app/workouts/*` |
 
 Rules:
@@ -253,20 +254,54 @@ Registered flat on the root `Stack`. Every change writes straight through `planR
 | Route | Presentation | Purpose |
 | --- | --- | --- |
 | `/plans/new` | Modal | Name the plan (required, trimmed), then replace the modal with the editor |
-| `/plans/[planId]` | Stack push | `PlanWeekEditor`: Monday to Sunday, entries in time order, an empty day shows the `restDay` nuggie and "Rest day" |
+| `/plans/[planId]` | Stack push | `PlanWeekEditor`: Monday to Sunday, entries in time order, an empty day shows the `restDay` nuggie and "Rest day". An `ActivePlanBanner` shows at the top when this is the active plan, with tapping opening an action sheet for "Change start date" or "Deactivate" |
 | `/plans/[planId]/add-entry` | Form sheet | `AddPlanEntrySheet`: a time picker (default from `defaultTimeOfDayForNewEntry`) and a searchable `WorkoutRow` list; tapping a workout adds it and closes |
 | `/plans/[planId]/entry-time` | Form sheet | `EntryTimeSheet`: spinner time picker and Save for one entry, opened by tapping an entry row |
+| `/plans/[planId]/activate` | Form sheet | `ActivatePlanSheet`: date picker to set the plan's start date. Opened from the active banner or when creating a new plan after naming it |
 | `/plans/[planId]/copy-day` | Form sheet | `CopyDaySheet`: weekday toggles (source day excluded), opened from the day ⋯ menu |
 
 The Create hub has a "New plan" `ActionCard` under "New workout", and "My plans" between it and "My workouts" (active first with an `ACTIVE` badge, summary from `describePlanSummary`).
 
 ### Plan Repository
 
-`src/database/repositories/planRepository.ts`: `listPlans` (entry count, active first, then newest), `getPlanWithEntries` (entries joined to the workout summary fields including `exerciseCount`, or `null`), `createPlan`, `addPlanEntry`, `updatePlanEntryTime`, `renamePlan`, `duplicatePlan` (inactive "(copy)" with its entries, one transaction), `deletePlan` (entries cascade), `removePlanEntry` (swipe on `PlanEntryRow` through `SwipeableBox`) and `copyDayEntries` (one transaction, appends to each chosen day and skips a workout already there at the same time). `usePlans` and `usePlan` reload on focus, and their writes call `bumpDataVersion()`.
+`src/database/repositories/planRepository.ts`: `listPlans` (entry count, active first, then newest), `getPlanWithEntries` (entries joined to the workout summary fields including `exerciseCount`, or `null`), `createPlan`, `addPlanEntry`, `updatePlanEntryTime`, `renamePlan`, `duplicatePlan` (inactive "(copy)" with its entries, one transaction), `deletePlan` (entries cascade), `removePlanEntry` (swipe on `PlanEntryRow` through `SwipeableBox`) and `copyDayEntries` (one transaction, appends to each chosen day and skips a workout already there at the same time). Every plan write function calls `bumpDataVersion()`.
+
+### Schedule Repository
+
+`src/database/repositories/scheduleRepository.ts` holds session queries that feed the scheduling model. It has one function:
+
+| Function | Behaviour |
+| --- | --- |
+| `listSessionsBetween(database, startDate, endDate)` | Every session in the date range (inclusive), joined to their workouts to get exercise counts and image URLs, ordered by date and started_at |
+
+### Scheduling Model
+
+`buildScheduledWorkouts` (in `src/plans/buildScheduledWorkouts.ts`) is a pure function that computes a `Map<string, ScheduledWorkout[]>` for a date range given an active plan and sessions. It is never stored, only computed on-demand by `useScheduledWorkouts`.
+
+The algorithm merges plan entries with sessions for each day:
+1. If the plan is active (has a start date) and the date is at or after the start date, filter plan entries by the day of week
+2. For each plan entry, find the matching session by `plan_entry_id`. If found and not already claimed, mark it as `completed` or `inProgress`. Otherwise, mark the plan entry as `planned` (no session yet)
+3. Any remaining sessions are unplanned (user started them ad hoc): add them at the end, with `planEntryId: null` and `timeOfDay: null`
+
+The `ScheduledWorkout` type holds `date`, `timeOfDay` (null for unplanned), `planEntryId` (null for unplanned), `workout` (with `id` that may be null), `status` (`planned | inProgress | completed`) and `sessionId` (null for planned).
+
+### Hooks
+
+Plan-specific hooks reload on focus and depend on `dataVersion`:
+
+| Hook | Behaviour |
+| --- | --- |
+| `usePlans()` | Returns every plan: `id`, `name`, `isActive`, `startsOn`, entry count |
+| `usePlan(planId)` | Returns one plan with entries joined to workout summary fields (name, kind, class type, exercise count), or `null` |
+| `usePlanActions(planId)` | Returns functions: `renamePlan(newName)`, `duplicatePlan()`, `deletePlan()`, `deactivatePlan()`, `getActivePlanWithEntries()` |
+| `useScheduledWorkouts(startDate, endDate)` | Returns the computed scheduled workouts map for the date range, or `null` while loading. Reloads on focus and when `dataVersion` changes |
+| `useScheduledWorkoutsForDate(date)` | Shorthand for `useScheduledWorkouts(date, date)`, returning `ScheduledWorkout[]` or `null` |
+
+`useScheduledWorkouts` reads the data version from `useDataVersion`, so it reloads when plan writes, workout save, or workout delete bump the version.
 
 ### Data Version Store
 
-`src/stores/dataVersionStore.ts` is an app-wide counter with `bumpDataVersion`, `subscribeToDataVersion` and the `useDataVersion` hook. Plan writes, workout save and workout delete bump it, because they change what is scheduled.
+`src/stores/dataVersionStore.ts` is a module-level counter with `bumpDataVersion(callback?)` (runs the optional callback in a transaction), `subscribeToDataVersion(listener)` and the `useDataVersion()` hook. It is bumped by every plan write function (`createPlan`, `addPlanEntry`, `updatePlanEntryTime`, `renamePlan`, `duplicatePlan`, `deletePlan`, `removePlanEntry`, `copyDayEntries`) and by `saveWorkout` and `deleteWorkout`, because all of these change what is scheduled. Screens and hooks that care about the schedule read it with `useDataVersion()`.
 
 ### Time Picker
 
@@ -274,9 +309,13 @@ The Create hub has a "New plan" `ActionCard` under "New workout", and "My plans"
 
 ### Pure Modules
 
-- `src/plans/timeOfDay.ts`: `HH:MM` to and from minutes and `Date`, display formatting, comparing and sorting, and the default time for a new entry (07:00 on an empty day, otherwise the last entry + 1 hour, capped at 23:30)
-- `src/plans/planCopyDay.ts`: which entries to insert when copying a day, skipping duplicates
+These hold the plans logic, import no React Native, and are covered by `bun test`:
+
+- `src/plans/buildScheduledWorkouts.ts`: merges plan entries with sessions, handling the three cases (planned, in progress, completed, unplanned) and returning scheduled workouts for a date range
+- `src/plans/timeOfDay.ts`: `HH:MM` to and from minutes and `Date`, display formatting, sorting, and the default time for a new entry (07:00 on an empty day, otherwise the last entry + 1 hour, capped at 23:30)
+- `src/plans/planCopyDay.ts`: which entries to insert when copying a day, skipping duplicates at the same time
 - `src/plans/describePlanSummary.ts`: "n workouts / week" or "No workouts yet"
+- `src/plans/describeActiveSince.ts`: "Active since MM/DD/YYYY" for a plan
 - `src/plans/groupEntriesByWeekday.ts` and `src/plans/weekdays.ts`: Monday to Sunday sections in time order
 - `src/plans/describePlanEntryWorkout.ts`: the class type label or "n ex."
 - `src/plans/planNameError.ts`: plan name is required
@@ -305,29 +344,31 @@ src/
     coach.tsx               Coach modal screen
     exercises/              library (index), new, [exerciseId] edit, picker
     workouts/               builder: _layout with WorkoutEditorProvider, new, class-details, editor, [workoutId]/edit, superset-info
-    plans/                  new, [planId] editor, [planId]/add-entry
+    plans/                  new, [planId] editor, [planId]/add-entry, entry-time, activate, copy-day
   components/
     primitives/             themed wrappers: Box, Typography, Touchable, TextField, Stack, Image, Icon, List, SectionedList, ScrollBox, AnimatedBox, SwipeableBox, LongPressDragBox, WindowMeasuredBox, TimePickerBox
     atoms/                  smallest UI pieces: Button, TextButton, IconButton, Badge, Chip, Checkbox, NuggieImage, Card, NumberInput, DurationInput, DragHandle, SupersetBracket, Toast, TimeLabel
-    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField, PlanEntryRow, DaySectionHeader, PlanRow, RestDay
-    organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter, PlanWeekEditor, AddPlanEntrySheet
+    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField, PlanEntryRow, DaySectionHeader, PlanRow, RestDay, ActivePlanBanner
+    organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter, PlanWeekEditor, AddPlanEntrySheet, ActivatePlanSheet, EntryTimeSheet, CopyDaySheet
   database/
     migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2)
-    repositories/           one file per entity: exerciseRepository, workoutRepository, planRepository
+    repositories/           one file per entity: exerciseRepository, workoutRepository, planRepository, scheduleRepository
   exercises/                pure exercise logic with tests: validation, A–Z grouping, filtering, selection
-  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan
+  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan, usePlanActions, useScheduledWorkouts
   stores/                   exercisePickerStore and workoutSavedStore for returning values between screens, dataVersionStore, with tests
-  plans/                    pure plan logic with tests: time of day, summaries, weekday grouping
+  plans/                    pure plan logic with tests: build scheduled workouts, time of day, summaries, copy day, weekday grouping
   workouts/                 pure builder logic with tests: reducer, normalisation, grouping blocks, target set columns, save rows, drag maths, rest presets, class type nuggies, editor context and provider
   numbers/                  pure number parsing with tests: textual input rules
   images/                   pure image URL validation with tests: error messages
   nuggies/                  nuggie selection and image system
   dates/                    pure date/duration helpers with tests
-  types/                    shared domain types (Exercise, Workout, Session, etc.)
+  types/                    shared domain types (Exercise, Workout, Session, Plan, ScheduledWorkout, etc.)
   theme/                    design tokens and theme provider
   health/                   Apple Health integration (phase 06)
   coach/                    Coach logic and screens (phase 09)
 ```
+
+**Note on typed routes:** Expo Router generates TypeScript types for file-based routes into `.expo/types/router.d.ts` during `npx expo start` on the development machine. A fresh checkout needs one dev-server start before `bun run typecheck` accepts new route references. Type checking happens in CI without a dev-server start, so it must pass on the main branch before merging.
 
 ## Conventions
 
