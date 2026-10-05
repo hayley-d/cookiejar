@@ -52,6 +52,21 @@ export async function listExercises(database: SQLiteDatabase): Promise<Exercise[
   return rows.map(toExercise);
 }
 
+export async function listRecentlyUsedExercises(database: SQLiteDatabase, limit?: number): Promise<Exercise[]> {
+  const rows = await database.getAllAsync<ExerciseRow>(
+    `SELECT exercises.id, exercises.name, exercises.body_part, exercises.image_url,
+      exercises.default_tracking_type, exercises.created_at
+    FROM exercises
+    LEFT JOIN session_exercises ON session_exercises.exercise_id = exercises.id
+    LEFT JOIN sessions ON sessions.id = session_exercises.session_id
+    GROUP BY exercises.id
+    ORDER BY MAX(sessions.started_at) IS NULL, MAX(sessions.started_at) DESC, exercises.created_at DESC, exercises.id DESC
+    LIMIT ?`,
+    limit ?? -1,
+  );
+  return rows.map(toExercise);
+}
+
 export async function getExercise(database: SQLiteDatabase, exerciseId: number): Promise<Exercise | null> {
   const row = await database.getFirstAsync<ExerciseRow>(
     `SELECT ${exerciseColumns} FROM exercises WHERE id = ?`,

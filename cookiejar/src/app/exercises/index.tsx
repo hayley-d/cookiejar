@@ -5,6 +5,7 @@ import { TextButton } from '@/components/atoms/TextButton';
 import { EmptyState } from '@/components/molecules/EmptyState';
 import { ExercisePicker } from '@/components/organisms/ExercisePicker';
 import { useExercises } from '@/hooks/useExercises';
+import { useRecentlyUsedExercises } from '@/hooks/useRecentlyUsedExercises';
 
 function openNewExercise() {
   router.push('/exercises/new');
@@ -16,6 +17,7 @@ function openExercise(exerciseId: number) {
 
 export default function ExerciseLibraryScreen() {
   const exercises = useExercises();
+  const recentExercises = useRecentlyUsedExercises();
   const [searchText, setSearchText] = useState('');
 
   return (
@@ -39,6 +41,7 @@ export default function ExerciseLibraryScreen() {
         <ExercisePicker
           variant="browse"
           exercises={exercises}
+          recentExercises={recentExercises}
           searchText={searchText}
           onChangeSearchText={setSearchText}
           onPressExercise={openExercise}

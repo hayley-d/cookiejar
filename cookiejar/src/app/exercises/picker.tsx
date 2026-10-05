@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { ExercisePicker } from '@/components/organisms/ExercisePicker';
 import { toggleExerciseSelection } from '@/exercises/toggleExerciseSelection';
 import { useExercises } from '@/hooks/useExercises';
+import { useRecentlyUsedExercises } from '@/hooks/useRecentlyUsedExercises';
 import { completeExercisePick } from '@/stores/exercisePickerStore';
 
 type ExercisePickerParameters = {
@@ -25,6 +26,7 @@ function parseExerciseIds(commaSeparatedExerciseIds: string | undefined) {
 export default function ExercisePickerScreen() {
   const { requestIdentifier, mode = 'multiple', excludeExerciseIds } = useLocalSearchParams<ExercisePickerParameters>();
   const exercises = useExercises();
+  const recentExercises = useRecentlyUsedExercises();
   const excludedExerciseIds = useMemo(() => parseExerciseIds(excludeExerciseIds), [excludeExerciseIds]);
   const [searchText, setSearchText] = useState('');
   const [selectedExerciseIds, setSelectedExerciseIds] = useState<number[]>([]);
@@ -55,6 +57,7 @@ export default function ExercisePickerScreen() {
     <ExercisePicker
       variant={mode}
       exercises={exercises}
+      recentExercises={recentExercises}
       searchText={searchText}
       onChangeSearchText={setSearchText}
       onPressExercise={pressExercise}
