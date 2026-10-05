@@ -2,9 +2,8 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 
 import { IconButton } from '@/components/atoms/IconButton';
 import { EmptyState } from '@/components/molecules/EmptyState';
+import { ClassWorkoutDetail } from '@/components/organisms/ClassWorkoutDetail';
 import { IndividualWorkoutDetail } from '@/components/organisms/IndividualWorkoutDetail';
-import { Box } from '@/components/primitives/Box';
-import { Typography } from '@/components/primitives/Typography';
 import { useWorkoutWithItems } from '@/hooks/useWorkoutWithItems';
 import { toLocalDateString } from '@/dates/toLocalDateString';
 
@@ -74,9 +73,7 @@ export default function WorkoutDetailScreen() {
       {workout.kind === 'individual' ? (
         <IndividualWorkoutDetail workout={workout} date={date} planEntryId={planEntryId} />
       ) : (
-        <Box flex={1} padding="medium">
-          <Typography variant="display">{workout.name}</Typography>
-        </Box>
+        <ClassWorkoutDetail workout={workout} date={date} planEntryId={planEntryId} />
       )}
     </>
   );
