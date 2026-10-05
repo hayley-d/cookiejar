@@ -1,6 +1,6 @@
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, AppState } from 'react-native';
 
 import {
   addSessionExercises,
@@ -208,6 +208,15 @@ export function useSession(sessionId: number) {
       void flushPendingValueWrites();
     };
   }, [flushPendingValueWrites]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (appState) => {
+      if (appState === 'background' || appState === 'inactive') {
+        enqueuePendingWrites();
+      }
+    });
+    return () => subscription.remove();
+  }, [enqueuePendingWrites]);
 
   const applySessionChange = useCallback((change: (session: SessionWithExercises) => SessionWithExercises) => {
     const session = sessionReference.current;
