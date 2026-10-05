@@ -131,14 +131,20 @@ export async function addPlanEntry(
 
 export async function updatePlanEntryTime(
   database: SQLiteDatabase,
+  planId: number,
   planEntryId: number,
   timeOfDay: string,
 ): Promise<void> {
-  await database.runAsync('UPDATE plan_entries SET time_of_day = ? WHERE id = ?', timeOfDay, planEntryId);
+  await database.runAsync(
+    'UPDATE plan_entries SET time_of_day = ? WHERE id = ? AND plan_id = ?',
+    timeOfDay,
+    planEntryId,
+    planId,
+  );
 }
 
-export async function removePlanEntry(database: SQLiteDatabase, planEntryId: number): Promise<void> {
-  await database.runAsync('DELETE FROM plan_entries WHERE id = ?', planEntryId);
+export async function removePlanEntry(database: SQLiteDatabase, planId: number, planEntryId: number): Promise<void> {
+  await database.runAsync('DELETE FROM plan_entries WHERE id = ? AND plan_id = ?', planEntryId, planId);
 }
 
 type CopyableEntryRow = {
@@ -231,8 +237,8 @@ export async function setActivePlan(database: SQLiteDatabase, planId: number, st
   });
 }
 
-export async function deactivatePlan(database: SQLiteDatabase): Promise<void> {
-  await database.runAsync('UPDATE plans SET is_active = 0');
+export async function deactivatePlan(database: SQLiteDatabase, planId: number): Promise<void> {
+  await database.runAsync('UPDATE plans SET is_active = 0 WHERE id = ?', planId);
 }
 
 export async function getActivePlanWithEntries(database: SQLiteDatabase): Promise<PlanWithEntries | null> {

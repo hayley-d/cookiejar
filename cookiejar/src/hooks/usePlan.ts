@@ -47,20 +47,19 @@ export function usePlan(planId: number) {
 
   const updatePlanEntryTime = useCallback(
     async (planEntryId: number, timeOfDay: string) => {
-      await writePlanEntryTime(database, planEntryId, timeOfDay);
+      await writePlanEntryTime(database, planId, planEntryId, timeOfDay);
       bumpDataVersion();
-      await reloadPlan();
     },
-    [database, reloadPlan],
+    [database, planId],
   );
 
   const removePlanEntry = useCallback(
     async (planEntryId: number) => {
-      await deletePlanEntry(database, planEntryId);
+      await deletePlanEntry(database, planId, planEntryId);
       bumpDataVersion();
       await reloadPlan();
     },
-    [database, reloadPlan],
+    [database, planId, reloadPlan],
   );
 
   const copyDay = useCallback(
@@ -96,16 +95,15 @@ export function usePlan(planId: number) {
     async (startsOn: string) => {
       await writeActivePlan(database, planId, startsOn);
       bumpDataVersion();
-      await reloadPlan();
     },
-    [database, planId, reloadPlan],
+    [database, planId],
   );
 
   const deactivatePlan = useCallback(async () => {
-    await clearActivePlan(database);
+    await clearActivePlan(database, planId);
     bumpDataVersion();
     await reloadPlan();
-  }, [database, reloadPlan]);
+  }, [database, planId, reloadPlan]);
 
   useFocusEffect(
     useCallback(() => {
