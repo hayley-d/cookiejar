@@ -7,17 +7,18 @@ import { Box } from '@/components/primitives/Box';
 import { ProgressRingBox } from '@/components/primitives/ProgressRingBox';
 import type { AverageComparison } from '@/health/compareToAverage';
 import { describeStepProgress } from '@/health/describeStepProgress';
+import { describeRestingHeartRateTrend } from '@/health/describeRestingHeartRateTrend';
 import { formatRestingHeartRate } from '@/health/formatRestingHeartRate';
 import { formatSleepMinutes } from '@/health/formatSleepMinutes';
 import { formatSteps } from '@/health/formatSteps';
 import { chooseNuggie } from '@/nuggies/chooseNuggie';
 import type { HealthStatsMetric } from '@/stats/parseStatsMetric';
+import { statsDetailHint } from '@/stats/statsDetail';
 import { useTheme } from '@/theme/useTheme';
 
 const lowSleepMinutes = 360;
 const noDataCaption = 'No data yet';
 const trendCaption = 'vs 7-day avg';
-const detailHint = 'Opens the last 14 days';
 
 type StatTileGridProperties = {
   hasRequestedAuthorization: boolean | null;
@@ -94,7 +95,7 @@ export function StatTileGrid({
       tone={stepProgress?.isGoalReached ? 'positive' : 'default'}
       nuggie={stepProgress?.isGoalReached ? chooseNuggie({ kind: 'stepGoalReached' }, now) : undefined}
       onPress={openMetric('steps')}
-      accessibilityHint={detailHint}
+      accessibilityHint={statsDetailHint}
     />
   );
 
@@ -107,7 +108,7 @@ export function StatTileGrid({
       tone={isSleepLow ? 'attention' : 'default'}
       nuggie={isSleepLow ? chooseNuggie({ kind: 'lowSleep' }, now) : undefined}
       onPress={openMetric('sleep')}
-      accessibilityHint={detailHint}
+      accessibilityHint={statsDetailHint}
     />
   );
 
@@ -128,7 +129,12 @@ export function StatTileGrid({
       }
       tone={restingHeartRate === null || restingHeartRateTrend === null ? 'default' : restingHeartRateTrend.tone}
       onPress={openMetric('restingHeartRate')}
-      accessibilityHint={detailHint}
+      accessibilityHint={statsDetailHint}
+      accessibilityDetail={
+        restingHeartRate === null || restingHeartRateTrend === null
+          ? undefined
+          : describeRestingHeartRateTrend(restingHeartRateTrend)
+      }
     />
   );
 

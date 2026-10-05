@@ -1,18 +1,15 @@
 import { StatBarList } from '@/components/organisms/StatBarList';
 import { formatShortDate } from '@/dates/formatShortDate';
-import { useScheduledWorkouts } from '@/hooks/useScheduledWorkouts';
 import { countScheduledWorkouts } from '@/progress/calculateWeeklyStreak';
 import { barFraction } from '@/stats/barFraction';
+import type { ScheduledWorkout } from '@/types/ScheduledWorkout';
 
 type StreakBarListProperties = {
-  startDate: string;
-  endDate: string;
   datesNewestFirst: readonly string[];
+  scheduledWorkoutsByDate: ReadonlyMap<string, readonly ScheduledWorkout[]> | null;
 };
 
-export function StreakBarList({ startDate, endDate, datesNewestFirst }: StreakBarListProperties) {
-  const lookup = useScheduledWorkouts(startDate, endDate);
-  const scheduledWorkoutsByDate = lookup.status === 'ready' ? lookup.scheduledWorkoutsByDate : null;
+export function StreakBarList({ datesNewestFirst, scheduledWorkoutsByDate }: StreakBarListProperties) {
   const rows = datesNewestFirst.map((date) => {
     const { completedCount, plannedCount } = countScheduledWorkouts(scheduledWorkoutsByDate?.get(date) ?? []);
     return {

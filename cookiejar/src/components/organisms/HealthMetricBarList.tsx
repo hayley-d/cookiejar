@@ -3,16 +3,14 @@ import { formatShortDate } from '@/dates/formatShortDate';
 import { formatRestingHeartRate } from '@/health/formatRestingHeartRate';
 import { formatSleepMinutes } from '@/health/formatSleepMinutes';
 import { formatSteps } from '@/health/formatSteps';
-import { useHealthRange } from '@/hooks/useHealthRange';
 import { barFraction, largestValue } from '@/stats/barFraction';
 import type { HealthStatsMetric } from '@/stats/parseStatsMetric';
 import type { HealthSnapshot } from '@/types/HealthSnapshot';
 
 type HealthMetricBarListProperties = {
   metric: HealthStatsMetric;
-  startDate: string;
-  endDate: string;
   datesNewestFirst: readonly string[];
+  snapshotsByDate: ReadonlyMap<string, HealthSnapshot>;
 };
 
 type MetricDefinition = {
@@ -26,8 +24,7 @@ const metricDefinitions: Record<HealthStatsMetric, MetricDefinition> = {
   restingHeartRate: { readValue: (snapshot) => snapshot.restingHeartRate, format: formatRestingHeartRate },
 };
 
-export function HealthMetricBarList({ metric, startDate, endDate, datesNewestFirst }: HealthMetricBarListProperties) {
-  const { snapshotsByDate } = useHealthRange(startDate, endDate);
+export function HealthMetricBarList({ metric, datesNewestFirst, snapshotsByDate }: HealthMetricBarListProperties) {
   const { readValue, format } = metricDefinitions[metric];
   const values = datesNewestFirst.map((date) => {
     const snapshot = snapshotsByDate.get(date);

@@ -2,8 +2,8 @@ import { StreakDots } from '@/components/atoms/StreakDots';
 import { StatTile } from '@/components/molecules/StatTile';
 import { chooseNuggie } from '@/nuggies/chooseNuggie';
 import type { WeeklyStreak } from '@/progress/calculateWeeklyStreak';
-
-const detailHint = 'Opens the last 14 days';
+import { describeStreakDays } from '@/progress/describeStreakDays';
+import { statsDetailHint } from '@/stats/statsDetail';
 
 type WeeklyStreakTileProperties = {
   streak: WeeklyStreak | null;
@@ -14,14 +14,16 @@ type WeeklyStreakTileProperties = {
 
 export function WeeklyStreakTile({ streak, isTargetMet, now, onPress }: WeeklyStreakTileProperties) {
   if (streak === null) {
-    return <StatTile
+    return (
+      <StatTile
         icon="flame.fill"
         label="This week"
         value="—"
         caption="No data yet"
         onPress={onPress}
-        accessibilityHint={detailHint}
-      />;
+        accessibilityHint={statsDetailHint}
+      />
+    );
   }
 
   return (
@@ -33,7 +35,8 @@ export function WeeklyStreakTile({ streak, isTargetMet, now, onPress }: WeeklySt
       tone={isTargetMet ? 'positive' : 'default'}
       nuggie={isTargetMet ? chooseNuggie({ kind: 'weeklyTargetMet' }, now) : undefined}
       onPress={onPress}
-      accessibilityHint={detailHint}
+      accessibilityHint={statsDetailHint}
+      accessibilityDetail={describeStreakDays(streak.days)}
     />
   );
 }
