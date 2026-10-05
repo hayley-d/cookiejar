@@ -21,7 +21,7 @@ export function LinkedHealthWorkoutRow({
   return (
     <Box gap="small">
       <Box direction="row" justify="space-between" align="center">
-        <Typography variant="heading">Garmin</Typography>
+        <Typography variant="heading">Linked workout</Typography>
         <TextButton label="Unlink" onPress={onUnlink} />
       </Box>
       <Box direction="row" gap="medium" style={{ flexWrap: 'wrap' }}>
