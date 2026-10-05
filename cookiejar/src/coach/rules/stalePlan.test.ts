@@ -30,8 +30,9 @@ describe('stalePlan', () => {
       nuggie: 'coach',
       action: { destination: { screen: 'planEditor', planId: 7 } },
     });
-    expect(insights[0].messages[0]).toContain('Summer Strength');
-    expect(insights[0].messages[0]).toContain('6 weeks');
+    expect(insights[0].messages).toEqual([
+      'Ohh my noops, 6 weeks of Summer Strength! Time for a new phase? Duplicate it and tweak it.',
+    ]);
     expect(stalePlanPriority).toBe(55);
   });
 
@@ -49,5 +50,21 @@ describe('stalePlan', () => {
 
   test('does not fire without an active plan', () => {
     expect(stalePlan(createCoachSnapshot())).toEqual([]);
+  });
+});
+
+describe('stalePlan copy', () => {
+  test('the second variant on alternate days', () => {
+    const snapshot = createCoachSnapshot({ now: new Date(2026, 9, 8, 9, 0), activePlan: planStartingOn('2026-08-26') });
+    expect(stalePlan(snapshot)[0].messages).toEqual([
+      'Summer Strength has had a good 6-week run. Duplicate it and switch things up for a noopy new phase.',
+    ]);
+  });
+
+  test('suggests a deload from 8 weeks', () => {
+    expect(insightsFor('2026-08-19')[0].messages[0]).not.toContain('deload');
+    expect(insightsFor('2026-08-12')[0].messages).toEqual([
+      'Ohh my noops, 8 weeks of Summer Strength! Time for a new phase? Duplicate it and tweak it. Start with a deload week, then go fresh.',
+    ]);
   });
 });

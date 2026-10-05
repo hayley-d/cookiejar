@@ -4,16 +4,9 @@ import { generalTips } from '@/coach/generalTips';
 import type { InsightRule } from '@/coach/Insight';
 import { insightRules } from '@/coach/insightRules';
 import type { Topic } from '@/coach/Topic';
+import { dayOfYear } from '@/dates/dayOfYear';
 
 export const tipTopics: readonly Topic[] = ['recovery', 'changeItUp', 'progress'];
-
-const millisecondsPerDay = 24 * 60 * 60 * 1000;
-
-export function dayOfYear(date: Date): number {
-  const startOfYearUtc = Date.UTC(date.getFullYear(), 0, 1);
-  const dateUtc = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
-  return Math.round((dateUtc - startOfYearUtc) / millisecondsPerDay) + 1;
-}
 
 export function chooseGeneralTip(date: Date, tips: readonly string[] = generalTips): string {
   return tips[dayOfYear(date) % tips.length];

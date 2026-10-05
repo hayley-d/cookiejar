@@ -47,7 +47,7 @@ const flatSets = [weightedSet(80, 5)];
 describe('plateau', () => {
   test('fires for changeItUp and improvement with an exercise history action', () => {
     const insights = insightsFor([
-      sessionOn(14, flatSets, 8),
+      sessionOn(7, flatSets, 8),
       sessionOn(21, flatSets, 8),
       sessionOn(28, flatSets, 8),
       sessionOn(5, flatSets),
@@ -63,15 +63,16 @@ describe('plateau', () => {
         destination: { screen: 'exerciseHistory', exerciseId: 2 },
       },
     });
-    expect(insights[0].messages[0]).toContain('Squat has been stuck for 3 weeks');
-    expect(insights[0].messages[0]).toContain('variation');
+    expect(insights[0].messages).toEqual([
+      "Not noopy! Squat's been stuck at 80 kg × 5 for 4 weeks. I believe in you! Try 4×8–12 at 70 kg for a few weeks, each set 1–2 reps from failure.",
+    ]);
     expect(plateauPriority).toBe(60);
   });
 
-  test('exactly 4 sessions across exactly 3 weeks fires', () => {
+  test('exactly 4 sessions across exactly 4 weeks fires', () => {
     expect(
       insightsFor([
-        sessionOn(14, flatSets, 8),
+        sessionOn(7, flatSets, 8),
         sessionOn(18, flatSets, 8),
         sessionOn(1, flatSets),
         sessionOn(5, flatSets),
@@ -80,13 +81,13 @@ describe('plateau', () => {
   });
 
   test('3 sessions does not fire', () => {
-    expect(insightsFor([sessionOn(14, flatSets, 8), sessionOn(28, flatSets, 8), sessionOn(5, flatSets)])).toEqual([]);
+    expect(insightsFor([sessionOn(7, flatSets, 8), sessionOn(28, flatSets, 8), sessionOn(5, flatSets)])).toEqual([]);
   });
 
-  test('4 sessions across just under 3 weeks does not fire', () => {
+  test('4 sessions across just under 4 weeks does not fire', () => {
     expect(
       insightsFor([
-        sessionOn(15, flatSets, 8),
+        sessionOn(8, flatSets, 8),
         sessionOn(18, flatSets, 8),
         sessionOn(1, flatSets),
         sessionOn(5, flatSets),
@@ -97,7 +98,7 @@ describe('plateau', () => {
   test('a rise in the best estimated 1RM does not fire', () => {
     expect(
       insightsFor([
-        sessionOn(14, [weightedSet(80, 5)], 8),
+        sessionOn(7, [weightedSet(80, 5)], 8),
         sessionOn(21, flatSets, 8),
         sessionOn(28, flatSets, 8),
         sessionOn(5, [weightedSet(82.5, 5)]),
@@ -108,7 +109,7 @@ describe('plateau', () => {
   test('a fall counts as no rise', () => {
     expect(
       insightsFor([
-        sessionOn(14, [weightedSet(80, 5)], 8),
+        sessionOn(7, [weightedSet(80, 5)], 8),
         sessionOn(21, flatSets, 8),
         sessionOn(28, flatSets, 8),
         sessionOn(5, [weightedSet(75, 5)]),
@@ -119,7 +120,7 @@ describe('plateau', () => {
   test('the best set of each session counts', () => {
     expect(
       insightsFor([
-        sessionOn(14, [weightedSet(80, 5), weightedSet(60, 8)], 8),
+        sessionOn(7, [weightedSet(80, 5), weightedSet(60, 8)], 8),
         sessionOn(21, flatSets, 8),
         sessionOn(28, flatSets, 8),
         sessionOn(5, [weightedSet(60, 8), weightedSet(80, 5)]),
@@ -137,7 +138,7 @@ describe('plateau', () => {
       distanceMeters: null,
     });
     const sessions = (lastRepetitions: number) => [
-      sessionOn(14, [repetitionSet(10)], 8),
+      sessionOn(7, [repetitionSet(10)], 8),
       sessionOn(21, [repetitionSet(10)], 8),
       sessionOn(28, [repetitionSet(10)], 8),
       sessionOn(5, [repetitionSet(lastRepetitions)]),
@@ -156,7 +157,7 @@ describe('plateau', () => {
       distanceMeters: null,
     });
     const sessions = (lastDuration: number) => [
-      sessionOn(14, [durationSet(60)], 8),
+      sessionOn(7, [durationSet(60)], 8),
       sessionOn(21, [durationSet(60)], 8),
       sessionOn(28, [durationSet(60)], 8),
       sessionOn(5, [durationSet(lastDuration)]),
@@ -170,7 +171,7 @@ describe('plateau', () => {
     expect(
       insightsFor([
         { ...sessionOn(31, flatSets, 7), startedAt: atWindowStart.toISOString() },
-        sessionOn(14, flatSets, 8),
+        sessionOn(7, flatSets, 8),
         sessionOn(21, flatSets, 8),
         sessionOn(5, flatSets),
       ]),
@@ -182,7 +183,7 @@ describe('plateau', () => {
     expect(
       insightsFor([
         { ...sessionOn(30, flatSets, 7), startedAt: beforeWindowStart.toISOString() },
-        sessionOn(14, flatSets, 8),
+        sessionOn(7, flatSets, 8),
         sessionOn(21, flatSets, 8),
         sessionOn(5, flatSets),
       ]),
@@ -193,7 +194,7 @@ describe('plateau', () => {
     expect(
       insightsFor([
         sessionOn(1, [weightedSet(50, 5)], 7),
-        sessionOn(14, flatSets, 8),
+        sessionOn(7, flatSets, 8),
         sessionOn(21, flatSets, 8),
         sessionOn(28, flatSets, 8),
         sessionOn(5, flatSets),
@@ -206,7 +207,7 @@ describe('plateau', () => {
       insightsFor([
         sessionOn(1, flatSets, 7),
         sessionOn(5, flatSets, 8),
-        sessionOn(14, flatSets, 8),
+        sessionOn(7, flatSets, 8),
         sessionOn(5, flatSets),
       ]),
     ).toEqual([]);
@@ -224,7 +225,7 @@ describe('plateau', () => {
     });
     const setsForExercises = (identifiers: number[]) => identifiers.map(setFor);
     const sessions = [
-      sessionOn(14, setsForExercises([1, 2, 3, 4]), 8),
+      sessionOn(7, setsForExercises([1, 2, 3, 4]), 8),
       sessionOn(21, setsForExercises([1, 2, 3, 4]), 8),
       sessionOn(28, setsForExercises([1, 2, 3, 4]), 8),
       sessionOn(5, setsForExercises([1, 2, 3, 4])),
@@ -238,7 +239,7 @@ describe('plateau', () => {
     );
     expect(insights).toHaveLength(1);
     expect(insights[0].messages).toHaveLength(3);
-    expect(insights[0].messages[0]).toContain('Exercise 4 has been stuck for 4 weeks');
+    expect(insights[0].messages[0]).toStartWith("Not noopy! Exercise 4's been stuck at 80 kg × 5 for 5 weeks.");
     expect(insights[0].action?.destination).toEqual({ screen: 'exerciseHistory', exerciseId: 4 });
   });
 
@@ -252,12 +253,51 @@ describe('plateau', () => {
       distanceMeters: null,
     });
     const insights = insightsFor([
-      sessionOn(14, [weightedSet(80, 5), repetitionSet(10)], 8),
+      sessionOn(7, [weightedSet(80, 5), repetitionSet(10)], 8),
       sessionOn(21, [weightedSet(80, 5), repetitionSet(10)], 8),
       sessionOn(28, [weightedSet(80, 5), repetitionSet(10)], 8),
       sessionOn(5, [weightedSet(80, 5), repetitionSet(10)]),
     ]);
     expect(insights).toHaveLength(1);
     expect(insights[0].messages).toHaveLength(1);
+  });
+
+  test('the second variant shows on alternate days', () => {
+    const insights = plateau(
+      createCoachSnapshot({
+        now: new Date(2026, 9, 8, 9, 0),
+        exercisesById,
+        sessionsLastTwelveWeeks: [
+          sessionOn(7, flatSets, 8),
+          sessionOn(21, flatSets, 8),
+          sessionOn(28, flatSets, 8),
+          sessionOn(5, flatSets),
+        ],
+      }),
+    );
+    expect(insights[0].messages[0]).toStartWith("Ohh noops, Squat hasn't moved past 80 kg × 5 in 4 weeks.");
+  });
+
+  test('weighted sets over 12 reps plateau on their heaviest weight', () => {
+    const highRepetitionSessions = (lastWeight: number) => [
+      sessionOn(7, [weightedSet(40, 15)], 8),
+      sessionOn(21, [weightedSet(40, 15)], 8),
+      sessionOn(28, [weightedSet(40, 16)], 8),
+      sessionOn(5, [weightedSet(lastWeight, 15)]),
+    ];
+    expect(insightsFor(highRepetitionSessions(40))).toHaveLength(1);
+    expect(insightsFor(highRepetitionSessions(42.5))).toEqual([]);
+  });
+
+  test('current sets and reps are averaged over the last 3 sessions, so one weak session does not change the advice', () => {
+    const fourByTen = Array.from({ length: 4 }, () => weightedSet(60, 10));
+    const weakSession = [weightedSet(55, 8), weightedSet(55, 8)];
+    const insights = insightsFor([
+      sessionOn(7, fourByTen, 8),
+      sessionOn(21, fourByTen, 8),
+      sessionOn(28, fourByTen, 8),
+      sessionOn(5, weakSession),
+    ]);
+    expect(insights[0].messages[0]).toEndWith('Keep your 10 reps and add a set: 4×10, each set 1–2 reps from failure.');
   });
 });

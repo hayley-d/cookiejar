@@ -1,5 +1,7 @@
 import type { CoachSnapshot, FinishedSessionWithSets } from '@/coach/CoachSnapshot';
+import { chooseVariant } from '@/coach/chooseVariant';
 import type { Insight } from '@/coach/Insight';
+import { describeBestSet, describePlateauAdvice, type PlateauSituation } from '@/coach/plateauPrescription';
 import { addDays } from '@/dates/addDays';
 import { parseLocalDateString } from '@/dates/parseLocalDateString';
 import { toLocalDateString } from '@/dates/toLocalDateString';
@@ -10,76 +12,105 @@ import {
   type CompletedSet,
 } from '@/progress/detectPersonalRecords';
 import type { Exercise } from '@/types/Exercise';
-import type { TrackingType } from '@/types/TrackingType';
 
 export const plateauPriority = 60;
 export const minimumSessionsForPlateau = 4;
-export const minimumWeeksForPlateau = 3;
+export const minimumWeeksForPlateau = 4;
+export const sessionsAveragedForCurrentTraining = 3;
 export const plateauWindowWeekCount = 6;
 export const maximumListedPlateaus = 3;
 
 const daysPerWeek = 7;
 const millisecondsPerDay = 24 * 60 * 60 * 1000;
 
-type SessionBest = { startedAt: string; bestValue: number };
+type MetricKind = 'estimatedOneRepMax' | 'heaviestHighRepetitionWeight' | 'repetitions' | 'duration' | 'distance';
 
-type Plateau = { exerciseId: number; weekCount: number };
+type SessionBest = {
+  startedAt: string;
+  bestValue: number;
+  bestSet: CompletedSet;
+  matchingSets: CompletedSet[];
+};
+
+type Plateau = { exerciseId: number; weekCount: number; situation: Omit<PlateauSituation, 'exerciseName' | 'goal'> };
 
 function windowStartTime(weekStartDate: string): number {
   return addDays(parseLocalDateString(weekStartDate), -(plateauWindowWeekCount - 1) * daysPerWeek).getTime();
 }
 
-function metricValueOf(set: CompletedSet): number | null {
+function metricOf(set: CompletedSet): { metricKind: MetricKind; value: number } | null {
   switch (set.trackingType) {
     case 'repetitions_and_weight':
-      if (!isWeightedSet(set) || set.repetitions > maximumRepetitionsForOneRepMaxEstimate) {
+      if (!isWeightedSet(set)) {
         return null;
       }
-      return estimateOneRepMax(set.weightKilograms, set.repetitions);
+      return set.repetitions > maximumRepetitionsForOneRepMaxEstimate
+        ? { metricKind: 'heaviestHighRepetitionWeight', value: set.weightKilograms }
+        : { metricKind: 'estimatedOneRepMax', value: estimateOneRepMax(set.weightKilograms, set.repetitions) };
     case 'repetitions':
-      return set.repetitions;
+      return set.repetitions === null ? null : { metricKind: 'repetitions', value: set.repetitions };
     case 'duration':
-      return set.durationSeconds;
+      return set.durationSeconds === null ? null : { metricKind: 'duration', value: set.durationSeconds };
     case 'distance':
-      return set.distanceMeters;
+      return set.distanceMeters === null ? null : { metricKind: 'distance', value: set.distanceMeters };
   }
 }
 
 function collectSessionBests(
   sessions: readonly FinishedSessionWithSets[],
   windowStart: number,
-): Map<number, Map<TrackingType, SessionBest[]>> {
-  const bestsByExerciseId = new Map<number, Map<TrackingType, SessionBest[]>>();
+): Map<number, Map<MetricKind, SessionBest[]>> {
+  const bestsByExerciseId = new Map<number, Map<MetricKind, SessionBest[]>>();
   for (const session of sessions) {
     if (new Date(session.startedAt).getTime() < windowStart) {
       continue;
     }
-    const bestByKey = new Map<string, { exerciseId: number; trackingType: TrackingType; value: number }>();
+    const bestByKey = new Map<string, { exerciseId: number; metricKind: MetricKind; best: SessionBest }>();
     for (const set of session.sets) {
-      const value = metricValueOf(set);
-      if (value === null) {
+      const metric = metricOf(set);
+      if (metric === null) {
         continue;
       }
-      const key = `${set.exerciseId}:${set.trackingType}`;
+      const key = `${set.exerciseId}:${metric.metricKind}`;
       const current = bestByKey.get(key);
-      if (current === undefined || value > current.value) {
+      if (current === undefined) {
         bestByKey.set(key, {
           exerciseId: set.exerciseId,
-          trackingType: set.trackingType,
-          value,
+          metricKind: metric.metricKind,
+          best: { startedAt: session.startedAt, bestValue: metric.value, bestSet: set, matchingSets: [set] },
         });
+        continue;
+      }
+      current.best.matchingSets.push(set);
+      if (metric.value > current.best.bestValue) {
+        current.best.bestValue = metric.value;
+        current.best.bestSet = set;
       }
     }
-    for (const { exerciseId, trackingType, value } of bestByKey.values()) {
-      const bestsByTrackingType = bestsByExerciseId.get(exerciseId) ?? new Map<TrackingType, SessionBest[]>();
-      bestsByTrackingType.set(trackingType, [
-        ...(bestsByTrackingType.get(trackingType) ?? []),
-        { startedAt: session.startedAt, bestValue: value },
-      ]);
-      bestsByExerciseId.set(exerciseId, bestsByTrackingType);
+    for (const { exerciseId, metricKind, best } of bestByKey.values()) {
+      const bestsByMetricKind = bestsByExerciseId.get(exerciseId) ?? new Map<MetricKind, SessionBest[]>();
+      bestsByMetricKind.set(metricKind, [...(bestsByMetricKind.get(metricKind) ?? []), best]);
+      bestsByExerciseId.set(exerciseId, bestsByMetricKind);
     }
   }
   return bestsByExerciseId;
+}
+
+function average(values: readonly number[]): number {
+  return values.reduce((total, value) => total + value, 0) / values.length;
+}
+
+function describeRecentTraining(chronological: readonly SessionBest[]): Plateau['situation'] {
+  const recentSessions = chronological.slice(-sessionsAveragedForCurrentTraining);
+  const recentRepetitions = recentSessions.flatMap((session) =>
+    session.matchingSets.map((set) => set.repetitions ?? 0),
+  );
+  const bestSession = chronological.reduce((best, session) => (session.bestValue > best.bestValue ? session : best));
+  return {
+    bestSet: bestSession.bestSet,
+    averageSetCount: Math.round(average(recentSessions.map((session) => session.matchingSets.length))),
+    averageRepetitions: Math.round(average(recentRepetitions)),
+  };
 }
 
 function calendarDaysBetween(earlierStartedAt: string, laterStartedAt: string): number {
@@ -94,8 +125,8 @@ function findPlateaus(snapshot: CoachSnapshot): Plateau[] {
     windowStartTime(snapshot.weekStartDate),
   );
   const plateaus: Plateau[] = [];
-  for (const [exerciseId, bestsByTrackingType] of bestsByExerciseId) {
-    for (const sessionBests of bestsByTrackingType.values()) {
+  for (const [exerciseId, bestsByMetricKind] of bestsByExerciseId) {
+    for (const sessionBests of bestsByMetricKind.values()) {
       if (sessionBests.length < minimumSessionsForPlateau) {
         continue;
       }
@@ -112,6 +143,7 @@ function findPlateaus(snapshot: CoachSnapshot): Plateau[] {
         plateaus.push({
           exerciseId,
           weekCount: Math.floor(dayCount / daysPerWeek),
+          situation: describeRecentTraining(chronological),
         });
       }
     }
@@ -121,14 +153,14 @@ function findPlateaus(snapshot: CoachSnapshot): Plateau[] {
 
 export function plateau(snapshot: CoachSnapshot): Insight[] {
   const seenExerciseIds = new Set<number>();
-  const listedPlateaus: { exercise: Exercise; weekCount: number }[] = [];
+  const listedPlateaus: { exercise: Exercise; weekCount: number; situation: Plateau['situation'] }[] = [];
   for (const foundPlateau of findPlateaus(snapshot)) {
     const exercise = snapshot.exercisesById.get(foundPlateau.exerciseId);
     if (exercise === undefined || seenExerciseIds.has(exercise.id)) {
       continue;
     }
     seenExerciseIds.add(exercise.id);
-    listedPlateaus.push({ exercise, weekCount: foundPlateau.weekCount });
+    listedPlateaus.push({ exercise, weekCount: foundPlateau.weekCount, situation: foundPlateau.situation });
   }
   listedPlateaus.splice(maximumListedPlateaus);
   if (listedPlateaus.length === 0) {
@@ -140,10 +172,18 @@ export function plateau(snapshot: CoachSnapshot): Insight[] {
       topics: ['changeItUp', 'improvement'],
       priority: plateauPriority,
       nuggie: 'coach',
-      messages: listedPlateaus.map(
-        ({ exercise, weekCount }) =>
-          `${exercise.name} has been stuck for ${weekCount} weeks. Try a new rep range (e.g. 5×5 → 4×8) or a variation.`,
-      ),
+      messages: listedPlateaus.map(({ exercise, weekCount, situation }) => {
+        const bestSetText = describeBestSet(situation.bestSet);
+        const advice = describePlateauAdvice({
+          ...situation,
+          exerciseName: exercise.name,
+          goal: snapshot.profile?.goal ?? null,
+        });
+        return chooseVariant(snapshot.now, [
+          `Not noopy! ${exercise.name}'s been stuck at ${bestSetText} for ${weekCount} weeks. ${advice}`,
+          `Ohh noops, ${exercise.name} hasn't moved past ${bestSetText} in ${weekCount} weeks. ${advice}`,
+        ]);
+      }),
       action: {
         label: `See ${listedPlateaus[0].exercise.name} history`,
         destination: { screen: 'exerciseHistory', exerciseId: listedPlateaus[0].exercise.id },

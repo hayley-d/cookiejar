@@ -90,3 +90,14 @@ describe('trainingLoadSpike', () => {
     expect(insightsFor([...previousFourWeekAverageOfThousand, durationSession])).toEqual([]);
   });
 });
+
+describe('trainingLoadSpike copy', () => {
+  test('shows the rise as a percentage in both variants', () => {
+    const sessions = [...previousFourWeekAverageOfThousand, thisWeek(100, 16)];
+    expect(insightsFor(sessions)[0].messages).toEqual([
+      '60% more volume than your usual week. Not noopy for your joints, watch for niggles.',
+    ]);
+    const alternate = trainingLoadSpike(createCoachSnapshot({ now: new Date(2026, 9, 8, 9, 0), sessionsLastTwelveWeeks: sessions }));
+    expect(alternate[0].messages).toEqual(['Big jump! 60% more volume this week than usual. Ease in and watch for niggles.']);
+  });
+});

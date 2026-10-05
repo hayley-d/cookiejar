@@ -1,4 +1,5 @@
 import type { CoachSnapshot } from '@/coach/CoachSnapshot';
+import { chooseVariant } from '@/coach/chooseVariant';
 import type { Insight } from '@/coach/Insight';
 import { addDays } from '@/dates/addDays';
 import { parseLocalDateString } from '@/dates/parseLocalDateString';
@@ -36,13 +37,19 @@ export function trainingLoadSpike(snapshot: CoachSnapshot): Insight[] {
   if (previousAverageVolume <= 0 || thisWeekVolume <= previousAverageVolume * trainingLoadSpikeMultiplier) {
     return [];
   }
+  const risePercent = Math.round((thisWeekVolume / previousAverageVolume - 1) * 100);
   return [
     {
       ruleIdentifier: 'trainingLoadSpike',
       topics: ['recovery'],
       priority: trainingLoadSpikePriority,
       nuggie: 'coach',
-      messages: ['Big jump in volume this week. Watch for niggles.'],
+      messages: [
+        chooseVariant(snapshot.now, [
+          `${risePercent}% more volume than your usual week. Not noopy for your joints, watch for niggles.`,
+          `Big jump! ${risePercent}% more volume this week than usual. Ease in and watch for niggles.`,
+        ]),
+      ],
       action: null,
     },
   ];

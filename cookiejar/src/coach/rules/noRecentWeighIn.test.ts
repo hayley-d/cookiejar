@@ -84,3 +84,26 @@ describe('noRecentWeighIn', () => {
     expect(noRecentWeighIn(createCoachSnapshot())).toEqual([]);
   });
 });
+
+describe('noRecentWeighIn copy', () => {
+  test('counts the days and names the goal', () => {
+    expect(insightsFor('weight_loss', '2026-09-18')[0].messages).toEqual([
+      'No weigh-in for 19 days. Log one so I can see how your weight loss is going!',
+    ]);
+  });
+
+  test('the second variant on alternate days', () => {
+    const snapshot = createCoachSnapshot({
+      now: new Date(2026, 9, 8, 9, 0),
+      profile: profileWith('hypertrophy'),
+      latestBodyMeasurement: measurementOn('2026-09-18'),
+    });
+    expect(noRecentWeighIn(snapshot)[0].messages).toEqual([
+      'Psst, last weigh-in was 19 days ago. Hop on the scales so I can track your muscle gain.',
+    ]);
+  });
+
+  test('asks for a first weigh-in when there has never been one', () => {
+    expect(insightsFor('weight_loss', null)[0].messages).toEqual(['No weigh-ins yet! Add one so I can track your weight loss.']);
+  });
+});

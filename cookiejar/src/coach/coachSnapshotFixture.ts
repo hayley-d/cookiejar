@@ -150,6 +150,7 @@ export function createSquatRecordEvent(): PersonalRecordEvent {
 }
 
 const squatPlateauSessions: readonly FinishedSessionWithSets[] = [
+  createFinishedSession(8, 7, [createWeightedSet(seededSquat.id, 80, 5)]),
   createFinishedSession(8, 14, [createWeightedSet(seededSquat.id, 80, 5)]),
   createFinishedSession(8, 21, [createWeightedSet(seededSquat.id, 80, 5)]),
   createFinishedSession(8, 28, [createWeightedSet(seededSquat.id, 80, 5)]),
@@ -195,6 +196,10 @@ export function createFullyLoadedCoachSnapshot(): CoachSnapshot {
     activePlan: seededPlan,
     finishedSessionCount: 12,
     sessionsLastTwelveWeeks: [
+      createFinishedSession(8, 7, [
+        createWeightedSet(seededSquat.id, 80, 5),
+        createWeightedSet(seededDeadlift.id, 95, 5),
+      ]),
       createFinishedSession(8, 14, [
         createWeightedSet(seededSquat.id, 80, 5),
         createWeightedSet(seededDeadlift.id, 100, 5),

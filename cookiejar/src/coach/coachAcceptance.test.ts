@@ -40,11 +40,13 @@ function identifiersFor(topic: Topic, snapshot = createFullyLoadedCoachSnapshot(
 describe('seeded acceptance fixture', () => {
   const snapshot = createSeededCoachSnapshot();
 
-  test('reports the squat stuck for 3 weeks as a plateau under "Should I change things up?"', () => {
+  test('reports the squat stuck for 4 weeks as a plateau under "Should I change things up?"', () => {
     const question = questionFor('changeItUp');
     expect(question.prompt).toBe('Should I change things up?');
     const bubbles = answerQuestion(question, snapshot);
-    expect(bubbles[0].text).toContain('Squat has been stuck for 3 weeks');
+    expect(bubbles[0].text).toBe(
+      "Not noopy! Squat's been stuck at 80 kg × 5 for 4 weeks. I believe in you! Try 4×8–12 at 70 kg for a few weeks, each set 1–2 reps from failure.",
+    );
     expect(bubbles[0].nuggie).toBe('coach');
     expect(bubbles[0].action).toEqual({
       label: 'See Squat history',
@@ -73,6 +75,7 @@ describe('seeded acceptance fixture', () => {
       finishedSessionCount: 12,
       exercisesById: new Map(stalledLifts.map((exercise) => [exercise.id, exercise])),
       sessionsLastTwelveWeeks: [
+        createFinishedSession(8, 7, stalledSets),
         createFinishedSession(8, 14, stalledSets),
         createFinishedSession(8, 21, stalledSets),
         createFinishedSession(8, 28, stalledSets),
@@ -87,7 +90,7 @@ describe('seeded acceptance fixture', () => {
   test('reports sleep under 6 hours as low sleep with the tired nuggie', () => {
     const bubbles = answerQuestion(questionFor('recovery'), snapshot);
     expect(bubbles).toHaveLength(1);
-    expect(bubbles[0].text).toContain('Go lighter today');
+    expect(bubbles[0].text).toBe("Not noopy, only 5h 40m of sleep 😴 Good thing it's a rest day, take it easy.");
     expect(bubbles[0].nuggie).toBe('tired');
     expect(identifiersFor('recovery', snapshot)).toEqual(['lowSleep']);
   });
@@ -103,7 +106,7 @@ describe('seeded acceptance fixture', () => {
     const [topInsight] = collectInsights(snapshot);
     expect(topInsight.ruleIdentifier).toBe('lowSleep');
     const bubbles = openingBubbles(snapshot);
-    expect(bubbles[0].text).toBe('Good Noop! Only 5h 40m sleep. Go lighter today.');
+    expect(bubbles[0].text).toBe("Good Noop! Not noopy, only 5h 40m of sleep 😴 Good thing it's a rest day, take it easy.");
     expect(bubbles[0].nuggie).toBe('tired');
   });
 
@@ -158,7 +161,7 @@ describe('priority ordering across all rules', () => {
   test('the greeting picks the highest priority across every topic', () => {
     const snapshot = createFullyLoadedCoachSnapshot();
     const bubbles = openingBubbles(snapshot);
-    expect(bubbles[0].text).toBe('Good Noop! Only 5h 40m sleep. Go lighter today.');
+    expect(bubbles[0].text).toBe("Good Noop! Not noopy, only 5h 40m of sleep 😴 You've already trained today, so rest up tonight.");
     expect(bubbles[0].nuggie).toBe('tired');
     const withoutRecovery = { ...snapshot, healthLastFourteenDays: [] };
     expect(openingBubbles(withoutRecovery)[0].text).toContain('New record on Squat');

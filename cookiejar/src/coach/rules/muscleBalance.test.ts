@@ -273,3 +273,41 @@ describe('muscleBalance window and priority', () => {
     expect(muscleBalance(createCoachSnapshot({ exercisesById }))).toEqual([]);
   });
 });
+
+describe('muscleBalance copy', () => {
+  test('names the neglected exercises you already do, most sets first', () => {
+    expect(insightsFor([[1, 10], [5, 1], [4, 2]])[0].messages).toEqual([
+      "10 push sets vs 3 pull sets in 4 weeks. Your back's feeling left out, not noopy! Add some Exercise 4 or Exercise 5.",
+    ]);
+  });
+
+  test('the second variant on alternate days', () => {
+    const snapshot = createCoachSnapshot({
+      now: new Date(2026, 9, 8, 9, 0),
+      exercisesById,
+      sessionsLastTwelveWeeks: [sessionWith(recentDate, [[1, 10], [5, 1], [4, 2]])],
+    });
+    expect(muscleBalance(snapshot)[0].messages).toEqual([
+      'Noop alert: 10 push sets, only 3 pull. Balance it out with Exercise 4 and Exercise 5.',
+    ]);
+  });
+
+  test('falls back to generic exercises when none were done', () => {
+    expect(insightsFor([[1, 10]])[0].messages).toEqual([
+      "10 push sets vs 0 pull sets in 4 weeks. Your back's feeling left out, not noopy! Add some rows and pull-ups.",
+    ]);
+  });
+
+  test('no core names a core exercise from earlier weeks', () => {
+    const snapshot = createCoachSnapshot({
+      exercisesById,
+      sessionsLastTwelveWeeks: [
+        sessionWith(new Date(2026, 7, 20, 18, 0), [[9, 3]]),
+        sessionWith(recentDate, [[1, 2], [4, 2]]),
+      ],
+    });
+    expect(muscleBalance(snapshot)[0].messages).toEqual([
+      'Ohh my Noops! No core work in 2 weeks! A few sets of Exercise 9 would sort it.',
+    ]);
+  });
+});

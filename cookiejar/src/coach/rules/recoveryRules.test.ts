@@ -1,9 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 
-import { createCoachSnapshot } from '@/coach/coachSnapshotFixture';
+import { createCoachSnapshot, createScheduledWorkout } from '@/coach/coachSnapshotFixture';
 import { elevatedRestingHeartRate, elevatedRestingHeartRatePriority } from '@/coach/rules/elevatedRestingHeartRate';
 import { lowSleep, lowSleepPriority } from '@/coach/rules/lowSleep';
 import { recoveryGood, recoveryGoodPriority } from '@/coach/rules/recoveryGood';
+import type { CoachSnapshot } from '@/coach/CoachSnapshot';
 import type { HealthSnapshot } from '@/types/HealthSnapshot';
 
 type HealthDay = {
@@ -204,5 +205,74 @@ describe('recoveryGood', () => {
     expect(recoveryGood(heartRateWeek(55, 55, null))).toEqual([]);
     expect(recoveryGood(heartRateWeek(null, 55, 480))).toEqual([]);
     expect(recoveryGood(snapshotWith([{ date: '2026-10-07', sleepMinutes: 480, restingHeartRate: 50 }]))).toEqual([]);
+  });
+});
+
+function withLegDayToday(snapshot: CoachSnapshot, status: 'planned' | 'completed' = 'planned'): CoachSnapshot {
+  return { ...snapshot, scheduledThisWeek: [createScheduledWorkout({ date: '2026-10-07', name: 'Leg Day', status })] };
+}
+
+function onAlternateDay(snapshot: CoachSnapshot): CoachSnapshot {
+  return { ...snapshot, now: new Date(2026, 9, 8, 9, 0) };
+}
+
+describe('lowSleep copy', () => {
+  test('a rest day says take it easy', () => {
+    expect(lowSleep(sleepOnlyLastNight(340))[0].messages).toEqual([
+      "Not noopy, only 5h 40m of sleep 😴 Good thing it's a rest day, take it easy.",
+    ]);
+  });
+
+  test("names today's workout", () => {
+    expect(lowSleep(withLegDayToday(sleepOnlyLastNight(340)))[0].messages).toEqual([
+      "Not noopy, only 5h 40m of sleep 😴 Leg Day's on today, go lighter or drop a set.",
+    ]);
+    expect(lowSleep(onAlternateDay(withLegDayToday(sleepOnlyLastNight(340))))[0].messages).toEqual([
+      'Oh noop, just 5h 40m of sleep. Take Leg Day easy today.',
+    ]);
+  });
+
+  test('after training today it says rest up tonight', () => {
+    expect(lowSleep(withLegDayToday(sleepOnlyLastNight(340), 'completed'))[0].messages).toEqual([
+      "Not noopy, only 5h 40m of sleep 😴 You've already trained today, so rest up tonight.",
+    ]);
+  });
+
+  test('a low three night average uses the average opening', () => {
+    expect(lowSleep(threeNights(370, 370, 370))[0].messages).toEqual([
+      "Not noopy, your last 3 nights averaged 6h 10m of sleep 😴 Good thing it's a rest day, take it easy.",
+    ]);
+  });
+});
+
+describe('elevatedRestingHeartRate copy', () => {
+  test('a rest day suggests yoga or a rest', () => {
+    expect(elevatedRestingHeartRate(heartRateWeek(61, 55))[0].messages).toEqual([
+      'Resting HR is up 6 bpm. Not noopy, could be fatigue. Perfect day for yoga or a rest.',
+    ]);
+  });
+
+  test("names today's workout", () => {
+    expect(elevatedRestingHeartRate(withLegDayToday(heartRateWeek(61, 55)))[0].messages).toEqual([
+      'Resting HR is up 6 bpm. Not noopy, could be fatigue. Swap Leg Day for yoga or a rest day?',
+    ]);
+    expect(elevatedRestingHeartRate(onAlternateDay(withLegDayToday(heartRateWeek(61, 55))))[0].messages).toEqual([
+      "Your heart's working 6 bpm harder than usual at rest. Go easy on Leg Day.",
+    ]);
+  });
+});
+
+describe('recoveryGood copy', () => {
+  test('a rest day says enjoy it', () => {
+    expect(recoveryGood(heartRateWeek(55, 55, 470))[0].messages).toEqual(['Very noopy recovery. Enjoy the rest day!']);
+  });
+
+  test("pushes for a record on today's workout", () => {
+    expect(recoveryGood(withLegDayToday(heartRateWeek(55, 55, 470)))[0].messages).toEqual([
+      "Slept 7h 50m and your heart's calm. Very noopy! Great day to push for a record on Leg Day!",
+    ]);
+    expect(recoveryGood(onAlternateDay(withLegDayToday(heartRateWeek(55, 55, 470))))[0].messages).toEqual([
+      'Fully recharged 🔋 7h 50m of sleep. Go hunt a record today!',
+    ]);
   });
 });
