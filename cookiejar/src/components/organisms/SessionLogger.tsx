@@ -28,6 +28,7 @@ type SessionLoggerProperties = {
   onAddExercises: () => void;
   onChangeNotes: (notes: string) => void;
   onFinish: () => void;
+  onDiscard: () => void;
 };
 
 export function SessionLogger({
@@ -44,6 +45,7 @@ export function SessionLogger({
   onAddExercises,
   onChangeNotes,
   onFinish,
+  onDiscard,
 }: SessionLoggerProperties) {
   const theme = useTheme();
   const restTimer = useRestTimer();
@@ -52,6 +54,7 @@ export function SessionLogger({
   return (
     <Box flex={1} background="background">
       <Box direction="row" align="center" gap="small" paddingHorizontal="medium" paddingVertical="small">
+        <TextButton label="✕ Discard" color="danger" onPress={onDiscard} disabled={isFinishing} />
         <Box flex={1}>
           <Typography variant="heading" numberOfLines={1} accessibilityRole="header">
             {session.workoutName.toUpperCase()}

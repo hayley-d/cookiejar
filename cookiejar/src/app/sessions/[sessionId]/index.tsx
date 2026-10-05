@@ -102,6 +102,16 @@ export default function SessionLoggerScreen() {
     ]);
   };
 
+  const requestDiscard = () => {
+    if (isFinishing) {
+      return;
+    }
+    Alert.alert('Discard this workout?', 'Everything logged in it will be deleted.', [
+      { text: 'Keep going', style: 'cancel' },
+      { text: 'Discard', style: 'destructive', onPress: () => void completeDiscard() },
+    ]);
+  };
+
   let content = null;
   if (sessionLookup.status === 'missing' || sessionLookup.status === 'failed') {
     content = (
@@ -142,6 +152,7 @@ export default function SessionLoggerScreen() {
         }
         onChangeNotes={changeNotes}
         onFinish={requestFinish}
+        onDiscard={requestDiscard}
       />
     );
   }
