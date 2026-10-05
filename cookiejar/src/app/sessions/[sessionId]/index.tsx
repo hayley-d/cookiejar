@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -57,26 +57,37 @@ export default function SessionLoggerScreen() {
   const [startingNuggie] = useState(chooseStartingNuggie);
   const [isLoadingScreenVisible, setIsLoadingScreenVisible] = useState(isStarting === 'true');
   const [isFinishing, setIsFinishing] = useState(false);
+  const isCompletingReference = useRef(false);
 
   const hideLoadingScreen = useCallback(() => setIsLoadingScreenVisible(false), []);
 
   const completeFinish = async () => {
+    if (isCompletingReference.current) {
+      return;
+    }
+    isCompletingReference.current = true;
     setIsFinishing(true);
     try {
       await finish();
       router.replace({ pathname: '/sessions/[sessionId]/finishing', params: { sessionId: String(sessionId) } });
     } catch {
+      isCompletingReference.current = false;
       setIsFinishing(false);
       Alert.alert('Could not finish the workout', 'Something went wrong. Please try again.');
     }
   };
 
   const completeDiscard = async () => {
+    if (isCompletingReference.current) {
+      return;
+    }
+    isCompletingReference.current = true;
     setIsFinishing(true);
     try {
       await discard();
       router.back();
     } catch {
+      isCompletingReference.current = false;
       setIsFinishing(false);
       Alert.alert('Could not discard the workout', 'Something went wrong. Please try again.');
     }
