@@ -51,8 +51,14 @@ export function useDailyHealth(date: string) {
       }
       lastRefreshStartedAtByDate.set(date, now.getTime());
 
-      const dailyHealth = await readDailyHealth(date, now);
-      const freshSnapshot = await upsertHealthSnapshot(database, dailyHealth);
+      let freshSnapshot: HealthSnapshot;
+      try {
+        const dailyHealth = await readDailyHealth(date, now);
+        freshSnapshot = await upsertHealthSnapshot(database, dailyHealth);
+      } catch {
+        lastRefreshStartedAtByDate.delete(date);
+        return;
+      }
       if (isActive()) {
         setLoadedSnapshot({ date, snapshot: freshSnapshot });
       }

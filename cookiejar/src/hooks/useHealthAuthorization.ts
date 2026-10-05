@@ -32,9 +32,11 @@ export function useHealthAuthorization() {
   const requestAuthorization = useCallback(async (): Promise<HealthAuthorizationOutcome> => {
     setIsRequesting(true);
     const outcome = await requestHealthAuthorization();
-    const newRequestedAt = new Date().toISOString();
-    await setSetting(database, healthAuthorizationRequestedAtSettingKey, newRequestedAt).catch(() => {});
-    setRequestedAt(newRequestedAt);
+    if (outcome !== 'unavailable') {
+      const newRequestedAt = new Date().toISOString();
+      await setSetting(database, healthAuthorizationRequestedAtSettingKey, newRequestedAt).catch(() => {});
+      setRequestedAt(newRequestedAt);
+    }
     setIsRequesting(false);
     return outcome;
   }, [database]);
