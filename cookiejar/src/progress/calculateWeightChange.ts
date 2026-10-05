@@ -3,14 +3,24 @@ import { parseLocalDateString } from '@/dates/parseLocalDateString';
 import { toLocalDateString } from '@/dates/toLocalDateString';
 
 export type WeightChangeMeasurement = {
+  id: number;
   measuredOn: string;
   weightKilograms: number | null;
 };
 
 type WeighIn = {
+  id: number;
   measuredOn: string;
   weightKilograms: number;
 };
+
+export function selectWeighIns(measurements: WeightChangeMeasurement[], today: string): WeighIn[] {
+  return measurements
+    .filter(
+      (measurement): measurement is WeighIn => measurement.weightKilograms !== null && measurement.measuredOn <= today,
+    )
+    .sort((first, second) => first.measuredOn.localeCompare(second.measuredOn) || first.id - second.id);
+}
 
 export function calculateWeightChange(
   measurements: WeightChangeMeasurement[],
@@ -18,11 +28,7 @@ export function calculateWeightChange(
   today: string,
 ): number | null {
   const windowStart = toLocalDateString(addDays(parseLocalDateString(today), -days));
-  const weighIns: WeighIn[] = measurements
-    .filter(
-      (measurement): measurement is WeighIn => measurement.weightKilograms !== null && measurement.measuredOn <= today,
-    )
-    .sort((first, second) => first.measuredOn.localeCompare(second.measuredOn));
+  const weighIns = selectWeighIns(measurements, today);
 
   if (weighIns.length < 2) {
     return null;

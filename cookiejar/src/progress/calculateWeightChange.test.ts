@@ -4,8 +4,11 @@ import { calculateWeightChange } from '@/progress/calculateWeightChange';
 
 const today = '2026-10-05';
 
+let nextId = 0;
+
 function weighIn(measuredOn: string, weightKilograms: number | null) {
-  return { measuredOn, weightKilograms };
+  nextId += 1;
+  return { id: nextId, measuredOn, weightKilograms };
 }
 
 describe('calculateWeightChange', () => {
@@ -51,5 +54,14 @@ describe('calculateWeightChange', () => {
 
   test('reports no change as 0', () => {
     expect(calculateWeightChange([weighIn('2026-10-05', 72), weighIn('2026-09-05', 72)], 30, today)).toBe(0);
+  });
+
+  test('breaks same-day ties by id so the last-entered weight is the latest', () => {
+    const measurements = [
+      { id: 3, measuredOn: today, weightKilograms: 72 },
+      { id: 2, measuredOn: today, weightKilograms: 72.5 },
+      { id: 1, measuredOn: '2026-09-05', weightKilograms: 73 },
+    ];
+    expect(calculateWeightChange(measurements, 30, today)).toBe(-1);
   });
 });

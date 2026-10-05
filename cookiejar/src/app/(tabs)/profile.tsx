@@ -12,8 +12,8 @@ import { describeHealthAccessStatus } from '@/health/describeHealthAccessStatus'
 import { useHealthAuthorization } from '@/hooks/useHealthAuthorization';
 import { useBodyMeasurements } from '@/hooks/useBodyMeasurements';
 import { useProfile } from '@/hooks/useProfile';
-import { calculateWeightChange } from '@/progress/calculateWeightChange';
 import { describeWeightSummary } from '@/progress/describeWeightSummary';
+import { summarizeWeight } from '@/progress/summarizeWeight';
 
 const coachButtonClearance = 96;
 const weightChangeDays = 30;
@@ -42,16 +42,12 @@ export default function ProfileScreen() {
   const profile = useProfile();
   const { hasRequestedAuthorization } = useHealthAuthorization();
   const { measurements } = useBodyMeasurements();
-  const latestWeightKilograms =
-    measurements?.find((measurement) => measurement.weightKilograms !== null)?.weightKilograms ?? null;
-  const weightSummary =
-    measurements && latestWeightKilograms !== null
-      ? describeWeightSummary(
-          latestWeightKilograms,
-          calculateWeightChange(measurements, weightChangeDays, toLocalDateString(new Date())),
-          weightChangeDays,
-        )
-      : null;
+  const weightSummary = measurements
+    ? summarizeWeight(measurements, weightChangeDays, toLocalDateString(new Date()))
+    : null;
+  const weightSummaryText = weightSummary
+    ? describeWeightSummary(weightSummary.latestWeightKilograms, weightSummary.change, weightChangeDays)
+    : null;
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1 }}>
@@ -73,7 +69,7 @@ export default function ProfileScreen() {
             ) : (
               <SettingsRow
                 title="Body measurements"
-                subtitle={weightSummary ?? 'No weight recorded yet'}
+                subtitle={weightSummaryText ?? 'No weight recorded yet'}
                 onPress={openMeasurements}
               />
             )}
