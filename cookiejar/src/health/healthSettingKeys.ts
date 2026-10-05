@@ -1,0 +1,1 @@
+export const healthAuthorizationRequestedAtSettingKey = 'health_authorization_requested_at';

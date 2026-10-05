@@ -1,7 +1,5 @@
-export type HealthSnapshot = {
-  date: string;
-  steps: number | null;
-  sleepMinutes: number | null;
-  restingHeartRate: number | null;
+import type { DailyHealth } from '@/health/HealthTypes';
+
+export type HealthSnapshot = DailyHealth & {
   fetchedAt: string;
 };
