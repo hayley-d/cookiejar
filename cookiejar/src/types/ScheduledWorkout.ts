@@ -1,11 +1,20 @@
-import type { PlanEntry } from '@/types/PlanEntry';
-import type { Session } from '@/types/Session';
-import type { Workout } from '@/types/Workout';
+import type { Workout } from "@/types/Workout";
+
+export type ScheduledWorkoutSummary = Pick<
+  Workout,
+  "name" | "kind" | "classType" | "durationMinutes" | "imageUrl"
+> & {
+  id: number | null;
+  exerciseCount: number;
+};
+
+export type ScheduledWorkoutStatus = "planned" | "inProgress" | "completed";
 
 export type ScheduledWorkout = {
   date: string;
-  timeOfDay: string;
-  planEntry: PlanEntry;
-  workout: Workout;
-  session: Session | null;
+  timeOfDay: string | null;
+  planEntryId: number | null;
+  workout: ScheduledWorkoutSummary;
+  status: ScheduledWorkoutStatus;
+  sessionId: number | null;
 };
