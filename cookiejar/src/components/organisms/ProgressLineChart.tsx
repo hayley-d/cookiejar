@@ -107,7 +107,7 @@ export function ProgressLineChart({ points, unit, referenceValue, emphasisedDate
               domain: [valueAxis.minimum, valueAxis.maximum],
               formatYLabel: (value) => String(value),
               labelColor: theme.colors.textSecondary,
-              lineColor: theme.colors.textSecondary,
+              lineColor: theme.colors.border,
               lineWidth: theme.sizes.chartGridLineWidth,
             },
           ]}
