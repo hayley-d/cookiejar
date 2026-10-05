@@ -304,3 +304,51 @@ export async function finishSession(database: SQLiteDatabase, sessionId: number)
 export async function discardSession(database: SQLiteDatabase, sessionId: number): Promise<void> {
   await database.runAsync('DELETE FROM sessions WHERE id = ?', sessionId);
 }
+
+type PreviousSessionExerciseRow = {
+  id: number;
+};
+
+type PreviousSessionSetRow = {
+  repetitions: number | null;
+  weight_kilograms: number | null;
+  duration_seconds: number | null;
+  distance_meters: number | null;
+};
+
+export async function getPreviousSessionSets(
+  database: SQLiteDatabase,
+  exerciseId: number,
+  beforeSessionId: number,
+): Promise<SetValues[]> {
+  const previousExercise = await database.getFirstAsync<PreviousSessionExerciseRow>(
+    `SELECT session_exercises.id
+    FROM session_exercises
+    JOIN sessions ON sessions.id = session_exercises.session_id
+    WHERE session_exercises.exercise_id = ?
+      AND sessions.finished_at IS NOT NULL
+      AND sessions.id <> ?
+      AND sessions.started_at < (SELECT started_at FROM sessions WHERE id = ?)
+    ORDER BY sessions.started_at DESC, sessions.id DESC, session_exercises.position
+    LIMIT 1`,
+    exerciseId,
+    beforeSessionId,
+    beforeSessionId,
+  );
+  if (previousExercise === null) {
+    return [];
+  }
+  const setRows = await database.getAllAsync<PreviousSessionSetRow>(
+    `SELECT repetitions, weight_kilograms, duration_seconds, distance_meters
+    FROM session_sets
+    WHERE session_exercise_id = ? AND completed_at IS NOT NULL
+    ORDER BY position, id`,
+    previousExercise.id,
+  );
+  return setRows.map((setRow) => ({
+    repetitions: setRow.repetitions,
+    weightKilograms: setRow.weight_kilograms,
+    durationSeconds: setRow.duration_seconds,
+    distanceMeters: setRow.distance_meters,
+  }));
+}
