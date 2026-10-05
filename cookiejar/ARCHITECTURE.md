@@ -565,7 +565,7 @@ Session-specific hooks manage the logger state and rest timer:
 | `useSession(sessionId)` | Returns `{ sessionLookup, previousSetsByExerciseId, changeSetValues, toggleSetCompletion, addSet, removeSet, changeExerciseRest, changeNotes, finish, discard, addExercises, replaceExercise, removeExercise }`. Loads the session on mount, debounces set value and notes writes with a 400 ms delay, flushes pending writes on unmount, when the app goes to the background or inactive, and before finish, cancels them before discard, and queues structural changes (after enqueueing pending writes) through `getSessionWithExercises` and merge. Finish and discard clear the rest timer and bump `dataVersion`. If a write fails it shows an alert |
 | `useRestTimer()` | Returns `{ remainingSeconds: number | null, isPaused: boolean, pause, resume }`. Reads the module-level rest timer store with `useSyncExternalStore`. The hook's effect checks for timer end every 250 ms (`fastTimerTick`), gives a haptic at zero, and clears the timer |
 | `useActiveSession()` | Returns `{ status: 'loading' } \| { status: 'failed' } \| { status: 'active', activeSession } \| { status: 'none' }`. Loads on mount with `getActiveSession` and reloads on focus and on `dataVersion` change. Used by the resume banner |
-| `useFinishedSession(sessionId)` | Returns `{ status: 'loading' } \| { status: 'missing' } \| { status: 'failed' } \| { status: 'found', session, personalRecords }`. Loads once per sessionId with `getSessionWithExercises`, calls `listCompletedSetsForExercises` to load earlier sets, then detects records with `detectPersonalRecords`. Does not reload on focus |
+| `useFinishedSession(sessionId)` | Returns `{ status: 'loading' } \| { status: 'missing' } \| { status: 'failed' } \| { status: 'found', session, personalRecords }`. Loads once per sessionId with `getSessionWithExercises`, calls `listCompletedSetsForExercises` to load earlier sets, then detects records with `detectPersonalRecords`. Reloads when `dataVersion` changes (after link or unlink) |
 | `useStartSession()` | Returns `{ startSession }`. Starts a new session or shows the single-open-session prompt. Uses an in-flight ref to prevent concurrent start attempts. See above for details |
 | `useSessionExercisePicks()` | Returns `{ exerciseIds, clearExerciseIds }` for the exercise picker opened from the logger. Uses the same pick store pattern as the builder |
 
@@ -616,7 +616,7 @@ Session-specific hooks manage the logger state and rest timer:
 
 ### Module Boundary
 
-`src/health/` is the only place that imports `@kingstinct/react-native-healthkit`. It exposes pure functions for reading daily health data, workouts and computing derived values. All HealthKit calls go through the adapter functions `readDailyHealth`, `readHealthWorkouts` and `healthAuthorization`, which handle the native platform differences.
+`src/health/` holds Apple Health integration. Only three adapter files import `@kingstinct/react-native-healthkit`: `healthAuthorization.ts`, `readDailyHealth.ts`, and `readHealthWorkouts.ts`. All other files in the module are pure (no React Native imports) and import only `@/dates` helpers and each other. The module exports `requestHealthAuthorization()` from the authorization adapter, and `findOverlappingWorkouts()` and `readWorkoutHeartRate()` from the workouts adapter.
 
 ### Adapter Files
 
@@ -628,24 +628,24 @@ Session-specific hooks manage the logger state and rest timer:
 
 ### Pure Modules
 
-These hold Apple Health logic, import no React Native except `@kingstinct/react-native-healthkit`, and are covered by `bun test`:
+These hold Apple Health logic and are covered by `bun test`:
 
 - `HealthTypes.ts`: `DailyHealth` (date, steps, sleepMinutes, restingHeartRate), `HealthWorkout` (uuid, activityTypeCode, startDate, endDate, durationSeconds, activeKilocalories, sourceName, bundleIdentifier), `WorkoutHeartRate` (averageHeartRate, maximumHeartRate), `HealthAuthorizationOutcome`
-- `computeSleepMinutes.ts`: sum sleep sample durations by stage
-- `healthDayRange.ts`: date boundaries for a local date string, adjusted for the time zone
-- `healthSleepRange.ts`: 22:00 to 12:00 sleep window spanning two local dates
-- `pickRestingHeartRate.ts`: select resting heart rate from samples by recency and source priority (Apple Health first)
+- `computeSleepMinutes.ts`: filter sleep samples to asleep stages (1, 3, 4, 5), use only Garmin samples when any exist, merge overlapping intervals, sum minutes and return null if none qualify
+- `healthDayRange.ts`: local midnight to `now` for today, or local midnight to midnight for a past date
+- `healthSleepRange.ts`: 18:00 on the previous day to 12:00 on the given date
+- `pickRestingHeartRate.ts`: pick the latest resting heart rate sample within the local day
 - `describeWorkoutActivity.ts`: activity name from HealthKit activity type code (Running, Cycling, Swimming, etc.)
-- `groupHealthWorkouts.ts`: split workouts into `garminWorkouts` and `otherWorkouts` by source
-- `findSuggestedHealthWorkout.ts`: find the best matching workout between session start and finish times, sorted by overlap
-- `isHealthSnapshotFinal.ts`: determine if a snapshot is final (cached after noon the next day)
+- `groupHealthWorkouts.ts`: split workouts into `garminWorkouts` and `otherWorkouts` by source, each sorted by start time
+- `findSuggestedHealthWorkout.ts`: return a Garmin workout only when exactly one overlaps at least 50% of the session duration, otherwise null
+- `isHealthSnapshotFinal.ts`: determine if a snapshot is final (its `fetchedAt` is after noon on the day after its date)
 - `shouldRefreshHealth.ts`: rate-limit reads with a 5-minute throttle per date
 - `shouldShowHealthAccessHint.ts`: show the access hint when authorization has been requested but no data is available
 - `formatSteps.ts`, `formatSleepMinutes.ts`, `formatRestingHeartRate.ts`: format health values for display
 - `formatWorkoutValues.ts`: format workout duration, kilocalories and heart rate ranges for display
-- `healthWorkoutSearchWindow.ts`: search window that extends 3 hours before the session start and 1 hour after the session finish, with buffer to account for time zone variations
-- `healthSettingKeys.ts`: setting key for the health authorization request timestamp
-- `isGarminSource.ts`: detect Garmin workouts by bundle identifier
+- `healthWorkoutSearchWindow.ts`: search window from 30 minutes before the session starts to 30 minutes after it finishes (using `now` if the session is not finished)
+- `healthSettingKeys.ts`: `healthAuthorizationRequestedAtSettingKey` for the authorization request timestamp
+- `isGarminSource.ts`: detect Garmin workouts by checking whether bundle identifier contains "garmin" (case-insensitive) or source name contains "Garmin"
 
 ### Hooks
 
@@ -654,21 +654,21 @@ Health-specific hooks manage data loading and caching:
 | Hook | Behaviour |
 | --- | --- |
 | `useHealthAuthorization()` | Returns `{ hasRequestedAuthorization, isRequesting, requestAuthorization }`. Loads the request timestamp from app settings on focus. `hasRequestedAuthorization` is `null` while loading, `true` if authorization has been requested (outcome was `authorized` or `denied`), `false` if not requested. `requestAuthorization()` calls the adapter, saves the request timestamp and returns the outcome |
-| `useDailyHealth(date)` | Returns `{ snapshot, refresh }`. Caches health snapshots by date in module-level memory. On mount it loads the cached snapshot. On focus and when the app returns to the foreground it checks if a refresh is needed (no snapshot, not final, or 5-minute throttle elapsed since last read per date). Reads through `readDailyHealth`, then upserts the snapshot to the database. After noon the next day, past-date snapshots become final and stop refreshing. Returns `null` snapshot until at least one read completes |
+| `useDailyHealth(date)` | Returns `{ snapshot, isLoading, refresh }`. Loads the snapshot from the database cache. Per-date refresh timestamps are held in module-level memory; the snapshot cache is the database. On mount it loads the cached snapshot. On focus and when the app returns to the foreground, only queries HealthKit if the `healthAuthorizationRequestedAt` setting exists, then checks if a refresh is needed (no snapshot, not final, or 5-minute throttle elapsed per date). When a refresh runs, reads through `readDailyHealth` and upserts the snapshot. A snapshot is final when its `fetchedAt` is after noon on the day after its date; final snapshots do not refresh. `isLoading` is true until a snapshot has been loaded for the requested date |
 | `useOverlappingHealthWorkouts(sessionId)` | Returns `{ lookup, refresh, link, isLinking }` where lookup is `{ status: 'loading' | 'unavailable' | 'failed' | 'ready' }`. On mount loads the session and its time window, then finds overlapping workouts and groups them. Reloads on focus. `refresh()` forces a reload. `link(workout)` reads the workout's heart rate range, updates the session with `linkHealthWorkout`, bumps dataVersion and returns success boolean |
+| `useUnlinkHealthWorkout(sessionId)` | Returns an async callback that calls `unlinkHealthWorkout(database, sessionId)` and bumps dataVersion. Used by the session summary to unlink a previously linked health workout |
 
 ### Components
 
-Phase 06 adds molecules for health data on the Home tab and on the session summary:
+Phase 06 adds molecules and an organism for health data on the Home tab and on the session summary:
 
 | Component | Purpose |
 | --- | --- |
 | `HealthPermissionCard` (molecule) | Card on Home when authorization has not been requested, with a coach nuggie, description and Connect button |
-| `StatTile` (molecule) | Small tile showing a health value and label, used for Steps, Sleep and Resting HR on Home |
 | `HealthWorkoutRow` (molecule) | A clickable row for a health workout: activity name, time range with duration and calories, and source name |
 | `LinkedHealthWorkoutRow` (molecule) | Linked Garmin workout summary with heart rate, calories and duration, and Unlink button |
-| `HealthSuggestionBanner` (molecule) | Card offering to link a suggested matching workout: "Link Garmin {activity} ({duration})?" |
-| `LinkHealthWorkoutSheet` (organism) | Full sheet modal showing Garmin workouts and other sources separately, with a Refresh button and a title |
+| `HealthSuggestionBanner` (molecule) | Card offering to link a suggested matching workout: "Link Garmin {activity} ({duration})?" Shown in `SessionSummary` when a single Garmin workout is found |
+| `LinkHealthWorkoutSheet` (organism) | Full sheet modal listing Garmin workouts first, then "Other sources", each sorted by start time. Shows "No Garmin workout found around this time — make sure Garmin Connect has synced" and a Refresh button when no Garmin workout is found |
 
 ### Routes
 
@@ -678,12 +678,14 @@ Phase 06 adds molecules for health data on the Home tab and on the session summa
 
 ### Home Health Section
 
-The Home tab (`src/app/(tabs)/index.tsx`) shows:
-1. `HealthPermissionCard` when authorization has not been requested
-2. When authorized: three `StatTile`s in a row for Steps, Sleep and Resting HR (tiles show `null` formatted as dashes before first read)
-3. `EmptyState` with "No data yet — check Health access" hint (tired nuggie) when authorization was requested but no snapshot data exists, with a button to open Settings instructions
+The Home tab (`src/app/(tabs)/index.tsx`) shows health data and access controls based on authorization state:
 
-The Home page uses `useDailyHealth` to load snapshots for today, and `useHealthAuthorization` to manage the request state. A header message `Settings → Health → Data Access & Devices → Cookiejar → Turn On All` guides users to enable Health access.
+1. When `hasRequestedAuthorization` is `false` (authorization not yet requested): `HealthPermissionCard` with a coach nuggie, description and Connect button
+2. When `hasRequestedAuthorization` is `true` (authorization has been requested or granted): three stat tiles in a row for Steps, Sleep and Resting HR. The tiles show formatted values from today's snapshot, or dashes (null formatted) before the first read
+3. When authorization was requested but today has no steps, sleep or resting heart rate data: `EmptyState` shows the tired nuggie, "No data yet — check Health access", a "Connect Apple Health" button, and an Alert with instructions "Settings → Health → Data Access & Devices → Cookiejar → Turn On All"
+4. Fallback: `EmptyState` with "Coming soon" message
+
+The page uses `useDailyHealth(today)` to load today's snapshot and `useHealthAuthorization` to manage the request state.
 
 ## App Start
 
@@ -713,7 +715,7 @@ src/
   components/
     primitives/             themed wrappers: Box, Typography, Touchable, TextField, Stack, Image, Icon, List, SectionedList, ScrollBox, AnimatedBox, SwipeableBox, LongPressDragBox, WindowMeasuredBox, TimePickerBox, PagedList, ProgressRingBox, ShakeBox
     atoms/                  smallest UI pieces: Button, TextButton, IconButton, Badge, Chip, Checkbox, NuggieImage, Card, NumberInput, DurationInput, DragHandle, SupersetBracket, Toast, TimeLabel, StatusChip, DayMarker
-    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField, PlanEntryRow, DaySectionHeader, PlanRow, RestDay, ActivePlanBanner, DayChip, ScheduledWorkoutCard, HeaderImageCard, WorkoutDetailExerciseRow, ActiveSessionBanner, PersonalRecordRow, RestTimerBar, SessionSetRow, SessionTopBar, StatTile, HealthPermissionCard, HealthWorkoutRow, LinkedHealthWorkoutRow, HealthSuggestionBanner
+    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField, PlanEntryRow, DaySectionHeader, PlanRow, RestDay, ActivePlanBanner, DayChip, ScheduledWorkoutCard, HeaderImageCard, WorkoutDetailExerciseRow, ActiveSessionBanner, PersonalRecordRow, RestTimerBar, SessionSetRow, SessionTopBar, StatTile (used by Phase 06 on Home), HealthPermissionCard, HealthWorkoutRow, LinkedHealthWorkoutRow, HealthSuggestionBanner
     organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter, PlanWeekEditor, AddPlanEntrySheet, ActivatePlanSheet, EntryTimeSheet, CopyDaySheet, WeekStrip, DayWorkoutList, IndividualWorkoutDetail, ClassWorkoutDetail, SessionLogger, ClassSessionView, SessionExerciseCard, SessionSummary, LinkHealthWorkoutSheet
   database/
     migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2), addSessionExerciseRestSeconds (v3)
