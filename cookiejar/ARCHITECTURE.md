@@ -91,6 +91,8 @@ Read the versioned docs at https://docs.expo.dev/versions/v57.0.0/ before using 
 | `getSetting(database, key)` | Returns the setting value string, or `null` |
 | `setSetting(database, key, value)` | Inserts or updates the setting value |
 
+Keys live in constants next to their feature: `healthAuthorizationRequestedAtSettingKey` in `src/health/healthSettingKeys.ts` and `coachTipLastShownDateSettingKey` (`coach_tip_last_shown_date`) in `src/coach/coachSettingKeys.ts`.
+
 ### Health Snapshot Repository
 
 `src/database/repositories/healthSnapshotRepository.ts` holds Apple Health snapshots by date:
@@ -183,10 +185,10 @@ routes (src/app)  →  organisms  →  molecules  →  atoms  →  primitives  �
 
 | Layer | Responsibility | Examples |
 | --- | --- | --- |
-| **primitives** | Thin themed wrappers over React Native elements. The only layer that touches raw `View`, `Text`, `Pressable`, `TextInput`, `ScrollView`, `FlatList`, `SectionList`, `expo-image`, `expo-symbols`, `react-native-svg` and `@react-native-community/datetimepicker`. They apply theme tokens and nothing else. | `Box`, `Typography`, `Touchable`, `TextField`, `Stack`, `Image`, `Icon`, `List`, `SectionedList`, `ScrollBox`, `AnimatedBox`, `SwipeableBox`, `LongPressDragBox`, `WindowMeasuredBox`, `TimePickerBox`, `ProgressRingBox`, `ShakeBox`, `SnapList` |
-| **atoms** | The smallest pieces of UI with meaning, built from primitives. No data access. | `Button`, `TextButton`, `IconButton`, `Badge`, `Chip`, `Checkbox`, `NuggieImage`, `Card`, `NumberInput`, `DurationInput`, `DragHandle`, `SupersetBracket`, `Toast`, `TimeLabel`, `StatusChip`, `DayMarker`, `CountdownButton`, `ElapsedTimer`, `PageDots`, `StreakDots`, `TrendArrow`, `DatePickerField` |
-| **molecules** | Small groups of atoms that work as a unit. Hold local UI state at most. | `CoachFloatingButton`, `ScreenHeader`, `EmptyState`, `ChipGroup`, `SegmentedControl`, `SearchBar`, `AlphabetIndex`, `ExerciseRow`, `FormField`, `ImageUrlField`, `Stepper`, `KindChoiceCard`, `ActionCard`, `TargetSetRow`, `TargetSetTable`, `WorkoutRow`, `WorkoutNameField`, `PlanEntryRow`, `DaySectionHeader`, `PlanRow`, `RestDay`, `ActivePlanBanner`, `DayChip`, `ScheduledWorkoutCard`, `HeaderImageCard`, `WorkoutDetailExerciseRow`, `ActiveSessionBanner`, `PersonalRecordRow`, `RestTimerBar`, `SessionSetRow`, `SessionTopBar`, `StatTile`, `GreetingHeader`, `TodayWorkoutCard`, `NuggieActionCard`, `RestDayCard`, `NoPlanCard`, `WeeklyStreakTile`, `StatBarRow`, `ProfileSummaryHeader`, `SettingsRow`, `MeasurementRow`, `RangeSwitcher`, `ClassCountTile`, `StatisticLine` |
-| **organisms** | Self-contained sections of a screen. Receive data and callbacks through props. | `NuggieLoadingScreen`, `ExerciseForm`, `ExercisePicker`, `ExerciseEditorCard`, `ReorderableExerciseList`, `ClassDetailsForm`, `CreateHub`, `WorkoutEditorFooter`, `PlanWeekEditor`, `AddPlanEntrySheet`, `ActivatePlanSheet`, `EntryTimeSheet`, `CopyDaySheet`, `WeekStrip`, `DayWorkoutList`, `IndividualWorkoutDetail`, `ClassWorkoutDetail`, `SessionLogger`, `ClassSessionView`, `SessionExerciseCard`, `SessionSummary`, `TodayCarousel`, `StatTileGrid`, `StatBarList`, `HealthMetricBarList`, `StreakBarList`, `ProfileForm`, `MeasurementForm`, `ProgressOverview`, `RecentRecordsSection`, `PersonalRecordItemRow`, `ClassCountSection`, `ClassStatisticsCard`, `ExerciseProgressSection`, `ExerciseHistoryList`, `ProgressChartFrame`, `ProgressLineChart`, `ProgressBarChart` |
+| **primitives** | Thin themed wrappers over React Native elements. The only layer that touches raw `View`, `Text`, `Pressable`, `TextInput`, `ScrollView`, `FlatList`, `SectionList`, `expo-image`, `expo-symbols`, `react-native-svg` and `@react-native-community/datetimepicker`. They apply theme tokens and nothing else. | `Box`, `Typography`, `Touchable`, `TextField`, `Stack`, `Image`, `Icon`, `List`, `SectionedList`, `ScrollBox`, `AnimatedBox`, `SwipeableBox`, `LongPressDragBox`, `WindowMeasuredBox`, `TimePickerBox`, `ProgressRingBox`, `ShakeBox`, `SnapList`, `PulseBox` |
+| **atoms** | The smallest pieces of UI with meaning, built from primitives. No data access. | `Button`, `TextButton`, `IconButton`, `Badge`, `Chip`, `Checkbox`, `NuggieImage`, `Card`, `NumberInput`, `DurationInput`, `DragHandle`, `SupersetBracket`, `Toast`, `TimeLabel`, `StatusChip`, `DayMarker`, `CountdownButton`, `ElapsedTimer`, `PageDots`, `StreakDots`, `TrendArrow`, `DatePickerField`, `TypingIndicator` |
+| **molecules** | Small groups of atoms that work as a unit. Hold local UI state at most. | `CoachFloatingButton`, `ScreenHeader`, `EmptyState`, `ChipGroup`, `SegmentedControl`, `SearchBar`, `AlphabetIndex`, `ExerciseRow`, `FormField`, `ImageUrlField`, `Stepper`, `KindChoiceCard`, `ActionCard`, `TargetSetRow`, `TargetSetTable`, `WorkoutRow`, `WorkoutNameField`, `PlanEntryRow`, `DaySectionHeader`, `PlanRow`, `RestDay`, `ActivePlanBanner`, `DayChip`, `ScheduledWorkoutCard`, `HeaderImageCard`, `WorkoutDetailExerciseRow`, `ActiveSessionBanner`, `PersonalRecordRow`, `RestTimerBar`, `SessionSetRow`, `SessionTopBar`, `StatTile`, `GreetingHeader`, `TodayWorkoutCard`, `NuggieActionCard`, `RestDayCard`, `NoPlanCard`, `WeeklyStreakTile`, `StatBarRow`, `ProfileSummaryHeader`, `SettingsRow`, `MeasurementRow`, `RangeSwitcher`, `ClassCountTile`, `StatisticLine`, `CoachMessageBubble`, `UserMessageBubble`, `PromptChip` |
+| **organisms** | Self-contained sections of a screen. Receive data and callbacks through props. | `NuggieLoadingScreen`, `ExerciseForm`, `ExercisePicker`, `ExerciseEditorCard`, `ReorderableExerciseList`, `ClassDetailsForm`, `CreateHub`, `WorkoutEditorFooter`, `PlanWeekEditor`, `AddPlanEntrySheet`, `ActivatePlanSheet`, `EntryTimeSheet`, `CopyDaySheet`, `WeekStrip`, `DayWorkoutList`, `IndividualWorkoutDetail`, `ClassWorkoutDetail`, `SessionLogger`, `ClassSessionView`, `SessionExerciseCard`, `SessionSummary`, `TodayCarousel`, `StatTileGrid`, `StatBarList`, `HealthMetricBarList`, `StreakBarList`, `ProfileForm`, `MeasurementForm`, `ProgressOverview`, `RecentRecordsSection`, `PersonalRecordItemRow`, `ClassCountSection`, `ClassStatisticsCard`, `ExerciseProgressSection`, `ExerciseHistoryList`, `ProgressChartFrame`, `ProgressLineChart`, `ProgressBarChart`, `CoachConversation`, `PromptChipBar` |
 | **routes** | Expo Router screens. Load data through repositories and hooks, then compose organisms. | `src/app/(tabs)/index.tsx`, `src/app/(tabs)/_layout.tsx`, `src/app/coach.tsx`, `src/app/exercises/*`, `src/app/workouts/*`, `src/app/plans/*`, `src/app/workout/[workoutId].tsx`, `src/app/sessions/[sessionId]/index.tsx`, `src/app/sessions/[sessionId]/finishing.tsx`, `src/app/sessions/[sessionId]/summary.tsx`, `src/app/stats/[metric].tsx`, `src/app/(tabs)/profile.tsx`, `src/app/profile/*`, `src/app/progress/*` |
 
 Rules:
@@ -203,12 +205,14 @@ All four routes are registered flat in the root `Stack`. There is no `exercises/
 
 | Route | Presentation | Purpose |
 | --- | --- | --- |
-| `/exercises` | Stack push | The library. Renders `ExercisePicker` in its `browse` variant. Tapping a row opens edit, and Add in the header (or the empty state's button) opens the new form |
+| `/exercises` | Stack push | The library. Renders `ExercisePicker` in its `browse` variant. Tapping a row opens edit, and Add in the header (or the empty state's button) opens the new form. Takes an optional `bodyPart` param (see below) |
 | `/exercises/new` | Modal | `ExerciseForm` with Save in the header. Takes an optional `requestIdentifier` (see below) |
 | `/exercises/[exerciseId]` | Stack push | `ExerciseForm` for editing, plus a red Delete that asks for confirmation and is disabled with a reason when the exercise is in use |
 | `/exercises/picker` | Full-screen modal, no Stack header | `ExercisePicker` in `multiple` or `single` mode. Params: `requestIdentifier`, `mode`, `excludeExerciseIds` (comma-separated) |
 
 `ExercisePicker` is one organism for both the library and the picker, so they share one list. It has Alphabetical, Body part and Recent tabs (`SegmentedControl`), a `SearchBar` that narrows whichever tab is active, and an `AlphabetIndex` on the alphabetical lists. In `multiple` mode, the footer holds "Add exercises (n)" (needs at least 1) and "Create superset" (needs at least 2). In `single` mode there is no footer, and tapping a row returns it. Excluded exercises are disabled and show a tick.
+
+The library route takes an optional `bodyPart` param (Phase 09a, used by the coach's `muscleBalance` action). `parseBodyPartParameter` turns it into a `BodyPart`, or `null` when it is missing, repeated or not a known body part. With a body part, the route filters both the alphabetical and the recent lists through `filterExercises` and shows a selected `Chip` ("{body part} ✕") above the list; tapping it calls `router.setParams({ bodyPart: undefined })` to clear the filter. Without the param the library is unchanged.
 
 The new and edit screens share their save flow through `useExerciseForm`. `useExercises`, `useExercise` and `useRecentlyUsedExercises` reload on focus.
 
@@ -220,6 +224,7 @@ These hold the library's logic, import no React Native, and are covered by `bun 
 - `src/exercises/groupExercisesAlphabetically.ts`: A–Z sections with `#` last, and `findNearestSectionTitle` for index letters that have no section
 - `src/exercises/filterExercises.ts`: search text and body part
 - `src/exercises/toggleExerciseSelection.ts`: ticks and unticks while keeping tick order
+- `src/exercises/parseBodyPartParameter.ts`: the `bodyPart` route param to a `BodyPart` or `null`
 
 ### Pick Store Pattern
 
@@ -870,7 +875,7 @@ Phase 08 turns the Profile tab into a hub, adds the profile form, the body measu
 3. Progress: a `SettingsRow` titled by `describeNewRecordCount` with the lifetime totals from `describeLifetimeTotals` as its subtitle (opens `/progress`). It appears once the lifetime totals have loaded.
 4. "Exercise library" (opens `/exercises`) and "Apple Health" (subtitle from `describeHealthAccessStatus(...).caption`, opens `/profile/apple-health`).
 
-There is no Notifications row; it waits for Phase 09. Saving the profile or a measurement, and deleting a measurement, calls `bumpDataVersion()`, so Home and the hub reload.
+There is no Notifications row; it waits for Phase 09b. Saving the profile or a measurement, and deleting a measurement, calls `bumpDataVersion()`, so Home and the hub reload.
 
 ### Routes
 
@@ -978,6 +983,113 @@ These import no React Native, expo-sqlite, Skia, victory-native or HealthKit cod
 
 Elsewhere: `src/stats/healthChartPoints.ts` (`healthChartPoints`, `healthChartUnits`, `averageOfPoints`), `src/health/describeHealthAccessStatus.ts` (caption, headline and detail for the three access states) and `src/dates/formatDayMonth.ts`. New shared types are `ChartPoint`, `ClassStatistics`, `ExerciseHistory` (with `ExerciseWithHistory`), `FinishedSessionSet` and `TrainingTotals`; `BodyMeasurement.ts` gains `BodyMeasurementInput` and `WeightMeasurement`.
 
+## Coach Nuggie
+
+Phase 09a replaces the placeholder coach modal with a rule-based coach. It adds no migration and makes no network calls. Notifications are not part of it; they come in Phase 09b.
+
+### Pure Coach Module
+
+`src/coach/` is pure. It imports no React Native, expo-sqlite or expo-router code, and is covered by `bun test`. Only routes and hooks talk to the database and the router. The flow is:
+
+1. `useCoachSnapshot` reads the repositories and hands plain results to `buildCoachSnapshot`, which returns a `CoachSnapshot`.
+2. Each rule in the registry (`insightRules` in `insightRules.ts`) is a function `(snapshot) => Insight[]`.
+3. `collectInsights` runs every rule, applies the `noData` exceptions, and sorts by `priority`, highest first.
+4. `answerQuestion(question, snapshot)` keeps the insights whose `topics` include the question's topic, takes the first 3 (`maximumInsightsPerAnswer`) and turns them into `CoachBubble`s. With no matching insight it returns one `coach` nuggie bubble with the topic's text from `topicFallbacks`.
+5. `openingBubbles(snapshot)` builds the greeting: `chooseGreeting(now, displayName)` ("Morning", "Afternoon" or "Evening", plus the trimmed name when there is one) prefixed to the single top insight across every topic, or to `openingFallback` when there is none.
+6. `chooseTipOfTheDay(snapshot)` takes the first message of the top insight that has a `recovery`, `changeItUp` or `progress` topic. Without one, `chooseGeneralTip(date)` picks from `generalTips` by day of the year.
+
+`CoachSnapshot` holds `now`, `today`, `weekStartDate`, the profile, the active plan, `finishedSessionCount`, the finished sessions of the last 12 weeks with their sets, the personal record events of the last 14 days, the workouts scheduled this week and in the 4 weeks before it, the health snapshots of the last 14 days, the latest body measurement and the exercises by id. Weeks start on the same day as the Home streak tile (`startOfWeek`). `coachSnapshotDateRanges` computes the windows, and `groupSetsIntoSessions` groups sets into sessions.
+
+An `Insight` has a `ruleIdentifier`, a list of `topics` (not one topic; a question matches when its topic is in the list), a `priority`, a `nuggie`, one or more `messages` and an optional `action` (`label` and `destination`). `insightToBubbles` makes one bubble per message and puts the action on the last bubble only. The five topics are `progress`, `improvement`, `changeItUp`, `recovery` and `week` (`Topic.ts`), and `coachQuestions` has one prompt chip per topic.
+
+Each priority is a named constant in its rule's file, and each rule file also holds that rule's thresholds as named constants.
+
+| Priority | Rule | Topics |
+| --- | --- | --- |
+| 100 | `noData` | all five |
+| 90 | `lowSleep` | `recovery` |
+| 85 | `elevatedRestingHeartRate` | `recovery` |
+| 80 | `newPersonalRecords` | `progress` |
+| 70 | `missedSessions` | `week`, `improvement` |
+| 65 | `trainingLoadSpike` | `recovery` |
+| 60 | `plateau` | `changeItUp`, `improvement` |
+| 55 | `stalePlan` | `changeItUp` |
+| 50 | `streakMilestone` | `progress`, `week` |
+| 45 | `muscleBalance` | `improvement` |
+| 40 | `noRecentWeighIn` | `improvement` |
+| 35 | `recoveryGood` | `recovery` |
+| 30 | `strengthTrend` | `progress` |
+| 10 | `weekAhead` | `week` |
+
+`noData` fires when `finishedSessionCount` is below `minimumFinishedSessions` (3). When it fires, every insight is dropped except those from `noData`, `lowSleep`, `elevatedRestingHeartRate`, `recoveryGood`, `weekAhead` and `stalePlan` (`rulesShownWithoutData`), because those do not need workout history.
+
+`CoachDestination` is a union of `exerciseHistory` (with an exercise id), `planEditor` (with a plan id), `addMeasurement`, `calendar` and `exerciseLibrary` (with a body part). The module has no route strings. `src/app/coach.tsx` maps them:
+
+| Destination | Route |
+| --- | --- |
+| `exerciseHistory` | `/progress/exercises/[exerciseId]` |
+| `planEditor` | `/plans/[planId]` (the active plan's id) |
+| `addMeasurement` | `/profile/measurements/new` |
+| `calendar` | `/calendar` (the Calendar tab, for "Today's plan" and "Open calendar") |
+| `exerciseLibrary` | `/exercises?bodyPart=<bodyPart>` |
+
+Tapping an action calls `router.dismiss()` and then `router.navigate(...)`, so the destination is not stacked under the coach modal.
+
+Other files: `buildCoachSnapshot.ts` and `recoveryReadings.ts` (sleep and resting heart rate averages shared by the recovery rules), `coachConversation.ts` (the reducer, below), `coachSettingKeys.ts`, and `coachSnapshotFixture.ts` with `coachAcceptance.test.ts`, which prove the four seeded-data cases (squat plateau, stale plan, low sleep with the `tired` nuggie, new record with the `beast` nuggie) on a pure snapshot. Nothing is seeded on the device.
+
+### Coach Conversation
+
+`conversationReducer` (`src/coach/coachConversation.ts`) holds `messages`, `queuedBubbles` and `nextIdentifier`. Its actions are `opened` (replaces the state with the opening bubbles queued), `questionAsked` (adds the user's prompt and queues the answer bubbles; ignored while bubbles are still queued) and `nextBubbleRevealed` (moves the first queued bubble into `messages`). `isTyping` is true while any bubble is queued.
+
+`useCoachConversation(snapshot)` wraps the reducer. It opens once, as soon as the snapshot is not `null`, and reveals one queued bubble every `coachTypingDelayMilliseconds` (400 ms) with `setTimeout`. It returns `{ messages, isTyping, typingNuggie, askQuestion }`, where `typingNuggie` is the nuggie of the next queued bubble. The conversation is never stored, so it starts again each time the coach opens.
+
+### Coach Route
+
+`/coach` is a modal (registered in the root `Stack` with title "Coach Nuggie"). It loads `useCoachSnapshot()` and renders:
+
+- `CoachConversation` (organism): a `ScrollBox` of `UserMessageBubble` and `CoachMessageBubble` rows, each rising in with `AnimatedBox`, then a `CoachMessageBubble` holding a `TypingIndicator` while a bubble is queued. It scrolls to the end when its content grows. A bubble with an action shows it as a secondary `Button`.
+- `PromptChipBar` (organism): a horizontal `ScrollBox` of `PromptChip`s, one per question in `coachQuestions`. The chips are disabled while the snapshot is loading or while an answer is typing, so a chip can't be tapped again mid-answer.
+- When the snapshot fails to load, an `EmptyState` ("Coach Nuggie is stuck") with a Close button.
+
+While the snapshot loads, the typing indicator uses the `coach` nuggie.
+
+### Tip of the Day
+
+`useTipOfTheDay()` is called by `src/app/(tabs)/_layout.tsx` and returns the tip text, or `undefined`. Once the snapshot lookup has settled it decides once per mount: it reads `coachTipLastShownDateSettingKey` (`coach_tip_last_shown_date`) from `app_settings`; if that equals today's local date it shows nothing, otherwise it picks the tip (`chooseTipOfTheDay` when the snapshot is ready, `chooseGeneralTip` when it failed) and stores today's date. So the tip shows at most once per local day. It clears the text after `durations.tipBubbleVisible` (6000 ms). `CoachFloatingButton` shows `tipText` in a bubble that is a `Touchable`, and tapping it opens the coach like the button does.
+
+### Hooks
+
+| Hook | Behaviour |
+| --- | --- |
+| `useCoachSnapshot()` | Returns `{ status: 'loading' }`, `{ status: 'failed' }` or `{ status: 'ready', snapshot }`. Reads the profile, the active plan, the lifetime totals, all finished session sets, the scheduled sessions from 4 weeks before this week to its end, the health snapshots of the last 14 days, the latest body measurement and the exercises, then calls `buildCoachSnapshot`. Reloads when the data version changes |
+| `useCoachConversation(snapshot)` | See Coach Conversation |
+| `useTipOfTheDay()` | See Tip of the Day |
+
+### Components
+
+| Component | Purpose |
+| --- | --- |
+| `PulseBox` (primitive) | An `Animated.View` that loops its opacity between 0.3 and 1. Takes `pulseDuration` and an optional `delay` |
+| `TypingIndicator` (atom) | Three `PulseBox` dots in a surface bubble, staggered, with the label "Coach Nuggie is typing" |
+| `CoachMessageBubble` (molecule) | A `NuggieImage` avatar beside a bubble with text and an optional action `Button`. Takes `children` in place of the bubble, which the typing state uses |
+| `UserMessageBubble` (molecule) | Right-aligned accent bubble with the user's prompt |
+| `PromptChip` (molecule) | A pill-shaped prompt button with an accent border. Takes `disabled` |
+| `CoachConversation` (organism) | See Coach Route |
+| `PromptChipBar` (organism) | See Coach Route |
+
+`ScrollBox` now takes a `ref` (typed `Ref<ScrollView>`) and exports `ScrollBoxHandle`, so `CoachConversation` can call `scrollToEnd`. `CoachFloatingButton` already took `tipText`; the bubble is now tappable.
+
+### New Theme Tokens
+
+| Token | Value | Purpose |
+| --- | --- | --- |
+| `sizes.coachAvatar` | 36 | Size of the nuggie beside a coach bubble |
+| `sizes.typingDot` | 8 | Diameter of a typing indicator dot |
+| `sizes.chatBubbleMaximumWidth` | 300 | Maximum width of a coach or user bubble |
+| `durations.typingDotPulse` | 400 | Length of one fade in the typing dots |
+| `durations.typingDotStagger` | 150 | Delay between neighbouring typing dots |
+| `durations.tipBubbleVisible` | 6000 | How long the tip bubble stays before hiding itself |
+
 ## App Start
 
 When the app launches:
@@ -986,7 +1098,7 @@ When the app launches:
 2. `NuggieLoadingScreen` appears as an overlay (sky-blue background, 180-point centred nuggie image, caption) and hides the native splash on its first layout. The nuggie is chosen by `chooseNuggie({ kind: 'appLoading' }, new Date())` to match the hour of day (sleeping 22–04, early morning 05–07, workout 08–21).
 3. The `SQLiteProvider` (with `useSuspense`) runs its `onInit` function: migrations execute against the database, driven by `PRAGMA user_version`.
 4. Once the database is ready and the minimum 800ms has elapsed, the loading screen hides and the tab navigation appears.
-5. Four tabs occupy the bottom: Home, Calendar, Create, Profile. The `CoachFloatingButton` (64-point circle with a 3-point accent ring) floats in the bottom-right, 16 points from each edge, above the tab bar. Tapping it opens the coach modal.
+5. Four tabs occupy the bottom: Home, Calendar, Create, Profile. The `CoachFloatingButton` (64-point circle with a 3-point accent ring) floats in the bottom-right, 16 points from each edge, above the tab bar. Tapping it opens the coach modal. The tabs layout also calls `useTipOfTheDay()` and passes the result to the button as `tipText` (see Coach Nuggie).
 
 The root layout nests `ThemeProvider` → `Suspense` (null fallback) → `SQLiteProvider` → `GestureHandlerRootView` → `Stack`. The loading screen is a sibling overlay inside `ThemeProvider`, so the tabs mount underneath while it is still showing.
 
@@ -997,7 +1109,7 @@ src/
   app/                      Expo Router routes and layouts
     (tabs)/                 bottom tabs: index, calendar, create, profile
     _layout.tsx             root: ThemeProvider → Suspense → SQLiteProvider → GestureHandlerRootView → Stack
-    coach.tsx               Coach modal screen
+    coach.tsx               Coach modal screen: conversation, prompt chips, action routing
     exercises/              library (index), new, [exerciseId] edit, picker
     workouts/               builder: _layout with WorkoutEditorProvider, new, class-details, editor, [workoutId]/edit, superset-info
     plans/                  new, [planId] editor, [planId]/add-entry, entry-time, activate, copy-day
@@ -1007,15 +1119,15 @@ src/
     progress/               index, records, classes, exercises/[exerciseId]
     sessions/               [sessionId] logger, finishing, summary screens, [sessionId]/link-health-workout sheet
   components/
-    primitives/             themed wrappers: Box, Typography, Touchable, TextField, Stack, Image, Icon, List, SectionedList, ScrollBox, AnimatedBox, SwipeableBox, LongPressDragBox, WindowMeasuredBox, TimePickerBox, PagedList, SnapList, ProgressRingBox, ShakeBox
-    atoms/                  smallest UI pieces: Button, TextButton, IconButton, Badge, Chip, Checkbox, NuggieImage, Card, NumberInput, DurationInput, DragHandle, SupersetBracket, Toast, TimeLabel, StatusChip, DayMarker, PageDots, StreakDots, TrendArrow, DatePickerField
-    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField, PlanEntryRow, DaySectionHeader, PlanRow, RestDay, ActivePlanBanner, DayChip, ScheduledWorkoutCard, HeaderImageCard, WorkoutDetailExerciseRow, ActiveSessionBanner, PersonalRecordRow, RestTimerBar, SessionSetRow, SessionTopBar, StatTile, HealthPermissionCard, HealthWorkoutRow, LinkedHealthWorkoutRow, HealthSuggestionBanner, GreetingHeader, TodayWorkoutCard, NuggieActionCard, RestDayCard, NoPlanCard, WeeklyStreakTile, StatBarRow, ProfileSummaryHeader, SettingsRow, MeasurementRow, RangeSwitcher, ClassCountTile, StatisticLine
-    organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter, PlanWeekEditor, AddPlanEntrySheet, ActivatePlanSheet, EntryTimeSheet, CopyDaySheet, WeekStrip, DayWorkoutList, IndividualWorkoutDetail, ClassWorkoutDetail, SessionLogger, ClassSessionView, SessionExerciseCard, SessionSummary, LinkHealthWorkoutSheet, TodayCarousel, StatTileGrid, StatBarList, HealthMetricBarList, StreakBarList, ProfileForm, MeasurementForm, ProgressOverview, RecentRecordsSection, PersonalRecordItemRow, ClassCountSection, ClassStatisticsCard, ExerciseProgressSection, ExerciseHistoryList, ProgressChartFrame, ProgressLineChart, ProgressBarChart
+    primitives/             themed wrappers: Box, Typography, Touchable, TextField, Stack, Image, Icon, List, SectionedList, ScrollBox, AnimatedBox, SwipeableBox, LongPressDragBox, WindowMeasuredBox, TimePickerBox, PagedList, SnapList, ProgressRingBox, ShakeBox, PulseBox
+    atoms/                  smallest UI pieces: Button, TextButton, IconButton, Badge, Chip, Checkbox, NuggieImage, Card, NumberInput, DurationInput, DragHandle, SupersetBracket, Toast, TimeLabel, StatusChip, DayMarker, PageDots, StreakDots, TrendArrow, DatePickerField, TypingIndicator
+    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField, PlanEntryRow, DaySectionHeader, PlanRow, RestDay, ActivePlanBanner, DayChip, ScheduledWorkoutCard, HeaderImageCard, WorkoutDetailExerciseRow, ActiveSessionBanner, PersonalRecordRow, RestTimerBar, SessionSetRow, SessionTopBar, StatTile, HealthPermissionCard, HealthWorkoutRow, LinkedHealthWorkoutRow, HealthSuggestionBanner, GreetingHeader, TodayWorkoutCard, NuggieActionCard, RestDayCard, NoPlanCard, WeeklyStreakTile, StatBarRow, ProfileSummaryHeader, SettingsRow, MeasurementRow, RangeSwitcher, ClassCountTile, StatisticLine, CoachMessageBubble, UserMessageBubble, PromptChip
+    organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter, PlanWeekEditor, AddPlanEntrySheet, ActivatePlanSheet, EntryTimeSheet, CopyDaySheet, WeekStrip, DayWorkoutList, IndividualWorkoutDetail, ClassWorkoutDetail, SessionLogger, ClassSessionView, SessionExerciseCard, SessionSummary, LinkHealthWorkoutSheet, TodayCarousel, StatTileGrid, StatBarList, HealthMetricBarList, StreakBarList, ProfileForm, MeasurementForm, ProgressOverview, RecentRecordsSection, PersonalRecordItemRow, ClassCountSection, ClassStatisticsCard, ExerciseProgressSection, ExerciseHistoryList, ProgressChartFrame, ProgressLineChart, ProgressBarChart, CoachConversation, PromptChipBar
   database/
     migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2), addSessionExerciseRestSeconds (v3)
     repositories/           one file per entity: exerciseRepository, workoutRepository, planRepository, scheduleRepository, sessionRepository, appSettingsRepository, healthSnapshotRepository, profileRepository, bodyMeasurementRepository, progressRepository
-  exercises/                pure exercise logic with tests: validation, A–Z grouping, filtering, selection
-  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan, usePlanActions, useScheduledWorkouts, useWeekPages, useSelectedDate, useScheduledWeeks, useSession, useStartSession, useActiveSession, useFinishedSession, useRestTimer, useSessionExercisePicks, useHealthAuthorization, useDailyHealth, useOverlappingHealthWorkouts, useUnlinkHealthWorkout, useProfile, useWeeklyStreak, useHealthRange, useFocusReloadKey, useProfileForm, useBodyMeasurements, useMeasurementForm, useTrainingTotals, usePersonalRecords, useNewRecordCount, useExercisesWithHistory, useExerciseHistory, useClassStatistics
+  exercises/                pure exercise logic with tests: validation, A–Z grouping, filtering, selection, body part param parsing
+  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan, usePlanActions, useScheduledWorkouts, useWeekPages, useSelectedDate, useScheduledWeeks, useSession, useStartSession, useActiveSession, useFinishedSession, useRestTimer, useSessionExercisePicks, useHealthAuthorization, useDailyHealth, useOverlappingHealthWorkouts, useUnlinkHealthWorkout, useProfile, useWeeklyStreak, useHealthRange, useFocusReloadKey, useProfileForm, useBodyMeasurements, useMeasurementForm, useTrainingTotals, usePersonalRecords, useNewRecordCount, useExercisesWithHistory, useExerciseHistory, useClassStatistics, useCoachSnapshot, useCoachConversation, useTipOfTheDay
   stores/                   exercisePickerStore, workoutSavedStore for returning values between screens; dataVersionStore, restTimerStore for module-level state; with tests
   plans/                    pure plan logic with tests: build scheduled workouts, time of day, summaries, copy day, weekday grouping, day marker state, week cache
   workouts/                 pure builder logic with tests: reducer, normalisation, grouping blocks, target set columns, save rows, drag maths, rest presets, class type nuggies, editor context and provider, duration estimation, target set descriptions
@@ -1032,7 +1144,7 @@ src/
   types/                    shared domain types (Exercise, Workout, Session, Plan, ScheduledWorkout, etc.)
   theme/                    design tokens and theme provider
   health/                   Apple Health integration (phase 06); range backfill, trend and step progress helpers (phase 07)
-  coach/                    Coach logic and screens (phase 09)
+  coach/                    pure coach logic with tests (phase 09a): snapshot, rule registry and rules/, answers, greeting, tip of the day, conversation reducer. No React Native, expo-sqlite or expo-router imports. Notifications arrive in phase 09b
 ```
 
 **Note on typed routes:** Expo Router generates TypeScript types for file-based routes into `.expo/types/router.d.ts` during `npx expo start` on the development machine. A fresh checkout needs one dev-server start before `bun run typecheck` accepts new route references.
