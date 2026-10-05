@@ -165,6 +165,42 @@ describe('plateau', () => {
     expect(insightsFor(sessions(75))).toEqual([]);
   });
 
+  test('a session exactly at the window start counts', () => {
+    const atWindowStart = new Date(2026, 7, 31, 0, 0);
+    expect(
+      insightsFor([
+        { ...sessionOn(31, flatSets, 7), startedAt: atWindowStart.toISOString() },
+        sessionOn(14, flatSets, 8),
+        sessionOn(21, flatSets, 8),
+        sessionOn(5, flatSets),
+      ]),
+    ).toHaveLength(1);
+  });
+
+  test('a session just before the window start is ignored', () => {
+    const beforeWindowStart = new Date(2026, 7, 30, 23, 59);
+    expect(
+      insightsFor([
+        { ...sessionOn(30, flatSets, 7), startedAt: beforeWindowStart.toISOString() },
+        sessionOn(14, flatSets, 8),
+        sessionOn(21, flatSets, 8),
+        sessionOn(5, flatSets),
+      ]),
+    ).toEqual([]);
+  });
+
+  test('earlier gains outside the window do not hide a recent plateau', () => {
+    expect(
+      insightsFor([
+        sessionOn(1, [weightedSet(50, 5)], 7),
+        sessionOn(14, flatSets, 8),
+        sessionOn(21, flatSets, 8),
+        sessionOn(28, flatSets, 8),
+        sessionOn(5, flatSets),
+      ]),
+    ).toHaveLength(1);
+  });
+
   test('ignores sessions older than the window', () => {
     expect(
       insightsFor([

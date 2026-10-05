@@ -80,6 +80,17 @@ describe('missedSessions', () => {
     ).toEqual([]);
   });
 
+  test('ad-hoc completed workouts do not lift the completion ratio', () => {
+    const adHocCompleted = Array.from({ length: 10 }, () =>
+      createScheduledWorkout({ date: '2026-09-20', status: 'completed', isPlanned: false }),
+    );
+    expect(
+      missedSessions(
+        createCoachSnapshot({ scheduledPreviousFourWeeks: [...previousWorkouts(1, 5), ...adHocCompleted] }),
+      ),
+    ).toHaveLength(1);
+  });
+
   test('never fires on completion when nothing was planned', () => {
     expect(missedSessions(createCoachSnapshot({ scheduledPreviousFourWeeks: [] }))).toEqual([]);
   });

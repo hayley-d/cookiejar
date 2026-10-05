@@ -25,8 +25,7 @@ type SessionBest = { startedAt: string; bestValue: number };
 type Plateau = { exerciseId: number; weekCount: number };
 
 function windowStartTime(weekStartDate: string): number {
-  const windowStart = addDays(parseLocalDateString(weekStartDate), -(plateauWindowWeekCount - 1) * daysPerWeek);
-  return parseLocalDateString(toLocalDateString(windowStart)).getTime();
+  return addDays(parseLocalDateString(weekStartDate), -(plateauWindowWeekCount - 1) * daysPerWeek).getTime();
 }
 
 function metricValueOf(set: CompletedSet): number | null {
