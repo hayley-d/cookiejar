@@ -1,5 +1,6 @@
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
+import { Alert } from 'react-native';
 
 import { updateProfile } from '@/database/repositories/profileRepository';
 import { toLocalDateString } from '@/dates/toLocalDateString';
@@ -35,6 +36,8 @@ export function useProfileForm({ initialValues, onSaved }: ProfileFormOptions) {
       await updateProfile(database, toProfileUpdate(values));
       bumpDataVersion();
       onSaved();
+    } catch {
+      Alert.alert('Could not save your profile', 'Something went wrong. Please try again.');
     } finally {
       setIsSaving(false);
     }

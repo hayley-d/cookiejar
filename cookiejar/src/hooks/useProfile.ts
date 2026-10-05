@@ -8,6 +8,7 @@ import type { Profile } from '@/types/Profile';
 
 export type ProfileState = Profile & {
   isLoaded: boolean;
+  hasLoadFailed: boolean;
 };
 
 const defaultProfileState: ProfileState = {
@@ -21,6 +22,7 @@ const defaultProfileState: ProfileState = {
   dailyStepGoal: 10000,
   updatedAt: '',
   isLoaded: false,
+  hasLoadFailed: false,
 };
 
 export function useProfile(): ProfileState {
@@ -34,10 +36,14 @@ export function useProfile(): ProfileState {
     getProfile(database).then(
       (profile) => {
         if (isActive && profile) {
-          setProfileState({ ...profile, isLoaded: true });
+          setProfileState({ ...profile, isLoaded: true, hasLoadFailed: false });
         }
       },
-      () => {},
+      () => {
+        if (isActive) {
+          setProfileState((previousState) => ({ ...previousState, hasLoadFailed: true }));
+        }
+      },
     );
     return () => {
       isActive = false;

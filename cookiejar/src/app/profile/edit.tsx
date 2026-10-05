@@ -1,6 +1,7 @@
 import { router, Stack } from 'expo-router';
 
 import { TextButton } from '@/components/atoms/TextButton';
+import { EmptyState } from '@/components/molecules/EmptyState';
 import { ProfileForm } from '@/components/organisms/ProfileForm';
 import { useProfile } from '@/hooks/useProfile';
 import { useProfileForm } from '@/hooks/useProfileForm';
@@ -30,7 +31,14 @@ export default function EditProfileScreen() {
   const profile = useProfile();
 
   if (!profile.isLoaded) {
-    return null;
+    return profile.hasLoadFailed ? (
+      <EmptyState
+        title="Could not load your profile"
+        message="Something went wrong. Please try again."
+        actionLabel="Close"
+        onAction={() => router.back()}
+      />
+    ) : null;
   }
 
   return (
