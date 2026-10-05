@@ -1,12 +1,11 @@
 import type { NuggieName } from '@/nuggies/NuggieName';
 
-export type AppNotification = {
-  id: number;
-  identifier: string | null;
+export type PlannedNotification = {
+  identifier: string;
   title: string;
   body: string;
   nuggie: NuggieName;
   route: string | null;
-  createdAt: string;
-  readAt: string | null;
+  fireAt: Date;
+  playsSound: boolean;
 };
