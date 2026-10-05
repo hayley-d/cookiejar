@@ -9,6 +9,7 @@ import { datesBetween } from '@/dates/datesBetween';
 import { clearRefreshStarted, getLastRefreshStartedAt, markRefreshStarted } from '@/health/healthRefreshThrottle';
 import { healthAuthorizationRequestedAtSettingKey } from '@/health/healthSettingKeys';
 import { healthRangeDatesToBackfill } from '@/health/healthRangeDatesToBackfill';
+import { mergeHealthSnapshots } from '@/health/mergeHealthSnapshots';
 import { readDailyHealth } from '@/health/readDailyHealth';
 import { shouldRefreshHealth } from '@/health/shouldRefreshHealth';
 import type { HealthSnapshot } from '@/types/HealthSnapshot';
@@ -27,12 +28,28 @@ export function useHealthRange(startDate: string, endDate: string) {
 
   const loadAndBackfill = useCallback(
     async (isActive: () => boolean) => {
+      const mergeIntoCurrentRange = (incomingSnapshots: HealthSnapshot[], shouldStartRange: boolean) => {
+        setLoadedRange((previousRange) => {
+          const isSameRange =
+            previousRange !== null && previousRange.startDate === startDate && previousRange.endDate === endDate;
+          if (!isSameRange) {
+            return shouldStartRange
+              ? { startDate, endDate, snapshotsByDate: mergeHealthSnapshots(new Map(), incomingSnapshots) }
+              : previousRange;
+          }
+          return {
+            startDate,
+            endDate,
+            snapshotsByDate: mergeHealthSnapshots(previousRange.snapshotsByDate, incomingSnapshots),
+          };
+        });
+      };
+
       const cachedSnapshots = await getHealthSnapshotsBetween(database, startDate, endDate);
       if (!isActive()) {
         return;
       }
-      const snapshotsByDate = new Map(cachedSnapshots.map((snapshot) => [snapshot.date, snapshot]));
-      setLoadedRange({ startDate, endDate, snapshotsByDate: new Map(snapshotsByDate) });
+      mergeIntoCurrentRange(cachedSnapshots, true);
 
       const authorizationRequestedAt = await getSetting(database, healthAuthorizationRequestedAtSettingKey);
       if (!isActive() || authorizationRequestedAt === null) {
@@ -52,13 +69,9 @@ export function useHealthRange(startDate: string, endDate: string) {
         try {
           const dailyHealth = await readDailyHealth(date, now);
           const freshSnapshot = await upsertHealthSnapshot(database, dailyHealth);
-          snapshotsByDate.set(date, freshSnapshot);
+          mergeIntoCurrentRange([freshSnapshot], false);
         } catch {
           clearRefreshStarted(date);
-          continue;
-        }
-        if (isActive()) {
-          setLoadedRange({ startDate, endDate, snapshotsByDate: new Map(snapshotsByDate) });
         }
       }
     },
@@ -68,11 +81,28 @@ export function useHealthRange(startDate: string, endDate: string) {
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
+      let isRunning = false;
+      let isRerunQueued = false;
       const isStillActive = () => isActive;
-      loadAndBackfill(isStillActive).catch(() => {});
+      const requestRun = async () => {
+        if (isRunning) {
+          isRerunQueued = true;
+          return;
+        }
+        isRunning = true;
+        try {
+          do {
+            isRerunQueued = false;
+            await loadAndBackfill(isStillActive);
+          } while (isRerunQueued && isActive);
+        } finally {
+          isRunning = false;
+        }
+      };
+      requestRun().catch(() => {});
       const subscription = AppState.addEventListener('change', (appState) => {
         if (appState === 'active') {
-          loadAndBackfill(isStillActive).catch(() => {});
+          requestRun().catch(() => {});
         }
       });
       return () => {
