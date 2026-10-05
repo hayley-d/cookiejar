@@ -6,6 +6,7 @@ import { ScheduledWorkoutCard } from '@/components/molecules/ScheduledWorkoutCar
 import { Box } from '@/components/primitives/Box';
 import { Typography } from '@/components/primitives/Typography';
 import type { ScheduledWorkoutsForDateLookup } from '@/plans/scheduledWeekCache';
+import { resolveScheduledWorkoutRoute } from '@/sessions/resolveScheduledWorkoutRoute';
 import type { ScheduledWorkout } from '@/types/ScheduledWorkout';
 
 type DayWorkoutListProperties = {
@@ -15,18 +16,11 @@ type DayWorkoutListProperties = {
 };
 
 function openWorkout(scheduledWorkout: ScheduledWorkout) {
-  const workoutId = scheduledWorkout.workout.id;
-  if (workoutId === null) {
+  const route = resolveScheduledWorkoutRoute(scheduledWorkout);
+  if (route === null) {
     return;
   }
-  router.push({
-    pathname: '/workout/[workoutId]',
-    params: {
-      workoutId: String(workoutId),
-      date: scheduledWorkout.date,
-      ...(scheduledWorkout.planEntryId === null ? {} : { planEntryId: String(scheduledWorkout.planEntryId) }),
-    },
-  });
+  router.push(route);
 }
 
 export function DayWorkoutList({ lookup, today, onStartWorkout }: DayWorkoutListProperties) {
