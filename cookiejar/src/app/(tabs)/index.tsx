@@ -12,10 +12,14 @@ import { StatTileGrid } from '@/components/organisms/StatTileGrid';
 import { TodayCarousel } from '@/components/organisms/TodayCarousel';
 import { Box } from '@/components/primitives/Box';
 import { ScrollBox } from '@/components/primitives/ScrollBox';
+import { addDays } from '@/dates/addDays';
+import { datesBetween } from '@/dates/datesBetween';
 import { toLocalDateString } from '@/dates/toLocalDateString';
+import { compareToAverage } from '@/health/compareToAverage';
 import { shouldShowHealthAccessHint } from '@/health/shouldShowHealthAccessHint';
 import { useDailyHealth } from '@/hooks/useDailyHealth';
 import { useHealthAuthorization } from '@/hooks/useHealthAuthorization';
+import { useHealthRange } from '@/hooks/useHealthRange';
 import { useProfile } from '@/hooks/useProfile';
 import { useScheduledWorkoutsForDate } from '@/hooks/useScheduledWorkouts';
 import { useStartSession } from '@/hooks/useStartSession';
@@ -23,6 +27,7 @@ import { useWeeklyStreak } from '@/hooks/useWeeklyStreak';
 import type { ScheduledWorkout } from '@/types/ScheduledWorkout';
 
 const coachButtonClearance = 96;
+const trendDayCount = 7;
 const healthAccessInstructions = 'Settings → Health → Data Access & Devices → Cookiejar → Turn On All';
 
 const showHealthAccessInstructions = () => {
@@ -35,6 +40,15 @@ export default function HomeScreen() {
   const { displayName, dailyStepGoal } = useProfile();
   const { hasRequestedAuthorization, isRequesting, requestAuthorization } = useHealthAuthorization();
   const { snapshot, refresh } = useDailyHealth(today);
+  const previousDays = datesBetween(
+    toLocalDateString(addDays(now, -trendDayCount)),
+    toLocalDateString(addDays(now, -1)),
+  );
+  const { snapshotsByDate } = useHealthRange(previousDays[0], previousDays[previousDays.length - 1]);
+  const restingHeartRateTrend = compareToAverage(
+    snapshot?.restingHeartRate ?? null,
+    previousDays.map((date) => snapshotsByDate.get(date)?.restingHeartRate ?? null),
+  );
   const todayWorkouts = useScheduledWorkoutsForDate(today);
   const { startSession } = useStartSession();
   const weeklyStreak = useWeeklyStreak(now);
@@ -89,6 +103,7 @@ export default function HomeScreen() {
             steps={snapshot?.steps ?? null}
             sleepMinutes={snapshot?.sleepMinutes ?? null}
             restingHeartRate={snapshot?.restingHeartRate ?? null}
+            restingHeartRateTrend={restingHeartRateTrend}
             dailyStepGoal={dailyStepGoal}
             now={now}
             weeklyTile={

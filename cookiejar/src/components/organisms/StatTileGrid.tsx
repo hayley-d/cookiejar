@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react';
 
+import { TrendArrow } from '@/components/atoms/TrendArrow';
 import { HealthPermissionCard } from '@/components/molecules/HealthPermissionCard';
 import { StatTile } from '@/components/molecules/StatTile';
 import { Box } from '@/components/primitives/Box';
 import { ProgressRingBox } from '@/components/primitives/ProgressRingBox';
+import type { AverageComparison } from '@/health/compareToAverage';
 import { describeStepProgress } from '@/health/describeStepProgress';
 import { formatRestingHeartRate } from '@/health/formatRestingHeartRate';
 import { formatSleepMinutes } from '@/health/formatSleepMinutes';
@@ -13,6 +15,7 @@ import { useTheme } from '@/theme/useTheme';
 
 const lowSleepMinutes = 360;
 const noDataCaption = 'No data yet';
+const trendCaption = 'vs 7-day avg';
 
 type StatTileGridProperties = {
   hasRequestedAuthorization: boolean | null;
@@ -21,6 +24,7 @@ type StatTileGridProperties = {
   steps: number | null;
   sleepMinutes: number | null;
   restingHeartRate: number | null;
+  restingHeartRateTrend?: AverageComparison | null;
   dailyStepGoal: number;
   now: Date;
   weeklyTile?: ReactNode;
@@ -33,6 +37,7 @@ export function StatTileGrid({
   steps,
   sleepMinutes,
   restingHeartRate,
+  restingHeartRateTrend = null,
   dailyStepGoal,
   now,
   weeklyTile,
@@ -100,7 +105,17 @@ export function StatTileGrid({
       icon="heart.fill"
       label="Resting HR"
       value={formatRestingHeartRate(restingHeartRate)}
-      caption={restingHeartRate === null ? noDataCaption : undefined}
+      caption={restingHeartRate === null ? noDataCaption : restingHeartRateTrend === null ? undefined : trendCaption}
+      accessory={
+        restingHeartRate === null || restingHeartRateTrend === null ? undefined : (
+          <TrendArrow
+            direction={restingHeartRateTrend.direction}
+            difference={restingHeartRateTrend.difference}
+            tone={restingHeartRateTrend.tone}
+          />
+        )
+      }
+      tone={restingHeartRate === null || restingHeartRateTrend === null ? 'default' : restingHeartRateTrend.tone}
     />
   );
 
