@@ -23,12 +23,13 @@ type StatTileProperties = {
   nuggie?: NuggieName;
   onPress?: () => void;
   accessibilityHint?: string;
+  accessibilityDetail?: string;
 };
 
 const toneColors: Record<StatTileTone, { text: ColorName; background: ColorName }> = {
   default: { text: 'textPrimary', background: 'surface' },
-  positive: { text: 'success', background: 'successSoft' },
-  attention: { text: 'attention', background: 'attentionSoft' },
+  positive: { text: 'successText', background: 'successSoft' },
+  attention: { text: 'attentionText', background: 'attentionSoft' },
 };
 
 export function StatTile({
@@ -41,11 +42,14 @@ export function StatTile({
   nuggie,
   onPress,
   accessibilityHint,
+  accessibilityDetail,
 }: StatTileProperties) {
   const theme = useTheme();
   const colors = toneColors[tone];
   const isDetailed = icon !== undefined || caption !== undefined || accessory !== undefined || nuggie !== undefined;
-  const accessibilityLabel = caption === undefined ? `${label} ${value}` : `${label} ${value}, ${caption}`;
+  const accessibilityLabel = [`${label} ${value}`, caption, accessibilityDetail]
+    .filter((part) => part !== undefined)
+    .join(', ');
 
   if (!isDetailed) {
     return (

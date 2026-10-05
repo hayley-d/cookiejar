@@ -19,8 +19,8 @@ const directionSymbols = {
 
 const toneColors: Record<AverageComparisonTone, ColorName> = {
   default: 'textSecondary',
-  positive: 'success',
-  attention: 'attention',
+  positive: 'successText',
+  attention: 'attentionText',
 };
 
 export function TrendArrow({ direction, difference, tone = 'default' }: TrendArrowProperties) {

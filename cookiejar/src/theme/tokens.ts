@@ -13,8 +13,10 @@ export type Palette = {
   onAccent: string;
   success: string;
   successSoft: string;
+  successText: string;
   attention: string;
   attentionSoft: string;
+  attentionText: string;
   danger: string;
   cardShadow: string;
   tabBar: string;
@@ -32,8 +34,10 @@ export const palettes: Record<ColorSchemeName, Palette> = {
     onAccent: '#1B2A40',
     success: '#5BBF8A',
     successSoft: '#DDF3E6',
+    successText: '#1B7346',
     attention: '#C77A12',
     attentionSoft: '#FCEBCF',
+    attentionText: '#8A5200',
     danger: '#D9534F',
     cardShadow: '#7FA9CC',
     tabBar: '#FFFFFF',
@@ -49,8 +53,10 @@ export const palettes: Record<ColorSchemeName, Palette> = {
     onAccent: '#1B2A40',
     success: '#6FD39E',
     successSoft: '#1F3B2E',
+    successText: '#6FD39E',
     attention: '#F0B04A',
     attentionSoft: '#4A3818',
+    attentionText: '#F0B04A',
     danger: '#E5675A',
     cardShadow: '#000000',
     tabBar: '#16233A',
