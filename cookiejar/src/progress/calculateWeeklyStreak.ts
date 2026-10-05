@@ -31,16 +31,19 @@ function dayState(date: string, today: string, scheduledWorkouts: readonly Sched
   if (scheduledWorkouts.length === 0) {
     return 'rest';
   }
+  const isPast = date < today;
   const hasUnfinishedPlannedWorkout = scheduledWorkouts.some(
     (scheduledWorkout) => isPlanned(scheduledWorkout) && !isCompleted(scheduledWorkout),
   );
-  if (scheduledWorkouts.every(isCompleted)) {
-    return scheduledWorkouts.some(isPlanned) ? 'completed' : 'unplanned';
+  if (hasUnfinishedPlannedWorkout) {
+    return isPast ? 'missed' : 'pending';
   }
-  if (date < today) {
-    return hasUnfinishedPlannedWorkout ? 'missed' : 'rest';
+  if (scheduledWorkouts.some(isCompleted)) {
+    return scheduledWorkouts.some((scheduledWorkout) => isPlanned(scheduledWorkout) && isCompleted(scheduledWorkout))
+      ? 'completed'
+      : 'unplanned';
   }
-  return 'pending';
+  return isPast ? 'rest' : 'pending';
 }
 
 export function calculateWeeklyStreak({ today, weekDates, scheduledWorkoutsByDate }: WeeklyStreakInput): WeeklyStreak {

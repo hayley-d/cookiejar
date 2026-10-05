@@ -129,6 +129,51 @@ describe('calculateWeeklyStreak', () => {
     expect(streak.days[0].state).toBe('missed');
   });
 
+  test('a past day with a completed workout and a leftover unfinished unplanned session is completed', () => {
+    const scheduledWorkoutsByDate = byDateOf(
+      workoutOf('2026-10-05', 'completed', 1),
+      workoutOf('2026-10-05', 'inProgress', null),
+    );
+    const streak = calculateWeeklyStreak({ today: '2026-10-07', weekDates, scheduledWorkoutsByDate });
+    expect(streak.completedCount).toBe(1);
+    expect(streak.plannedCount).toBe(1);
+    expect(streak.days[0].state).toBe('completed');
+  });
+
+  test('a past day with a completed unplanned workout and a leftover in-progress session is unplanned', () => {
+    const scheduledWorkoutsByDate = byDateOf(
+      workoutOf('2026-10-05', 'completed', null),
+      workoutOf('2026-10-05', 'inProgress', null),
+    );
+    const streak = calculateWeeklyStreak({ today: '2026-10-07', weekDates, scheduledWorkoutsByDate });
+    expect(streak.completedCount).toBe(1);
+    expect(streak.days[0].state).toBe('unplanned');
+  });
+
+  test('a past planned in-progress entry is missed', () => {
+    const scheduledWorkoutsByDate = byDateOf(workoutOf('2026-10-05', 'inProgress', 1));
+    const streak = calculateWeeklyStreak({ today: '2026-10-07', weekDates, scheduledWorkoutsByDate });
+    expect(streak.plannedCount).toBe(1);
+    expect(streak.days[0].state).toBe('missed');
+  });
+
+  test('a past day with only an unfinished unplanned session is rest', () => {
+    const scheduledWorkoutsByDate = byDateOf(workoutOf('2026-10-05', 'inProgress', null));
+    const streak = calculateWeeklyStreak({ today: '2026-10-07', weekDates, scheduledWorkoutsByDate });
+    expect(streak.completedCount).toBe(0);
+    expect(streak.plannedCount).toBe(0);
+    expect(streak.days[0].state).toBe('rest');
+  });
+
+  test('today with a completed workout and an unfinished unplanned session is completed', () => {
+    const scheduledWorkoutsByDate = byDateOf(
+      workoutOf('2026-10-07', 'completed', 1),
+      workoutOf('2026-10-07', 'inProgress', null),
+    );
+    const streak = calculateWeeklyStreak({ today: '2026-10-07', weekDates, scheduledWorkoutsByDate });
+    expect(streak.days[2].state).toBe('completed');
+  });
+
   test('today with one completed and one planned workout is pending', () => {
     const scheduledWorkoutsByDate = byDateOf(
       workoutOf('2026-10-07', 'completed', 1),
