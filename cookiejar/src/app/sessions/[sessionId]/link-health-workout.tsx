@@ -24,7 +24,7 @@ export default function LinkHealthWorkoutScreen() {
 
   return (
     <LinkHealthWorkoutSheet
-      isLoading={lookup.status === 'loading'}
+      status={lookup.status}
       groupedWorkouts={lookup.status === 'ready' ? lookup.groupedWorkouts : null}
       isLinking={isLinking}
       onPickWorkout={pickWorkout}

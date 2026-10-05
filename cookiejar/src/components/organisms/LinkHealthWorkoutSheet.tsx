@@ -6,8 +6,10 @@ import { Typography } from '@/components/primitives/Typography';
 import type { GroupedHealthWorkouts } from '@/health/groupHealthWorkouts';
 import type { HealthWorkout } from '@/health/HealthTypes';
 
+type LinkHealthWorkoutSheetStatus = 'loading' | 'unavailable' | 'failed' | 'ready';
+
 type LinkHealthWorkoutSheetProperties = {
-  isLoading: boolean;
+  status: LinkHealthWorkoutSheetStatus;
   groupedWorkouts: GroupedHealthWorkouts | null;
   isLinking: boolean;
   onPickWorkout: (workout: HealthWorkout) => void;
@@ -15,14 +17,39 @@ type LinkHealthWorkoutSheetProperties = {
 };
 
 export function LinkHealthWorkoutSheet({
-  isLoading,
+  status,
   groupedWorkouts,
   isLinking,
   onPickWorkout,
   onRefresh,
 }: LinkHealthWorkoutSheetProperties) {
-  if (isLoading) {
+  if (status === 'loading') {
     return null;
+  }
+
+  if (status === 'unavailable') {
+    return (
+      <ScrollBox gap="medium" padding="large">
+        <Typography variant="title">Link Garmin workout</Typography>
+        <Typography color="textSecondary" align="center">
+          Connect Apple Health on Home first
+        </Typography>
+      </ScrollBox>
+    );
+  }
+
+  if (status === 'failed') {
+    return (
+      <ScrollBox gap="medium" padding="large">
+        <Typography variant="title">Link Garmin workout</Typography>
+        <Box gap="medium" align="center">
+          <Typography color="textSecondary" align="center">
+            Could not read Apple Health
+          </Typography>
+          <Button label="Refresh" variant="secondary" onPress={onRefresh} />
+        </Box>
+      </ScrollBox>
+    );
   }
 
   const hasGarminWorkouts = groupedWorkouts !== null && groupedWorkouts.garminWorkouts.length > 0;
