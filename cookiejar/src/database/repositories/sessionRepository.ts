@@ -3,6 +3,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import { resolveSessionStart, type ExistingPlanEntrySession } from '@/sessions/resolveSessionStart';
 import type { PreviousSessionSet } from '@/sessions/describePreviousSet';
 import type { SetValues } from '@/sessions/fillSetForTick';
+import { actualValuesAfterReplace, resolveReplacedExerciseId } from '@/sessions/replaceExercise';
 import type { ClassType } from '@/types/ClassType';
 import type { SessionSet } from '@/types/SessionSet';
 import type { SessionExerciseWithSets, SessionWithExercises } from '@/types/SessionWithExercises';
@@ -354,4 +355,194 @@ export async function getPreviousSessionSets(
     durationSeconds: setRow.duration_seconds,
     distanceMeters: setRow.distance_meters,
   }));
+}
+
+const defaultAddedExerciseRestSeconds = 90;
+
+type NextPositionRow = {
+  next_position: number;
+};
+
+type SessionExerciseIdentityRow = {
+  exercise_id: number;
+  replaced_exercise_id: number | null;
+};
+
+type TrackingTypeRow = {
+  default_tracking_type: TrackingType;
+};
+
+type SessionSetIdentifierRow = {
+  id: number;
+};
+
+type SessionSetActualValuesRow = {
+  id: number;
+  repetitions: number | null;
+  weight_kilograms: number | null;
+  duration_seconds: number | null;
+  distance_meters: number | null;
+};
+
+export async function addSessionSet(
+  database: SQLiteDatabase,
+  sessionExerciseId: number,
+  values: SetValues,
+): Promise<void> {
+  await database.runAsync(
+    `INSERT INTO session_sets
+      (session_exercise_id, position, repetitions, weight_kilograms, duration_seconds, distance_meters)
+    VALUES (?, (SELECT COALESCE(MAX(position), -1) + 1 FROM session_sets WHERE session_exercise_id = ?), ?, ?, ?, ?)`,
+    sessionExerciseId,
+    sessionExerciseId,
+    values.repetitions,
+    values.weightKilograms,
+    values.durationSeconds,
+    values.distanceMeters,
+  );
+}
+
+export async function removeSessionSet(
+  database: SQLiteDatabase,
+  sessionExerciseId: number,
+  sessionSetId: number,
+): Promise<void> {
+  await database.withTransactionAsync(async () => {
+    await database.runAsync(
+      'DELETE FROM session_sets WHERE id = ? AND session_exercise_id = ?',
+      sessionSetId,
+      sessionExerciseId,
+    );
+    const remainingSets = await database.getAllAsync<SessionSetIdentifierRow>(
+      'SELECT id FROM session_sets WHERE session_exercise_id = ? ORDER BY position, id',
+      sessionExerciseId,
+    );
+    for (const [index, remainingSet] of remainingSets.entries()) {
+      await database.runAsync(
+        'UPDATE session_sets SET position = ? WHERE id = ? AND session_exercise_id = ?',
+        index,
+        remainingSet.id,
+        sessionExerciseId,
+      );
+    }
+  });
+}
+
+export async function addSessionExercises(
+  database: SQLiteDatabase,
+  sessionId: number,
+  exerciseIds: number[],
+): Promise<void> {
+  await database.withTransactionAsync(async () => {
+    for (const exerciseId of exerciseIds) {
+      const nextPosition = await database.getFirstAsync<NextPositionRow>(
+        'SELECT COALESCE(MAX(position), -1) + 1 AS next_position FROM session_exercises WHERE session_id = ?',
+        sessionId,
+      );
+      const insertResult = await database.runAsync(
+        `INSERT INTO session_exercises (session_id, exercise_id, position, tracking_type, rest_seconds)
+        SELECT ?, id, ?, default_tracking_type, ? FROM exercises WHERE id = ?`,
+        sessionId,
+        nextPosition?.next_position ?? 0,
+        defaultAddedExerciseRestSeconds,
+        exerciseId,
+      );
+      if (insertResult.changes === 0) {
+        continue;
+      }
+      await database.runAsync(
+        'INSERT INTO session_sets (session_exercise_id, position) VALUES (?, 0)',
+        insertResult.lastInsertRowId,
+      );
+    }
+  });
+}
+
+export async function replaceSessionExercise(
+  database: SQLiteDatabase,
+  sessionId: number,
+  sessionExerciseId: number,
+  newExerciseId: number,
+): Promise<void> {
+  await database.withTransactionAsync(async () => {
+    const currentExercise = await database.getFirstAsync<SessionExerciseIdentityRow>(
+      'SELECT exercise_id, replaced_exercise_id FROM session_exercises WHERE id = ? AND session_id = ?',
+      sessionExerciseId,
+      sessionId,
+    );
+    const newExercise = await database.getFirstAsync<TrackingTypeRow>(
+      'SELECT default_tracking_type FROM exercises WHERE id = ?',
+      newExerciseId,
+    );
+    if (currentExercise === null || newExercise === null) {
+      throw new Error('The exercise to replace no longer exists');
+    }
+
+    await database.runAsync(
+      `UPDATE session_exercises
+      SET exercise_id = ?, replaced_exercise_id = ?, tracking_type = ?
+      WHERE id = ? AND session_id = ?`,
+      newExerciseId,
+      resolveReplacedExerciseId({
+        currentExerciseId: currentExercise.exercise_id,
+        currentReplacedExerciseId: currentExercise.replaced_exercise_id,
+        newExerciseId,
+      }),
+      newExercise.default_tracking_type,
+      sessionExerciseId,
+      sessionId,
+    );
+
+    const setRows = await database.getAllAsync<SessionSetActualValuesRow>(
+      `SELECT id, repetitions, weight_kilograms, duration_seconds, distance_meters
+      FROM session_sets WHERE session_exercise_id = ?`,
+      sessionExerciseId,
+    );
+    for (const setRow of setRows) {
+      const keptValues = actualValuesAfterReplace(
+        {
+          repetitions: setRow.repetitions,
+          weightKilograms: setRow.weight_kilograms,
+          durationSeconds: setRow.duration_seconds,
+          distanceMeters: setRow.distance_meters,
+        },
+        newExercise.default_tracking_type,
+      );
+      await updateSessionSet(database, setRow.id, keptValues);
+    }
+  });
+}
+
+export async function removeSessionExercise(
+  database: SQLiteDatabase,
+  sessionId: number,
+  sessionExerciseId: number,
+): Promise<void> {
+  await database.runAsync(
+    'DELETE FROM session_exercises WHERE id = ? AND session_id = ?',
+    sessionExerciseId,
+    sessionId,
+  );
+}
+
+export async function updateSessionExerciseRest(
+  database: SQLiteDatabase,
+  sessionId: number,
+  sessionExerciseId: number,
+  restSeconds: number | null,
+): Promise<void> {
+  await database.runAsync(
+    'UPDATE session_exercises SET rest_seconds = ? WHERE id = ? AND session_id = ?',
+    restSeconds,
+    sessionExerciseId,
+    sessionId,
+  );
+}
+
+export async function updateSessionNotes(
+  database: SQLiteDatabase,
+  sessionId: number,
+  notes: string | null,
+): Promise<void> {
+  await database.runAsync('UPDATE sessions SET notes = ? WHERE id = ?', notes, sessionId);
 }
