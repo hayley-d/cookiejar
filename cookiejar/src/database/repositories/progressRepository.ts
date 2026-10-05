@@ -5,7 +5,10 @@ import { parseLocalDateString } from '@/dates/parseLocalDateString';
 import type { TrackingType } from '@/types/TrackingType';
 import type { ExerciseHistorySet, ExerciseWithHistory } from '@/types/ExerciseHistory';
 import type { FinishedSessionSet } from '@/types/FinishedSessionSet';
-import type { TrainingTotals } from '@/types/TrainingTotals';
+import type { ClassStatistics } from '@/types/ClassStatistics';
+import type { ClassType } from '@/types/ClassType';
+import type { TrainingTotals, TrainingTotalsRange } from '@/types/TrainingTotals';
+import { sortClassStatistics } from '@/progress/sortClassStatistics';
 
 type SessionTotalsRow = {
   workout_count: number;
@@ -18,17 +21,25 @@ type VolumeRow = {
 
 const earliestInstant = '0000-01-01T00:00:00.000Z';
 
+const sessionDurationSecondsExpression = 'ROUND((julianday(finished_at) - julianday(started_at)) * 86400)';
+
+function toInstantBounds(startDate: string | null, endDate: string) {
+  return {
+    rangeStart: startDate === null ? earliestInstant : parseLocalDateString(startDate).toISOString(),
+    rangeEnd: addDays(parseLocalDateString(endDate), 1).toISOString(),
+  };
+}
+
 export async function getTrainingTotals(
   database: SQLiteDatabase,
   startDate: string | null,
   endDate: string,
 ): Promise<TrainingTotals> {
-  const rangeStart = startDate === null ? earliestInstant : parseLocalDateString(startDate).toISOString();
-  const rangeEnd = addDays(parseLocalDateString(endDate), 1).toISOString();
+  const { rangeStart, rangeEnd } = toInstantBounds(startDate, endDate);
 
   const sessionTotals = await database.getFirstAsync<SessionTotalsRow>(
     `SELECT COUNT(*) AS workout_count,
-      SUM(ROUND((julianday(finished_at) - julianday(started_at)) * 86400)) AS time_trained_seconds
+      SUM(${sessionDurationSecondsExpression}) AS time_trained_seconds
     FROM sessions
     WHERE finished_at IS NOT NULL AND started_at >= ? AND started_at < ?`,
     rangeStart,
@@ -151,4 +162,39 @@ export async function listExercisesWithHistory(database: SQLiteDatabase): Promis
     defaultTrackingType: row.default_tracking_type,
     lastPerformedAt: row.last_performed_at,
   }));
+}
+
+type ClassStatisticsRow = {
+  class_type: ClassType;
+  session_count: number;
+  total_seconds: number | null;
+  sessions_this_month: number;
+  last_started_at: string;
+};
+
+export async function listClassStatistics(
+  database: SQLiteDatabase,
+  monthRange: TrainingTotalsRange,
+): Promise<ClassStatistics[]> {
+  const { rangeStart, rangeEnd } = toInstantBounds(monthRange.startDate, monthRange.endDate);
+  const rows = await database.getAllAsync<ClassStatisticsRow>(
+    `SELECT class_type, COUNT(*) AS session_count,
+      SUM(${sessionDurationSecondsExpression}) AS total_seconds,
+      SUM(CASE WHEN started_at >= ? AND started_at < ? THEN 1 ELSE 0 END) AS sessions_this_month,
+      MAX(started_at) AS last_started_at
+    FROM sessions
+    WHERE workout_kind = 'class' AND class_type IS NOT NULL AND finished_at IS NOT NULL
+    GROUP BY class_type`,
+    rangeStart,
+    rangeEnd,
+  );
+  return sortClassStatistics(
+    rows.map((row) => ({
+      classType: row.class_type,
+      sessionCount: row.session_count,
+      totalSeconds: Math.max(0, row.total_seconds ?? 0),
+      sessionsThisMonth: row.sessions_this_month,
+      lastStartedAt: row.last_started_at,
+    })),
+  );
 }

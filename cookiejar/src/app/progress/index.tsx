@@ -3,10 +3,12 @@ import { useState } from 'react';
 
 import { EmptyState } from '@/components/molecules/EmptyState';
 import { NuggieLoadingScreen } from '@/components/organisms/NuggieLoadingScreen';
+import { ClassCountSection } from '@/components/organisms/ClassCountSection';
 import { ExerciseProgressSection } from '@/components/organisms/ExerciseProgressSection';
 import { RecentRecordsSection } from '@/components/organisms/RecentRecordsSection';
 import { ProgressOverview } from '@/components/organisms/ProgressOverview';
 import { ScrollBox } from '@/components/primitives/ScrollBox';
+import { useClassStatistics } from '@/hooks/useClassStatistics';
 import { useExercisesWithHistory } from '@/hooks/useExercisesWithHistory';
 import { usePersonalRecords } from '@/hooks/usePersonalRecords';
 import { useTrainingTotals } from '@/hooks/useTrainingTotals';
@@ -19,6 +21,10 @@ const loadingMinimumDurationMilliseconds = 500;
 
 function openRecords() {
   router.push('/progress/records');
+}
+
+function openClassStatistics() {
+  router.push('/progress/classes');
 }
 
 function openExerciseHistory(exerciseId: number) {
@@ -35,6 +41,7 @@ export default function ProgressScreen() {
   const lifetimeLookup = useTrainingTotals(lifetimeRange(now));
   const { personalRecords } = usePersonalRecords();
   const { exercises } = useExercisesWithHistory();
+  const { classStatistics } = useClassStatistics();
   const newRecordCount =
     personalRecords === null ? 0 : countPersonalRecordsInRange(personalRecords, currentMonthRange(now));
   const [isLoadingScreenVisible, setIsLoadingScreenVisible] = useState(true);
@@ -69,6 +76,7 @@ export default function ProgressScreen() {
           onPressItem={openSessionSummary}
           onSeeAll={openRecords}
         />
+        <ClassCountSection statistics={classStatistics ?? []} onOpenStatistics={openClassStatistics} />
         <ExerciseProgressSection exercises={exercises ?? []} onPressExercise={openExerciseHistory} />
       </ProgressOverview>
     </ScrollBox>
