@@ -38,6 +38,7 @@ function makeSession(): SessionWithExercises {
     healthMaximumHeartRate: null,
     healthActiveKilocalories: null,
     healthDurationSeconds: null,
+    plannedDurationMinutes: null,
     exercises: [10, 20].map((sessionExerciseId) => ({
       id: sessionExerciseId,
       sessionId: 1,

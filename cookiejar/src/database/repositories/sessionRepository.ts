@@ -82,6 +82,7 @@ type SessionRow = {
   health_maximum_heart_rate: number | null;
   health_active_kilocalories: number | null;
   health_duration_seconds: number | null;
+  planned_duration_minutes: number | null;
 };
 
 type SessionExerciseRow = {
@@ -226,10 +227,14 @@ export async function getSessionWithExercises(
   sessionId: number,
 ): Promise<SessionWithExercises | null> {
   const sessionRow = await database.getFirstAsync<SessionRow>(
-    `SELECT id, workout_id, plan_entry_id, workout_name, workout_kind, class_type, scheduled_date, started_at,
-      finished_at, notes, health_workout_uuid, health_average_heart_rate, health_maximum_heart_rate,
-      health_active_kilocalories, health_duration_seconds
-    FROM sessions WHERE id = ?`,
+    `SELECT sessions.id, sessions.workout_id, sessions.plan_entry_id, sessions.workout_name, sessions.workout_kind,
+      sessions.class_type, sessions.scheduled_date, sessions.started_at, sessions.finished_at, sessions.notes,
+      sessions.health_workout_uuid, sessions.health_average_heart_rate, sessions.health_maximum_heart_rate,
+      sessions.health_active_kilocalories, sessions.health_duration_seconds,
+      workouts.duration_minutes AS planned_duration_minutes
+    FROM sessions
+    LEFT JOIN workouts ON workouts.id = sessions.workout_id
+    WHERE sessions.id = ?`,
     sessionId,
   );
   if (sessionRow === null) {
@@ -296,6 +301,7 @@ export async function getSessionWithExercises(
     healthMaximumHeartRate: sessionRow.health_maximum_heart_rate,
     healthActiveKilocalories: sessionRow.health_active_kilocalories,
     healthDurationSeconds: sessionRow.health_duration_seconds,
+    plannedDurationMinutes: sessionRow.planned_duration_minutes,
     exercises,
   };
 }

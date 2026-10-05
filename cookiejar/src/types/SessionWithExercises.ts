@@ -10,5 +10,6 @@ export type SessionExerciseWithSets = SessionExercise & {
 };
 
 export type SessionWithExercises = Session & {
+  plannedDurationMinutes: number | null;
   exercises: SessionExerciseWithSets[];
 };

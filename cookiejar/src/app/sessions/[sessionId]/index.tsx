@@ -4,6 +4,7 @@ import { Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EmptyState } from '@/components/molecules/EmptyState';
+import { ClassSessionView } from '@/components/organisms/ClassSessionView';
 import { NuggieLoadingScreen } from '@/components/organisms/NuggieLoadingScreen';
 import { SessionLogger } from '@/components/organisms/SessionLogger';
 import { Box } from '@/components/primitives/Box';
@@ -125,6 +126,16 @@ export default function SessionLoggerScreen() {
         }
         actionLabel="Close"
         onAction={() => router.back()}
+      />
+    );
+  } else if (sessionLookup.status === 'found' && sessionLookup.session.workoutKind === 'class') {
+    content = (
+      <ClassSessionView
+        session={sessionLookup.session}
+        isFinishing={isFinishing}
+        onChangeNotes={changeNotes}
+        onMarkComplete={() => void completeFinish()}
+        onDiscard={requestDiscard}
       />
     );
   } else if (sessionLookup.status === 'found') {
