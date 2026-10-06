@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
+import { encodeNotificationSettings } from '@/notifications/encodeNotificationSettings';
+import { reminderLeadMinuteOptions, type NotificationSettings } from '@/notifications/NotificationSettings';
 import { parseNotificationSettings } from '@/notifications/parseNotificationSettings';
 
 describe('parseNotificationSettings', () => {
@@ -57,5 +59,42 @@ describe('parseNotificationSettings', () => {
   test('falls back to 30 minutes for an unknown lead time', () => {
     expect(parseNotificationSettings({ reminder_lead_minutes: '45' }).reminderLeadMinutes).toBe(30);
     expect(parseNotificationSettings({ reminder_lead_minutes: 'soon' }).reminderLeadMinutes).toBe(30);
+  });
+});
+
+describe('encodeNotificationSettings', () => {
+  test('encodes toggles as true or false and the lead time as digits', () => {
+    expect(
+      encodeNotificationSettings({
+        areWorkoutRemindersEnabled: false,
+        reminderLeadMinutes: 60,
+        areRestAlertsEnabled: true,
+        isWeeklySummaryEnabled: false,
+      }),
+    ).toEqual({
+      workout_reminders_enabled: 'false',
+      reminder_lead_minutes: '60',
+      rest_alerts_enabled: 'true',
+      weekly_summary_enabled: 'false',
+    });
+  });
+
+  test('round-trips every combination through the parser', () => {
+    const booleans = [true, false];
+    for (const areWorkoutRemindersEnabled of booleans) {
+      for (const areRestAlertsEnabled of booleans) {
+        for (const isWeeklySummaryEnabled of booleans) {
+          for (const reminderLeadMinutes of reminderLeadMinuteOptions) {
+            const settings: NotificationSettings = {
+              areWorkoutRemindersEnabled,
+              reminderLeadMinutes,
+              areRestAlertsEnabled,
+              isWeeklySummaryEnabled,
+            };
+            expect(parseNotificationSettings(encodeNotificationSettings(settings))).toEqual(settings);
+          }
+        }
+      }
+    }
   });
 });
