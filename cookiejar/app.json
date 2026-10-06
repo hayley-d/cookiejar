@@ -12,7 +12,8 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.hayleydodkins.cookiejar"
+      "bundleIdentifier": "com.hayleydodkins.cookiejar",
+      "appleTeamId": "LVWSJRBLKN"
     },
     "plugins": [
       "expo-router",
@@ -39,7 +40,8 @@
           "NSHealthUpdateUsageDescription": false,
           "background": false
         }
-      ]
+      ],
+      "./plugins/withoutPushEntitlement"
     ],
     "experiments": {
       "typedRoutes": true
