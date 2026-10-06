@@ -10,6 +10,7 @@ import { databaseName } from '@/database/databaseName';
 import { migrateDatabase } from '@/database/migrateDatabase';
 import { useNotificationReconciler } from '@/hooks/useNotificationReconciler';
 import { useNotificationTapRouting } from '@/hooks/useNotificationTapRouting';
+import { useRestAlertScheduling } from '@/hooks/useRestAlertScheduling';
 import { configureNotificationHandler } from '@/notifications/notificationHandler';
 import { chooseNuggie } from '@/nuggies/chooseNuggie';
 import type { NuggieName } from '@/nuggies/NuggieName';
@@ -28,9 +29,7 @@ const loadingCaptions: Partial<Record<NuggieName, string>> = {
   workout: defaultLoadingCaption,
 };
 
-type DatabaseReadySignalProperties = {
-  onReady: () => void;
-};
+type DatabaseReadySignalProperties = { onReady: () => void };
 
 function DatabaseReadySignal({ onReady }: DatabaseReadySignalProperties) {
   useSQLiteContext();
@@ -45,6 +44,7 @@ function DatabaseReadySignal({ onReady }: DatabaseReadySignalProperties) {
 function NotificationServices() {
   useNotificationReconciler();
   useNotificationTapRouting();
+  useRestAlertScheduling();
 
   return null;
 }
@@ -154,10 +154,7 @@ export default function RootLayout() {
                   sheetGrabberVisible: true,
                 }}
               />
-              <Stack.Screen
-                name="exercises/picker"
-                options={{ presentation: 'fullScreenModal', headerShown: false }}
-              />
+              <Stack.Screen name="exercises/picker" options={{ presentation: 'fullScreenModal', headerShown: false }} />
               <Stack.Screen
                 name="plans/new"
                 options={{ presentation: 'modal', title: 'New plan', headerLargeTitleEnabled: false }}

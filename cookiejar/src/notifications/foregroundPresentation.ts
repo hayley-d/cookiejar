@@ -14,8 +14,16 @@ const shownWithSound: ForegroundPresentation = {
   shouldSetBadge: false,
 };
 
+const hidden: ForegroundPresentation = {
+  shouldShowBanner: false,
+  shouldShowList: false,
+  shouldPlaySound: false,
+  shouldSetBadge: false,
+};
+
 const foregroundPresentationByKind: Record<NotificationKind, ForegroundPresentation> = {
   workoutReminder: shownWithSound,
+  restTimer: hidden,
   other: shownWithSound,
 };
 

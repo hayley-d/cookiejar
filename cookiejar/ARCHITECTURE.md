@@ -1150,6 +1150,12 @@ The route `notifications/permission` is a `formSheet` that renders the `Notifica
 
 `useNotificationTapRouting()` handles the response that opened the app, then listens for taps. Each tap marks the row with that identifier read, bumps the data version and pushes the route from the content data. Both hooks are mounted once by `NotificationServices` in the root layout, inside `SQLiteProvider` and after the `Stack`.
 
+### Rest Alert
+
+`useRestAlertScheduling()` subscribes to `restTimerStore` and is mounted by `NotificationServices` alongside the other two hooks, so the session hooks are untouched. Each store change goes through the pure `mapRestTimerChange(previousState, nextState, nowMilliseconds)`: a running timer gives `schedule` with the seconds left (the full rest on start, the time left on resume), a pause, clear or natural end gives `cancel`, and idle staying idle gives `nothing`. Under one second also cancels, since `TIME_INTERVAL` needs at least 1.
+
+Actions run one after another on a promise chain. A schedule action loads the settings, skips when `areRestAlertsEnabled` is off or permission is not granted, reads the in-progress session with `getActiveSession` to build `/sessions/<id>` (no route if there is none), then checks the timer state is still the one that triggered it before calling `scheduleRestTimerNotification(seconds, sessionRoute)`. `cancelRestTimerNotification()` cancels the fixed identifier `rest-timer:alert`, so scheduling again replaces it. The alert is a `TIME_INTERVAL` trigger with no sound, titled "Noop noop! 🦄" with the body "Rest's up! Back to it 💪". It is never upserted into the `notifications` table. `foregroundPresentationFor('restTimer')` hides it in the foreground (no banner, list or sound).
+
 ## App Start
 
 When the app launches:
