@@ -1,4 +1,5 @@
 import { Stack } from 'expo-router';
+import { getFocusedRouteNameFromRoute } from 'expo-router/react-navigation';
 import * as SplashScreen from 'expo-splash-screen';
 import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
@@ -6,6 +7,7 @@ import { Suspense, useCallback, useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { NuggieLoadingScreen } from '@/components/organisms/NuggieLoadingScreen';
+import { getSetting } from '@/database/repositories/appSettingsRepository';
 import { databaseName } from '@/database/databaseName';
 import { migrateDatabase } from '@/database/migrateDatabase';
 import { useNotificationReconciler } from '@/hooks/useNotificationReconciler';
@@ -15,6 +17,8 @@ import { useRestAlertScheduling } from '@/hooks/useRestAlertScheduling';
 import { configureNotificationHandler } from '@/notifications/notificationHandler';
 import { chooseNuggie } from '@/nuggies/chooseNuggie';
 import type { NuggieName } from '@/nuggies/NuggieName';
+import { appearancePreferenceSettingKey, parseAppearancePreference } from '@/theme/appearancePreference';
+import { applyAppearancePreference } from '@/theme/applyAppearancePreference';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 import { palettes } from '@/theme/tokens';
 import { useColorSchemeName } from '@/theme/useColorSchemeName';
@@ -30,14 +34,32 @@ const loadingCaptions: Partial<Record<NuggieName, string>> = {
   workout: defaultLoadingCaption,
 };
 
+const tabTitles: Record<string, string> = {
+  index: 'Home',
+  calendar: 'Calendar',
+  create: 'Create',
+  profile: 'Profile',
+};
+
 type DatabaseReadySignalProperties = { onReady: () => void };
 
 function DatabaseReadySignal({ onReady }: DatabaseReadySignalProperties) {
-  useSQLiteContext();
+  const database = useSQLiteContext();
 
   useEffect(() => {
-    onReady();
-  }, [onReady]);
+    let isActive = true;
+    getSetting(database, appearancePreferenceSettingKey)
+      .then((storedPreference) => applyAppearancePreference(parseAppearancePreference(storedPreference)))
+      .catch(() => {})
+      .finally(() => {
+        if (isActive) {
+          onReady();
+        }
+      });
+    return () => {
+      isActive = false;
+    };
+  }, [database, onReady]);
 
   return null;
 }
@@ -78,8 +100,17 @@ export default function RootLayout() {
                 contentStyle: { backgroundColor: palette.background },
               }}
             >
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="coach" options={{ presentation: 'modal', title: 'Coach Nuggie' }} />
+              <Stack.Screen
+                name="(tabs)"
+                options={({ route }) => ({
+                  headerShown: false,
+                  title: tabTitles[getFocusedRouteNameFromRoute(route) ?? 'index'] ?? tabTitles.index,
+                })}
+              />
+              <Stack.Screen
+                name="coach"
+                options={{ presentation: 'modal', title: 'Coach Nuggie', headerLargeTitleEnabled: false }}
+              />
               <Stack.Screen
                 name="exercises/index"
                 options={{ title: 'Exercise library', headerLargeTitleEnabled: false }}

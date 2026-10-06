@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ProfileSummaryHeader } from '@/components/molecules/ProfileSummaryHeader';
 import { ScreenHeader } from '@/components/molecules/ScreenHeader';
+import { SegmentedControl, type Segment } from '@/components/molecules/SegmentedControl';
 import { SettingsRow } from '@/components/molecules/SettingsRow';
 import { Box } from '@/components/primitives/Box';
 import { ScrollBox } from '@/components/primitives/ScrollBox';
@@ -10,6 +11,7 @@ import { Typography } from '@/components/primitives/Typography';
 import { toLocalDateString } from '@/dates/toLocalDateString';
 import { describeHealthAccessStatus } from '@/health/describeHealthAccessStatus';
 import { useHealthAuthorization } from '@/hooks/useHealthAuthorization';
+import { useAppearancePreference } from '@/hooks/useAppearancePreference';
 import { useBodyMeasurements } from '@/hooks/useBodyMeasurements';
 import { useNewRecordCount } from '@/hooks/useNewRecordCount';
 import { useProfile } from '@/hooks/useProfile';
@@ -18,9 +20,16 @@ import { lifetimeRange } from '@/progress/currentMonthRange';
 import { describeWeightSummary } from '@/progress/describeWeightSummary';
 import { describeLifetimeTotals, describeNewRecordCount } from '@/progress/formatTrainingTotals';
 import { summarizeWeight } from '@/progress/summarizeWeight';
+import type { AppearancePreference } from '@/theme/appearancePreference';
 
 const coachButtonClearance = 96;
 const weightChangeDays = 30;
+
+const appearanceSegments: Segment<AppearancePreference>[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+];
 
 function openEditProfile() {
   router.push('/profile/edit');
@@ -56,6 +65,7 @@ export default function ProfileScreen() {
   const { measurements } = useBodyMeasurements();
   const { totals: lifetimeTotals } = useTrainingTotals(lifetimeRange(new Date()));
   const newRecordCount = useNewRecordCount();
+  const { appearancePreference, changeAppearancePreference } = useAppearancePreference();
   const weightSummary = measurements
     ? summarizeWeight(measurements, weightChangeDays, toLocalDateString(new Date()))
     : null;
@@ -110,6 +120,16 @@ export default function ProfileScreen() {
               onPress={openAppleHealth}
             />
             <SettingsRow title="Notifications" onPress={openNotificationSettings} />
+          </Box>
+          <Box gap="small">
+            <Typography variant="caption" color="textSecondary">
+              Appearance
+            </Typography>
+            <SegmentedControl
+              segments={appearanceSegments}
+              selectedValue={appearancePreference}
+              onSelect={changeAppearancePreference}
+            />
           </Box>
         </ScrollBox>
       </Box>

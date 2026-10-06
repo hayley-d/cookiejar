@@ -1,11 +1,10 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 
 import { EmptyState } from '@/components/molecules/EmptyState';
+import { StatSummaryCard } from '@/components/molecules/StatSummaryCard';
 import { ProgressBarChart } from '@/components/organisms/ProgressBarChart';
 import { ProgressLineChart } from '@/components/organisms/ProgressLineChart';
-import { HealthMetricBarList } from '@/components/organisms/HealthMetricBarList';
-import { StreakBarList } from '@/components/organisms/StreakBarList';
-import { Box } from '@/components/primitives/Box';
+import { StatDayList } from '@/components/organisms/StatDayList';
 import { ScrollBox } from '@/components/primitives/ScrollBox';
 import { addDays } from '@/dates/addDays';
 import { datesBetween } from '@/dates/datesBetween';
@@ -16,6 +15,8 @@ import { useScheduledWorkouts } from '@/hooks/useScheduledWorkouts';
 import { parseStatsMetric, type StatsMetric } from '@/stats/parseStatsMetric';
 import { averageOfPoints, healthChartPoints, healthChartUnits } from '@/stats/healthChartPoints';
 import { formatSleepChartValue } from '@/stats/formatSleepChartValue';
+import { describeHealthStatDays, describeStreakStatDays, healthMetricValues } from '@/stats/describeStatDays';
+import { summarizeHealthMetric, summarizeStreakDays } from '@/stats/summarizeStatDays';
 import { statsDetailDayCount } from '@/stats/statsDetail';
 
 type StatsParameters = {
@@ -54,42 +55,52 @@ export default function StatsScreen() {
 
   const datesOldestFirst = datesBetween(startDate, endDate);
   const datesNewestFirst = [...datesOldestFirst].reverse();
-  const chartPoints = metric === 'streak' ? [] : healthChartPoints(metric, datesOldestFirst, snapshotsByDate);
+
+  if (metric === 'streak') {
+    const statDays = describeStreakStatDays(
+      datesNewestFirst,
+      scheduledWorkoutsLookup.status === 'ready' ? scheduledWorkoutsLookup.scheduledWorkoutsByDate : null,
+      endDate,
+    );
+    return (
+      <>
+        <Stack.Screen options={{ title: metricTitles[metric] }} />
+        <ScrollBox>
+          {scheduledWorkoutsLookup.status === 'ready' ? <StatSummaryCard items={summarizeStreakDays(statDays)} /> : null}
+          <StatDayList statDays={statDays} />
+        </ScrollBox>
+      </>
+    );
+  }
+
+  const chartPoints = healthChartPoints(metric, datesOldestFirst, snapshotsByDate);
+  const summaryItems = summarizeHealthMetric(
+    metric,
+    datesNewestFirst,
+    healthMetricValues(metric, datesNewestFirst, snapshotsByDate),
+    dailyStepGoal,
+  );
 
   return (
     <>
       <Stack.Screen options={{ title: metricTitles[metric] }} />
       <ScrollBox>
-        {metric === 'streak' ? (
-          <StreakBarList
-            datesNewestFirst={datesNewestFirst}
-            scheduledWorkoutsByDate={
-              scheduledWorkoutsLookup.status === 'ready' ? scheduledWorkoutsLookup.scheduledWorkoutsByDate : null
-            }
+        {summaryItems.length === 0 ? null : <StatSummaryCard items={summaryItems} />}
+        {chartPoints.length === 0 ? null : metric === 'restingHeartRate' ? (
+          <ProgressLineChart
+            points={chartPoints}
+            unit={healthChartUnits[metric]}
+            referenceValue={averageOfPoints(chartPoints)}
           />
         ) : (
-          <Box gap="medium">
-            {chartPoints.length === 0 ? null : metric === 'restingHeartRate' ? (
-              <ProgressLineChart
-                points={chartPoints}
-                unit={healthChartUnits[metric]}
-                referenceValue={averageOfPoints(chartPoints)}
-              />
-            ) : (
-              <ProgressBarChart
-                points={chartPoints}
-                unit={healthChartUnits[metric]}
-                formatValue={metricValueFormatters[metric]}
-                referenceValue={metric === 'steps' && isLoaded ? dailyStepGoal : undefined}
-              />
-            )}
-            <HealthMetricBarList
-              metric={metric}
-              datesNewestFirst={datesNewestFirst}
-              snapshotsByDate={snapshotsByDate}
-            />
-          </Box>
+          <ProgressBarChart
+            points={chartPoints}
+            unit={healthChartUnits[metric]}
+            formatValue={metricValueFormatters[metric]}
+            referenceValue={metric === 'steps' && isLoaded ? dailyStepGoal : undefined}
+          />
         )}
+        <StatDayList statDays={describeHealthStatDays(metric, datesNewestFirst, snapshotsByDate, dailyStepGoal)} />
       </ScrollBox>
     </>
   );

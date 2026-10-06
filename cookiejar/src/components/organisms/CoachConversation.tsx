@@ -16,12 +16,23 @@ type CoachConversationProperties = {
 
 export function CoachConversation({ messages, isTyping, onActionPress }: CoachConversationProperties) {
   const scrollReference = useRef<ScrollBoxHandle>(null);
+  const viewportHeightReference = useRef(0);
+
+  const scrollToNewestWhenOverflowing = (_contentWidth: number, contentHeight: number) => {
+    const viewportHeight = viewportHeightReference.current;
+    if (viewportHeight > 0 && contentHeight > viewportHeight) {
+      scrollReference.current?.scrollToEnd({ animated: true });
+    }
+  };
 
   return (
     <ScrollBox
       ref={scrollReference}
       gap="small"
-      onContentSizeChange={() => scrollReference.current?.scrollToEnd({ animated: true })}
+      onLayout={(event) => {
+        viewportHeightReference.current = event.nativeEvent.layout.height;
+      }}
+      onContentSizeChange={scrollToNewestWhenOverflowing}
     >
       {messages.map((message) => {
         if (message.author === 'user') {

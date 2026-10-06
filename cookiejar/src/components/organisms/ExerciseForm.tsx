@@ -26,7 +26,7 @@ const trackingTypeSegments = trackingTypes.map((trackingType) => ({
 
 export function ExerciseForm({ values, errors, onChangeValues, footer }: ExerciseFormProperties) {
   return (
-    <ScrollBox gap="large">
+    <ScrollBox gap="large" automaticallyAdjustKeyboardInsets>
       <FormField label="Name" error={errors.name}>
         <TextField
           value={values.name}

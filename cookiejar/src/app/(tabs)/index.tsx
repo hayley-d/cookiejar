@@ -17,6 +17,7 @@ import { addDays } from '@/dates/addDays';
 import { datesBetween } from '@/dates/datesBetween';
 import { toLocalDateString } from '@/dates/toLocalDateString';
 import { compareToAverage } from '@/health/compareToAverage';
+import { latestRestingHeartRate } from '@/health/latestRestingHeartRate';
 import { shouldShowHealthAccessHint } from '@/health/shouldShowHealthAccessHint';
 import { useDailyHealth } from '@/hooks/useDailyHealth';
 import { useHealthAuthorization } from '@/hooks/useHealthAuthorization';
@@ -51,6 +52,7 @@ export default function HomeScreen() {
     toLocalDateString(addDays(now, -1)),
   );
   const { snapshotsByDate } = useHealthRange(previousDays[0], previousDays[previousDays.length - 1]);
+  const restingHeartRateReading = latestRestingHeartRate(snapshot, previousDays, snapshotsByDate);
   const restingHeartRateTrend = compareToAverage(
     snapshot?.restingHeartRate ?? null,
     previousDays.map((date) => snapshotsByDate.get(date)?.restingHeartRate ?? null),
@@ -121,7 +123,8 @@ export default function HomeScreen() {
             onConnect={connectHealth}
             steps={snapshot?.steps ?? null}
             sleepMinutes={snapshot?.sleepMinutes ?? null}
-            restingHeartRate={snapshot?.restingHeartRate ?? null}
+            restingHeartRate={restingHeartRateReading?.beatsPerMinute ?? null}
+            restingHeartRateDate={restingHeartRateReading?.date ?? null}
             restingHeartRateTrend={restingHeartRateTrend}
             dailyStepGoal={dailyStepGoal}
             now={now}
