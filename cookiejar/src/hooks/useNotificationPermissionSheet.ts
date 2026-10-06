@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { getSetting, setSetting } from '@/database/repositories/appSettingsRepository';
 import { getNotificationPermissionStatus } from '@/notifications/notificationPermission';
 import { notificationPermissionSheetShownAtSettingKey } from '@/notifications/notificationSettingKeys';
+import { reportNotificationError } from '@/notifications/reportNotificationError';
 import { shouldShowNotificationPermissionSheet } from '@/notifications/shouldShowNotificationPermissionSheet';
 
 export function useNotificationPermissionSheet(): void {
@@ -22,12 +23,10 @@ export function useNotificationPermissionSheet(): void {
         return;
       }
       await setSetting(database, notificationPermissionSheetShownAtSettingKey, new Date().toISOString());
-      if (isActive) {
-        router.push('/notifications/permission');
-      }
+      router.push('/notifications/permission');
     };
 
-    openSheetOnFirstVisit().catch(() => {});
+    openSheetOnFirstVisit().catch(reportNotificationError);
 
     return () => {
       isActive = false;
