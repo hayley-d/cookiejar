@@ -1,4 +1,7 @@
-export function createQueuedRunner(task: () => Promise<void>): () => Promise<void> {
+export function createQueuedRunner(
+  task: () => Promise<void>,
+  onError: (error: unknown) => void = () => {},
+): () => Promise<void> {
   let isRunning = false;
   let hasQueuedRun = false;
 
@@ -13,7 +16,9 @@ export function createQueuedRunner(task: () => Promise<void>): () => Promise<voi
         hasQueuedRun = false;
         try {
           await task();
-        } catch {}
+        } catch (error) {
+          onError(error);
+        }
       } while (hasQueuedRun);
     } finally {
       isRunning = false;

@@ -39,8 +39,7 @@
           "NSHealthUpdateUsageDescription": false,
           "background": false
         }
-      ],
-      "expo-notifications"
+      ]
     ],
     "experiments": {
       "typedRoutes": true

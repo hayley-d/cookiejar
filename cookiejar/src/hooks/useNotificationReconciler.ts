@@ -5,6 +5,7 @@ import { AppState } from 'react-native';
 import { reconcileNotifications } from '@/hooks/reconcileNotifications';
 import { createQueuedRunner } from '@/notifications/createQueuedRunner';
 import { notificationsConfiguration } from '@/notifications/notificationsConfiguration';
+import { reportNotificationError } from '@/notifications/reportNotificationError';
 import { subscribeToDataVersion } from '@/stores/dataVersionStore';
 
 export function useNotificationReconciler(): void {
@@ -16,9 +17,9 @@ export function useNotificationReconciler(): void {
 
     const requestRun = createQueuedRunner(async () => {
       if (isMounted) {
-        await reconcileNotifications(database, new Date());
+        await reconcileNotifications(database);
       }
-    });
+    }, reportNotificationError);
 
     const clearDebounce = () => {
       if (debounceTimeout !== null) {

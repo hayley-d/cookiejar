@@ -60,7 +60,7 @@ describe('buildWorkoutReminders', () => {
     expect(reminders).toEqual([
       {
         identifier: 'workout-reminder:2026-10-06:12',
-        title: 'Workout reminder',
+        title: 'Noop noop! 🦄',
         body: "Push Day at 17:30 — Nuggie's ready when you are!",
         nuggie: 'notification',
         route: '/workout/4?date=2026-10-06&planEntryId=12',

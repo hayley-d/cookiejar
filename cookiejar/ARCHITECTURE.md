@@ -1115,6 +1115,8 @@ While the snapshot loads, the typing indicator shows. Every Nuggie bubble and th
 
 Phase 09b adds local notifications with `expo-notifications`. There is no push server.
 
+The `expo-notifications` config plugin is deliberately left out of app.json. It always adds the push `aps-environment` entitlement, which the free Personal Team can't sign. Local notifications don't need it, and the native module autolinks without the plugin.
+
 ### Module Boundary
 
 `src/notifications/` is the only place that imports `expo-notifications`, following the Apple Health precedent. Four adapter files import it:
@@ -1133,12 +1135,12 @@ Phase 09b adds local notifications with `expo-notifications`. There is no push s
 - `notificationIdentifiers.ts`: the `workout-reminder:` prefix, `workoutReminderIdentifier(date, planEntryId)` and `notificationKindForIdentifier`
 - `foregroundPresentation.ts`: banner, list and sound per notification kind
 - `PlannedNotification.ts`: identifier, title, body, nuggie, route, fire time and whether it plays a sound
-- `buildWorkoutReminders.ts`: one reminder per planned workout with a time of day in the 14-day window (today and the 13 days after), firing at its time minus the lead time when that is still in the future. The body reads "Push Day at 17:30 — Nuggie's ready when you are!", the nuggie is `notification`, and the route is the workout detail from `resolveScheduledWorkoutRoute` as a string
-- `workoutReminderWindow.ts`, `routeToHref.ts`, `readNotificationRoute.ts`, `createQueuedRunner.ts` (one run at a time, with at most one queued rerun) and `notificationsConfiguration.ts`
+- `buildWorkoutReminders.ts`: one reminder per planned workout with a time of day in the 14-day window (today and the 13 days after), firing at its time minus the lead time when that is still in the future. The title is "Noop noop! 🦄", the body reads "Push Day at 17:30 — Nuggie's ready when you are!", the nuggie is `notification`, and the route is the workout detail from `resolveScheduledWorkoutRoute` as a string
+- `workoutReminderWindow.ts`, `routeToHref.ts`, `readNotificationRoute.ts`, `createQueuedRunner.ts` (one run at a time, with at most one queued rerun, passing failures to an `onError` callback) and `notificationsConfiguration.ts`
 
 ### Reconciling
 
-`useNotificationReconciler()` runs `reconcileNotifications(database, now)` on mount, when the app returns to the foreground and 2 seconds after the last data version bump, through one queued runner. Each run loads the settings, requests permission and, for each scheduled kind, cancels the pending requests with that kind's prefix, deletes its future rows, then schedules each planned notification again and upserts its row. Without permission, nothing is scheduled.
+`useNotificationReconciler()` runs `reconcileNotifications(database)` on mount, when the app returns to the foreground and 2 seconds after the last data version bump, through one queued runner. Each run loads the settings, requests permission, then reads the current time (so a long first-launch prompt can't leave a past fire time) and, for each scheduled kind, cancels the pending requests with that kind's prefix, deletes its future rows, then schedules each planned notification again and upserts its row. Each notification is scheduled on its own: a failure is reported with `reportNotificationError` (a `console.warn` in `__DEV__`), its row is not written, and the rest still go ahead. Without permission, nothing is scheduled.
 
 ### Tap Routing
 

@@ -1,4 +1,4 @@
 export const notificationsConfiguration = {
-  workoutReminderTitle: 'Workout reminder',
+  workoutReminderTitle: 'Noop noop! 🦄',
   reconcileDebounceMilliseconds: 2000,
 } as const;

@@ -16,6 +16,7 @@ import {
 } from '@/notifications/notificationScheduling';
 import type { NotificationSettings } from '@/notifications/NotificationSettings';
 import type { PlannedNotification } from '@/notifications/PlannedNotification';
+import { reportNotificationError } from '@/notifications/reportNotificationError';
 import { workoutReminderWindow } from '@/notifications/workoutReminderWindow';
 import { buildScheduledWorkouts } from '@/plans/buildScheduledWorkouts';
 
@@ -37,15 +38,19 @@ async function replacePlannedNotifications(
     return;
   }
   for (const plannedNotification of plannedNotifications) {
-    await schedulePlannedNotification(plannedNotification);
-    await upsertNotification(context.database, {
-      identifier: plannedNotification.identifier,
-      title: plannedNotification.title,
-      body: plannedNotification.body,
-      nuggie: plannedNotification.nuggie,
-      route: plannedNotification.route,
-      createdAt: plannedNotification.fireAt.toISOString(),
-    });
+    try {
+      await schedulePlannedNotification(plannedNotification);
+      await upsertNotification(context.database, {
+        identifier: plannedNotification.identifier,
+        title: plannedNotification.title,
+        body: plannedNotification.body,
+        nuggie: plannedNotification.nuggie,
+        route: plannedNotification.route,
+        createdAt: plannedNotification.fireAt.toISOString(),
+      });
+    } catch (error) {
+      reportNotificationError(error);
+    }
   }
 }
 
@@ -62,9 +67,10 @@ async function planWorkoutReminders(context: ReconcileContext): Promise<PlannedN
   return buildWorkoutReminders(scheduledWorkoutsByDate, context.settings, context.now);
 }
 
-export async function reconcileNotifications(database: SQLiteDatabase, now: Date): Promise<void> {
+export async function reconcileNotifications(database: SQLiteDatabase): Promise<void> {
   const settings = await loadNotificationSettings(database);
   const permissionOutcome = await requestNotificationPermission();
+  const now = new Date();
   const context: ReconcileContext = { database, settings, canSchedule: permissionOutcome === 'granted', now };
 
   const workoutReminders = await planWorkoutReminders(context);

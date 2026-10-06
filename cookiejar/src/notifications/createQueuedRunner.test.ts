@@ -49,14 +49,19 @@ describe('createQueuedRunner', () => {
     expect(highestConcurrentRuns).toBe(1);
   });
 
-  test('keeps running after a task fails', async () => {
+  test('keeps running after a task fails and reports each failure', async () => {
     let runCount = 0;
-    const requestRun = createQueuedRunner(async () => {
-      runCount += 1;
-      throw new Error('failed');
-    });
+    const reportedErrors: unknown[] = [];
+    const requestRun = createQueuedRunner(
+      async () => {
+        runCount += 1;
+        throw new Error(`failed ${runCount}`);
+      },
+      (error) => reportedErrors.push(error),
+    );
     await requestRun();
     await requestRun();
     expect(runCount).toBe(2);
+    expect(reportedErrors.map((error) => (error as Error).message)).toEqual(['failed 1', 'failed 2']);
   });
 });
