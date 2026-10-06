@@ -6,17 +6,19 @@ import { StatTile } from '@/components/molecules/StatTile';
 import { Box } from '@/components/primitives/Box';
 import { ProgressRingBox } from '@/components/primitives/ProgressRingBox';
 import type { AverageComparison } from '@/health/compareToAverage';
+import { formatShortDate } from '@/dates/formatShortDate';
+import { toLocalDateString } from '@/dates/toLocalDateString';
 import { describeStepProgress } from '@/health/describeStepProgress';
 import { describeRestingHeartRateTrend } from '@/health/describeRestingHeartRateTrend';
 import { formatRestingHeartRate } from '@/health/formatRestingHeartRate';
 import { formatSleepMinutes } from '@/health/formatSleepMinutes';
 import { formatSteps } from '@/health/formatSteps';
+import { shortSleepMinutes } from '@/health/sleepThresholds';
 import { chooseNuggie } from '@/nuggies/chooseNuggie';
 import type { HealthStatsMetric } from '@/stats/parseStatsMetric';
 import { statsDetailHint } from '@/stats/statsDetail';
 import { useTheme } from '@/theme/useTheme';
 
-const lowSleepMinutes = 360;
 const noDataCaption = 'No data yet';
 const trendCaption = 'vs 7-day avg';
 
@@ -27,6 +29,7 @@ type StatTileGridProperties = {
   steps: number | null;
   sleepMinutes: number | null;
   restingHeartRate: number | null;
+  restingHeartRateDate?: string | null;
   restingHeartRateTrend?: AverageComparison | null;
   dailyStepGoal: number;
   now: Date;
@@ -41,7 +44,8 @@ export function StatTileGrid({
   steps,
   sleepMinutes,
   restingHeartRate,
-  restingHeartRateTrend = null,
+  restingHeartRateDate = null,
+  restingHeartRateTrend: todayRestingHeartRateTrend = null,
   dailyStepGoal,
   now,
   weeklyTile,
@@ -75,7 +79,18 @@ export function StatTileGrid({
   }
 
   const stepProgress = steps === null ? null : describeStepProgress(steps, dailyStepGoal);
-  const isSleepLow = sleepMinutes !== null && sleepMinutes < lowSleepMinutes;
+  const isRestingHeartRateFromEarlierDay =
+    restingHeartRateDate !== null && restingHeartRateDate !== toLocalDateString(now);
+  const restingHeartRateTrend = isRestingHeartRateFromEarlierDay ? null : todayRestingHeartRateTrend;
+  const restingHeartRateCaption =
+    restingHeartRate === null
+      ? noDataCaption
+      : isRestingHeartRateFromEarlierDay && restingHeartRateDate !== null
+        ? `Last reading ${formatShortDate(restingHeartRateDate)}`
+        : restingHeartRateTrend === null
+          ? undefined
+          : trendCaption;
+  const isSleepLow = sleepMinutes !== null && sleepMinutes < shortSleepMinutes;
 
   const stepsTile = (
     <StatTile
@@ -117,7 +132,7 @@ export function StatTileGrid({
       icon="heart.fill"
       label="Resting HR"
       value={formatRestingHeartRate(restingHeartRate)}
-      caption={restingHeartRate === null ? noDataCaption : restingHeartRateTrend === null ? undefined : trendCaption}
+      caption={restingHeartRateCaption}
       accessory={
         restingHeartRate === null || restingHeartRateTrend === null ? undefined : (
           <TrendArrow

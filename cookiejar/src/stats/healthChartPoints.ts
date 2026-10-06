@@ -8,7 +8,7 @@ export const healthChartUnits: Record<HealthStatsMetric, string> = {
   restingHeartRate: 'bpm',
 };
 
-function readChartValue(metric: HealthStatsMetric, snapshot: HealthSnapshot): number | null {
+export function readHealthMetricValue(metric: HealthStatsMetric, snapshot: HealthSnapshot): number | null {
   if (metric === 'steps') {
     return snapshot.steps;
   }
@@ -26,7 +26,7 @@ export function healthChartPoints(
   const points: ChartPoint[] = [];
   for (const date of datesOldestFirst) {
     const snapshot = snapshotsByDate.get(date);
-    const value = snapshot === undefined ? null : readChartValue(metric, snapshot);
+    const value = snapshot === undefined ? null : readHealthMetricValue(metric, snapshot);
     if (value !== null) {
       points.push({ date, value });
     }
