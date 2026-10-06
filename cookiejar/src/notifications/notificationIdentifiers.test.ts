@@ -4,6 +4,7 @@ import { foregroundPresentationFor } from '@/notifications/foregroundPresentatio
 import {
   notificationKindForIdentifier,
   restTimerIdentifier,
+  weeklySummaryIdentifier,
   workoutReminderIdentifier,
 } from '@/notifications/notificationIdentifiers';
 
@@ -13,7 +14,17 @@ describe('workoutReminderIdentifier', () => {
   });
 });
 
+describe('weeklySummaryIdentifier', () => {
+  test('builds the identifier from the Sunday date', () => {
+    expect(weeklySummaryIdentifier('2026-10-11')).toBe('weekly-summary:2026-10-11');
+  });
+});
+
 describe('notificationKindForIdentifier', () => {
+  test('recognises weekly summaries by their prefix', () => {
+    expect(notificationKindForIdentifier('weekly-summary:2026-10-11')).toBe('weeklySummary');
+  });
+
   test('recognises workout reminders by their prefix', () => {
     expect(notificationKindForIdentifier('workout-reminder:2026-10-06:12')).toBe('workoutReminder');
   });

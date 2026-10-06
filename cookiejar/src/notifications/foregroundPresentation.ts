@@ -23,6 +23,7 @@ const hidden: ForegroundPresentation = {
 
 const foregroundPresentationByKind: Record<NotificationKind, ForegroundPresentation> = {
   workoutReminder: shownWithSound,
+  weeklySummary: shownWithSound,
   restTimer: hidden,
   other: shownWithSound,
 };
