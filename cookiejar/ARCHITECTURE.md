@@ -38,7 +38,7 @@ This app is built in phases. See [docs/README.md](docs/README.md) for the full p
 | Charts | `victory-native` (`^42.0.1`, resolved at 42.0.1) drawing with `@shopify/react-native-skia` (`2.6.2`). Both are imported only by `ProgressChartFrame`, `ProgressLineChart` and `ProgressBarChart` |
 | Date/time picker | `@react-native-community/datetimepicker` (native platform pickers for time and date selection) |
 | Apple Health | `@kingstinct/react-native-healthkit`, pinned exactly at `15.1.0`, with `react-native-nitro-modules` (`0.37.1`) as its native bridge |
-| Notifications | `expo-notifications` (`~57.0.21`) for local notifications only, with no push server. It is imported only in `src/notifications/`, and its config plugin is deliberately not in app.json (see Notifications) |
+| Notifications | `expo-notifications` (`~57.0.21`) for local notifications only, with no push server. It is imported only in `src/notifications/`, and the local `plugins/withoutPushEntitlement.js` plugin strips the push entitlement it would add (see Notifications) |
 | Splash screen | `expo-splash-screen` |
 | Package manager | bun. `package.json` lists `@shopify/react-native-skia` under `trustedDependencies` so bun runs its install script |
 | Test runner | `bun test` for TypeScript modules |
@@ -1117,7 +1117,7 @@ While the snapshot loads, the typing indicator shows. Every Nuggie bubble and th
 
 Phase 09b adds local notifications with `expo-notifications`. There is no push server.
 
-The `expo-notifications` config plugin is deliberately left out of app.json. It always adds the push `aps-environment` entitlement, which the free Personal Team can't sign. Local notifications don't need it, and the native module autolinks without the plugin. `package.json` lists `expo-notifications` at `~57.0.21`; installing it needs a native rebuild with `bun run device`.
+Prebuild applies the `expo-notifications` config plugin automatically whenever the package is installed, even though it is not listed in app.json. That plugin always adds the push `aps-environment` entitlement, which the free Personal Team can't sign, and local notifications don't need it. The local plugin `plugins/withoutPushEntitlement.js`, listed last in app.json, deletes the entitlement. Expo's plugin is registered after app.json's plugins, so its entitlement mod runs first and ours runs after it. `package.json` lists `expo-notifications` at `~57.0.21`; installing it needs a native rebuild with `bun run device`.
 
 ### Module Boundary
 
@@ -1305,9 +1305,10 @@ src/
 
 ### HealthKit signing (2026-10-05)
 
-- Outcome: the free personal team (Hayley Dodkins (Personal Team)) signs the HealthKit capability. Xcode Signing & Capabilities shows HealthKit with no capability error, `bun run device` installs the app, and the Apple Health permission sheet appears and can be granted. `ios/Cookiejar/Cookiejar.entitlements` contains `com.apple.developer.healthkit`.
+- Outcome: the free personal team (Hayley Dodkins (Personal Team)) signs the HealthKit capability. Xcode Signing & Capabilities shows HealthKit with no capability error, `bun run device` installs the app, and the Apple Health permission sheet appears and can be granted. `ios/NuggiesGym/NuggiesGym.entitlements` contains `com.apple.developer.healthkit`.
 - Library pin: `@kingstinct/react-native-healthkit` is pinned exactly at `15.1.0`. Version 16.0.0 fails to build on Expo 57 / React Native 0.86 (issue #391, fix in PR #395 unreleased as of 2026-10-05). Move up once a fixed 16.x ships.
 - One-time Mac setup that the first device build needed:
   1. "No code signing certificates are available to use": in Xcode → Settings → Accounts, add the Apple ID, select the Personal Team, Manage Certificates, then + Apple Development.
-  2. "Your team has no devices from which to generate a provisioning profile": open `ios/Cookiejar.xcworkspace`, choose the connected iPhone as the run destination, and click Try Again under Signing.
+  2. "Your team has no devices from which to generate a provisioning profile": open `ios/NuggiesGym.xcworkspace`, choose the connected iPhone as the run destination, and click Try Again under Signing.
+- **Regenerating `ios/` (2026-10-06).** `ios/` is git-ignored and `bun run device` reuses it as it is, so changes to the name, icon or plugins in app.json only reach the phone after `bunx expo prebuild --platform ios`. The app was renamed to "Nuggie's Gym", so the native project is now `NuggiesGym`. `ios.appleTeamId` in app.json keeps the Personal Team (`LVWSJRBLKN`) selected across prebuilds, so signing doesn't need to be chosen again in Xcode. The bundle identifier is unchanged, so the app updates in place and keeps its data.
   3. Repeated "codesign wants to access key" prompts, one per signed framework: run `security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k <mac password> ~/Library/Keychains/login.keychain-db`. Clear stuck prompts with `killall SecurityAgent`.
