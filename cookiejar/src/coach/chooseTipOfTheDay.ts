@@ -16,5 +16,8 @@ export function chooseTipOfTheDay(snapshot: CoachSnapshot, rules: readonly Insig
   const topInsight = collectInsights(snapshot, rules).find(
     (insight) => insight.messages.length > 0 && insight.topics.some((topic) => tipTopics.includes(topic)),
   );
+  if (topInsight?.ruleIdentifier === 'noData') {
+    return chooseGeneralTip(snapshot.now);
+  }
   return topInsight?.messages[0] ?? chooseGeneralTip(snapshot.now);
 }

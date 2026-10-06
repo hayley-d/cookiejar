@@ -8,6 +8,11 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NuggieLoadingScreen } from '@/components/organisms/NuggieLoadingScreen';
 import { databaseName } from '@/database/databaseName';
 import { migrateDatabase } from '@/database/migrateDatabase';
+import { useNotificationReconciler } from '@/hooks/useNotificationReconciler';
+import { useNotificationReceivedRefresh } from '@/hooks/useNotificationReceivedRefresh';
+import { useNotificationTapRouting } from '@/hooks/useNotificationTapRouting';
+import { useRestAlertScheduling } from '@/hooks/useRestAlertScheduling';
+import { configureNotificationHandler } from '@/notifications/notificationHandler';
 import { chooseNuggie } from '@/nuggies/chooseNuggie';
 import type { NuggieName } from '@/nuggies/NuggieName';
 import { ThemeProvider } from '@/theme/ThemeProvider';
@@ -15,6 +20,7 @@ import { palettes } from '@/theme/tokens';
 import { useColorSchemeName } from '@/theme/useColorSchemeName';
 
 SplashScreen.preventAutoHideAsync();
+configureNotificationHandler();
 
 const defaultLoadingCaption = 'Getting your workouts ready…';
 
@@ -24,9 +30,7 @@ const loadingCaptions: Partial<Record<NuggieName, string>> = {
   workout: defaultLoadingCaption,
 };
 
-type DatabaseReadySignalProperties = {
-  onReady: () => void;
-};
+type DatabaseReadySignalProperties = { onReady: () => void };
 
 function DatabaseReadySignal({ onReady }: DatabaseReadySignalProperties) {
   useSQLiteContext();
@@ -34,6 +38,15 @@ function DatabaseReadySignal({ onReady }: DatabaseReadySignalProperties) {
   useEffect(() => {
     onReady();
   }, [onReady]);
+
+  return null;
+}
+
+function NotificationServices() {
+  useNotificationReconciler();
+  useNotificationReceivedRefresh();
+  useNotificationTapRouting();
+  useRestAlertScheduling();
 
   return null;
 }
@@ -100,6 +113,23 @@ export default function RootLayout() {
                   sheetGrabberVisible: true,
                 }}
               />
+              <Stack.Screen
+                name="notifications/index"
+                options={{ title: 'Notifications', headerLargeTitleEnabled: false }}
+              />
+              <Stack.Screen
+                name="notifications/settings"
+                options={{ title: 'Notifications', headerLargeTitleEnabled: false }}
+              />
+              <Stack.Screen
+                name="notifications/permission"
+                options={{
+                  presentation: 'formSheet',
+                  headerShown: false,
+                  sheetAllowedDetents: [0.55],
+                  sheetGrabberVisible: true,
+                }}
+              />
               <Stack.Screen name="progress/index" options={{ title: 'Progress', headerLargeTitleEnabled: false }} />
               <Stack.Screen
                 name="progress/records"
@@ -134,10 +164,7 @@ export default function RootLayout() {
                   sheetGrabberVisible: true,
                 }}
               />
-              <Stack.Screen
-                name="exercises/picker"
-                options={{ presentation: 'fullScreenModal', headerShown: false }}
-              />
+              <Stack.Screen name="exercises/picker" options={{ presentation: 'fullScreenModal', headerShown: false }} />
               <Stack.Screen
                 name="plans/new"
                 options={{ presentation: 'modal', title: 'New plan', headerLargeTitleEnabled: false }}
@@ -180,6 +207,7 @@ export default function RootLayout() {
                 }}
               />
             </Stack>
+            <NotificationServices />
           </GestureHandlerRootView>
         </SQLiteProvider>
       </Suspense>

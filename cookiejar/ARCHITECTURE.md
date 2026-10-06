@@ -38,6 +38,7 @@ This app is built in phases. See [docs/README.md](docs/README.md) for the full p
 | Charts | `victory-native` (`^42.0.1`, resolved at 42.0.1) drawing with `@shopify/react-native-skia` (`2.6.2`). Both are imported only by `ProgressChartFrame`, `ProgressLineChart` and `ProgressBarChart` |
 | Date/time picker | `@react-native-community/datetimepicker` (native platform pickers for time and date selection) |
 | Apple Health | `@kingstinct/react-native-healthkit`, pinned exactly at `15.1.0`, with `react-native-nitro-modules` (`0.37.1`) as its native bridge |
+| Notifications | `expo-notifications` (`~57.0.21`) for local notifications only, with no push server. It is imported only in `src/notifications/`, and its config plugin is deliberately not in app.json (see Notifications) |
 | Splash screen | `expo-splash-screen` |
 | Package manager | bun. `package.json` lists `@shopify/react-native-skia` under `trustedDependencies` so bun runs its install script |
 | Test runner | `bun test` for TypeScript modules |
@@ -91,7 +92,7 @@ Read the versioned docs at https://docs.expo.dev/versions/v57.0.0/ before using 
 | `getSetting(database, key)` | Returns the setting value string, or `null` |
 | `setSetting(database, key, value)` | Inserts or updates the setting value |
 
-Keys live in constants next to their feature: `healthAuthorizationRequestedAtSettingKey` in `src/health/healthSettingKeys.ts` and `coachTipLastShownDateSettingKey` (`coach_tip_last_shown_date`) in `src/coach/coachSettingKeys.ts`.
+Keys live in constants next to their feature: `healthAuthorizationRequestedAtSettingKey` in `src/health/healthSettingKeys.ts`, `coachTipLastShownDateSettingKey` (`coach_tip_last_shown_date`) in `src/coach/coachSettingKeys.ts`, and the notification keys in `src/notifications/notificationSettingKeys.ts` (`workout_reminders_enabled`, `reminder_lead_minutes`, `rest_alerts_enabled`, `weekly_summary_enabled` and `notification_permission_sheet_shown_at`).
 
 ### Health Snapshot Repository
 
@@ -128,6 +129,21 @@ The profile form (see Profile and Progress) is the only writer.
 | `getLatestBodyMeasurement(database)` | The newest measurement (same order), or `null` |
 | `listWeightsBetween(database, startDate, endDate)` | `WeightMeasurement` rows (`measuredOn`, `weightKilograms`) with a weight, inclusive of both dates, ordered by `measured_on ASC, id ASC` |
 
+### Notification Repository
+
+`src/database/repositories/notificationRepository.ts` holds the `notifications` SQL (Phase 09b). A row is written when its notification is scheduled, with `created_at` set to the fire time, so only rows whose `created_at` is in the past have been delivered. Checked on the device, not with `bun test`.
+
+| Function | Behaviour |
+| --- | --- |
+| `upsertNotification(database, recordedNotification)` | Inserts or updates the row with the same `identifier`, and clears `read_at` |
+| `deleteFutureNotificationsWithIdentifierPrefix(database, identifierPrefix, now)` | Deletes rows whose identifier starts with the prefix and whose `created_at` is after `now` |
+| `listPastNotifications(database, now)` | Rows with `created_at` at or before `now` as `AppNotification`, newest first |
+| `countPastUnreadNotifications(database, now)` | The number of past rows with no `read_at` |
+| `markNotificationRead(database, notificationId, now)` | Sets `read_at` on one row by id |
+| `listPastNotificationIdentifiersWithPrefix(database, identifierPrefix, now)` | The identifiers of past rows that start with the prefix, as a `Set`. The reconciler uses it to find reminders already delivered |
+| `markNotificationReadByIdentifier(database, identifier, now)` | Sets `read_at` on one row by identifier |
+| `markAllNotificationsRead(database, now)` | Sets `read_at` on every past unread row |
+
 ### Progress Repository
 
 `src/database/repositories/progressRepository.ts` holds the read-only SQL behind the Progress screens (Phase 08). Only finished sessions (`finished_at IS NOT NULL`) and completed sets (`completed_at IS NOT NULL`) count. Checked on the device, not with `bun test`.
@@ -142,11 +158,12 @@ The profile form (see Profile and Progress) is the only writer.
 
 ### Migrations
 
-Migrations run in order through `src/database/migrations/migrations.ts` array: `[createInitialSchema, createTrainingSchema, addSessionExerciseRestSeconds]`. The `user_version` PRAGMA tracks which migrations have run.
+Migrations run in order through `src/database/migrations/migrations.ts` array: `[createInitialSchema, createTrainingSchema, addSessionExerciseRestSeconds, addNotificationIdentifier]`. The `user_version` PRAGMA tracks which migrations have run.
 
 - **v1 (createInitialSchema)**: Draft schema with exercises, workouts, workout_exercises and sets tables. Never edited. Kept so the migration order stays the same on every device.
 - **v2 (createTrainingSchema)**: Drops draft tables and creates the full training schema for production use.
 - **v3 (addSessionExerciseRestSeconds)**: Adds `rest_seconds` column to `session_exercises` table to allow per-session rest customization.
+- **v4 (addNotificationIdentifier)**: Adds a nullable `identifier` column to `notifications` and the unique index `notifications_by_identifier` on it. SQLite can't add a `UNIQUE` column with `ALTER TABLE`, so the uniqueness comes from the index.
 
 ### Schema v2
 
@@ -164,7 +181,7 @@ Migrations run in order through `src/database/migrations/migrations.ts` array: `
 | **profile** | Single user profile (id=1) | `id`, `display_name`, `birth_date`, `sex`, `height_centimetres`, `goal`, `weekly_workout_target`, `daily_step_goal`, `updated_at` |
 | **body_measurements** | Weight and body composition history | `id`, `measured_on`, `weight_kilograms`, `body_fat_percent`, waist/hip/chest measurements, `notes` |
 | **health_snapshots** | Apple Health data by date | `date`, `steps`, `sleep_minutes`, `resting_heart_rate`, `fetched_at` |
-| **notifications** | App notifications | `id`, `title`, `body`, `nuggie`, `route`, `created_at`, `read_at` |
+| **notifications** | App notifications | `id`, `identifier` (unique, added by v4), `title`, `body`, `nuggie`, `route`, `created_at`, `read_at` |
 | **app_settings** | Key-value settings | `key`, `value` |
 
 ### Storage Conventions
@@ -185,11 +202,11 @@ routes (src/app)  →  organisms  →  molecules  →  atoms  →  primitives  �
 
 | Layer | Responsibility | Examples |
 | --- | --- | --- |
-| **primitives** | Thin themed wrappers over React Native elements. The only layer that touches raw `View`, `Text`, `Pressable`, `TextInput`, `ScrollView`, `FlatList`, `SectionList`, `expo-image`, `expo-symbols`, `react-native-svg` and `@react-native-community/datetimepicker`. They apply theme tokens and nothing else. | `Box`, `Typography`, `Touchable`, `TextField`, `Stack`, `Image`, `Icon`, `List`, `SectionedList`, `ScrollBox`, `AnimatedBox`, `SwipeableBox`, `LongPressDragBox`, `WindowMeasuredBox`, `TimePickerBox`, `ProgressRingBox`, `ShakeBox`, `SnapList`, `PulseBox` |
-| **atoms** | The smallest pieces of UI with meaning, built from primitives. No data access. | `Button`, `TextButton`, `IconButton`, `Badge`, `Chip`, `Checkbox`, `NuggieImage`, `Card`, `NumberInput`, `DurationInput`, `DragHandle`, `SupersetBracket`, `Toast`, `TimeLabel`, `StatusChip`, `DayMarker`, `CountdownButton`, `ElapsedTimer`, `PageDots`, `StreakDots`, `TrendArrow`, `DatePickerField`, `TypingIndicator` |
-| **molecules** | Small groups of atoms that work as a unit. Hold local UI state at most. | `CoachFloatingButton`, `ScreenHeader`, `EmptyState`, `ChipGroup`, `SegmentedControl`, `SearchBar`, `AlphabetIndex`, `ExerciseRow`, `FormField`, `ImageUrlField`, `Stepper`, `KindChoiceCard`, `ActionCard`, `TargetSetRow`, `TargetSetTable`, `WorkoutRow`, `WorkoutNameField`, `PlanEntryRow`, `DaySectionHeader`, `PlanRow`, `RestDay`, `ActivePlanBanner`, `DayChip`, `ScheduledWorkoutCard`, `HeaderImageCard`, `WorkoutDetailExerciseRow`, `ActiveSessionBanner`, `PersonalRecordRow`, `RestTimerBar`, `SessionSetRow`, `SessionTopBar`, `StatTile`, `GreetingHeader`, `TodayWorkoutCard`, `NuggieActionCard`, `RestDayCard`, `NoPlanCard`, `WeeklyStreakTile`, `StatBarRow`, `ProfileSummaryHeader`, `SettingsRow`, `MeasurementRow`, `RangeSwitcher`, `ClassCountTile`, `StatisticLine`, `CoachMessageBubble`, `UserMessageBubble`, `PromptChip` |
-| **organisms** | Self-contained sections of a screen. Receive data and callbacks through props. | `NuggieLoadingScreen`, `ExerciseForm`, `ExercisePicker`, `ExerciseEditorCard`, `ReorderableExerciseList`, `ClassDetailsForm`, `CreateHub`, `WorkoutEditorFooter`, `PlanWeekEditor`, `AddPlanEntrySheet`, `ActivatePlanSheet`, `EntryTimeSheet`, `CopyDaySheet`, `WeekStrip`, `DayWorkoutList`, `IndividualWorkoutDetail`, `ClassWorkoutDetail`, `SessionLogger`, `ClassSessionView`, `SessionExerciseCard`, `SessionSummary`, `TodayCarousel`, `StatTileGrid`, `StatBarList`, `HealthMetricBarList`, `StreakBarList`, `ProfileForm`, `MeasurementForm`, `ProgressOverview`, `RecentRecordsSection`, `PersonalRecordItemRow`, `ClassCountSection`, `ClassStatisticsCard`, `ExerciseProgressSection`, `ExerciseHistoryList`, `ProgressChartFrame`, `ProgressLineChart`, `ProgressBarChart`, `CoachConversation`, `PromptChipBar` |
-| **routes** | Expo Router screens. Load data through repositories and hooks, then compose organisms. | `src/app/(tabs)/index.tsx`, `src/app/(tabs)/_layout.tsx`, `src/app/coach.tsx`, `src/app/exercises/*`, `src/app/workouts/*`, `src/app/plans/*`, `src/app/workout/[workoutId].tsx`, `src/app/sessions/[sessionId]/index.tsx`, `src/app/sessions/[sessionId]/finishing.tsx`, `src/app/sessions/[sessionId]/summary.tsx`, `src/app/stats/[metric].tsx`, `src/app/(tabs)/profile.tsx`, `src/app/profile/*`, `src/app/progress/*` |
+| **primitives** | Thin themed wrappers over React Native elements. The only layer that touches raw `View`, `Text`, `Pressable`, `TextInput`, `ScrollView`, `FlatList`, `SectionList`, `expo-image`, `expo-symbols`, `react-native-svg`, `@react-native-community/datetimepicker` and the native `Switch`. They apply theme tokens and nothing else. | `Box`, `Typography`, `Touchable`, `TextField`, `Stack`, `Image`, `Icon`, `List`, `SectionedList`, `ScrollBox`, `AnimatedBox`, `SwipeableBox`, `LongPressDragBox`, `WindowMeasuredBox`, `TimePickerBox`, `ProgressRingBox`, `ShakeBox`, `SnapList`, `PulseBox`, `Switch` |
+| **atoms** | The smallest pieces of UI with meaning, built from primitives. No data access. | `Button`, `TextButton`, `IconButton`, `Badge`, `Chip`, `Checkbox`, `NuggieImage`, `Card`, `NumberInput`, `DurationInput`, `DragHandle`, `SupersetBracket`, `Toast`, `TimeLabel`, `StatusChip`, `DayMarker`, `CountdownButton`, `ElapsedTimer`, `PageDots`, `StreakDots`, `TrendArrow`, `DatePickerField`, `TypingIndicator`, `UnreadDot` |
+| **molecules** | Small groups of atoms that work as a unit. Hold local UI state at most. | `CoachFloatingButton`, `ScreenHeader`, `EmptyState`, `ChipGroup`, `SegmentedControl`, `SearchBar`, `AlphabetIndex`, `ExerciseRow`, `FormField`, `ImageUrlField`, `Stepper`, `KindChoiceCard`, `ActionCard`, `TargetSetRow`, `TargetSetTable`, `WorkoutRow`, `WorkoutNameField`, `PlanEntryRow`, `DaySectionHeader`, `PlanRow`, `RestDay`, `ActivePlanBanner`, `DayChip`, `ScheduledWorkoutCard`, `HeaderImageCard`, `WorkoutDetailExerciseRow`, `ActiveSessionBanner`, `PersonalRecordRow`, `RestTimerBar`, `SessionSetRow`, `SessionTopBar`, `StatTile`, `GreetingHeader`, `TodayWorkoutCard`, `NuggieActionCard`, `RestDayCard`, `NoPlanCard`, `WeeklyStreakTile`, `StatBarRow`, `ProfileSummaryHeader`, `SettingsRow`, `MeasurementRow`, `RangeSwitcher`, `ClassCountTile`, `StatisticLine`, `CoachMessageBubble`, `UserMessageBubble`, `PromptChip`, `NotificationBell`, `NotificationRow`, `ToggleRow`, `ChoiceRow` |
+| **organisms** | Self-contained sections of a screen. Receive data and callbacks through props. | `NuggieLoadingScreen`, `ExerciseForm`, `ExercisePicker`, `ExerciseEditorCard`, `ReorderableExerciseList`, `ClassDetailsForm`, `CreateHub`, `WorkoutEditorFooter`, `PlanWeekEditor`, `AddPlanEntrySheet`, `ActivatePlanSheet`, `EntryTimeSheet`, `CopyDaySheet`, `WeekStrip`, `DayWorkoutList`, `IndividualWorkoutDetail`, `ClassWorkoutDetail`, `SessionLogger`, `ClassSessionView`, `SessionExerciseCard`, `SessionSummary`, `TodayCarousel`, `StatTileGrid`, `StatBarList`, `HealthMetricBarList`, `StreakBarList`, `ProfileForm`, `MeasurementForm`, `ProgressOverview`, `RecentRecordsSection`, `PersonalRecordItemRow`, `ClassCountSection`, `ClassStatisticsCard`, `ExerciseProgressSection`, `ExerciseHistoryList`, `ProgressChartFrame`, `ProgressLineChart`, `ProgressBarChart`, `CoachConversation`, `PromptChipBar`, `NotificationList` |
+| **routes** | Expo Router screens. Load data through repositories and hooks, then compose organisms. | `src/app/(tabs)/index.tsx`, `src/app/(tabs)/_layout.tsx`, `src/app/coach.tsx`, `src/app/exercises/*`, `src/app/workouts/*`, `src/app/plans/*`, `src/app/workout/[workoutId].tsx`, `src/app/sessions/[sessionId]/index.tsx`, `src/app/sessions/[sessionId]/finishing.tsx`, `src/app/sessions/[sessionId]/summary.tsx`, `src/app/stats/[metric].tsx`, `src/app/(tabs)/profile.tsx`, `src/app/profile/*`, `src/app/progress/*`, `src/app/notifications/*` |
 
 Rules:
 
@@ -752,7 +769,7 @@ Phase 07 turns the Home tab (`src/app/(tabs)/index.tsx`) into a dashboard. It us
 
 From top to bottom, inside a `ScrollBox` on a `SafeAreaView` with only the top edge:
 
-1. `GreetingHeader`: the line from `chooseGreeting(now, displayName)` and the full date from `formatFullDate`.
+1. `GreetingHeader`: the line from `chooseGreeting(now, displayName)` and the full date from `formatFullDate`. It takes an optional `accessory` node, shown at the trailing edge; Home passes the `NotificationBell` (see Notification Centre). Without an accessory it looks as before.
 2. The today section, shown once `useScheduledWorkoutsForDate(today)` is `ready` (nothing while it loads or fails):
    - one or more workouts: `TodayCarousel`
    - none, and `hasActivePlan` is true: `RestDayCard`, whose button opens `/create`
@@ -873,9 +890,9 @@ Phase 08 turns the Profile tab into a hub, adds the profile form, the body measu
 1. `ProfileSummaryHeader`: nuggie, the display name (or "Your profile"), the goal label and weekly target, and an Edit button that opens `/profile/edit`. The stored goal `hypertrophy` is labelled "Muscle" (`fitnessGoalLabels` in `src/profile/profileLabels.ts`).
 2. Body: a `SettingsRow` "Add your first measurement" (opens `/profile/measurements/new`) when there are none, otherwise "Body measurements" with the latest weight and 30-day change from `describeWeightSummary` (opens `/profile/measurements`).
 3. Progress: a `SettingsRow` titled by `describeNewRecordCount` with the lifetime totals from `describeLifetimeTotals` as its subtitle (opens `/progress`). It appears once the lifetime totals have loaded.
-4. "Exercise library" (opens `/exercises`) and "Apple Health" (subtitle from `describeHealthAccessStatus(...).caption`, opens `/profile/apple-health`).
+4. "Exercise library" (opens `/exercises`), "Apple Health" (subtitle from `describeHealthAccessStatus(...).caption`, opens `/profile/apple-health`) and "Notifications" (opens `/notifications/settings`).
 
-There is no Notifications row; it waits for Phase 09b. Saving the profile or a measurement, and deleting a measurement, calls `bumpDataVersion()`, so Home and the hub reload.
+Saving the profile or a measurement, and deleting a measurement, calls `bumpDataVersion()`, so Home and the hub reload.
 
 ### Routes
 
@@ -985,7 +1002,7 @@ Elsewhere: `src/stats/healthChartPoints.ts` (`healthChartPoints`, `healthChartUn
 
 ## Coach Nuggie
 
-Phase 09a replaces the placeholder coach modal with a rule-based coach. It adds no migration and makes no network calls. Notifications are not part of it; they come in Phase 09b.
+Phase 09a replaces the placeholder coach modal with a rule-based coach. It adds no migration and makes no network calls. Notifications are Phase 09b (see Notifications).
 
 ### Pure Coach Module
 
@@ -1061,7 +1078,7 @@ While the snapshot loads, the typing indicator shows. Every Nuggie bubble and th
 
 ### Tip of the Day
 
-`useTipOfTheDay()` is called by `src/app/(tabs)/_layout.tsx` and returns the tip text, or `undefined`. On mount it decides once and never reloads on data changes: it reads `coachTipLastShownDateSettingKey` (`coach_tip_last_shown_date`) from `app_settings`; if that equals today's local date it shows nothing, otherwise it loads the snapshot once with `loadCoachSnapshot(database, now)` (in `src/hooks/loadCoachSnapshot.ts`, the plain async loader that `useCoachSnapshot` also uses), picks the tip (`chooseTipOfTheDay` when the load succeeds, `chooseGeneralTip` when it fails) and stores today's date. `useCoachSnapshot` itself still reloads on every data version change and keeps a ready snapshot if a later reload fails. So the tip shows at most once per local day. It clears the text after `durations.tipBubbleVisible` (6000 ms). `CoachFloatingButton` shows `tipText` in a bubble that is a `Touchable`, and tapping it opens the coach like the button does.
+`useTipOfTheDay()` is called by `src/app/(tabs)/_layout.tsx` and returns the tip text, or `undefined`. On mount it decides once and never reloads on data changes: it reads `coachTipLastShownDateSettingKey` (`coach_tip_last_shown_date`) from `app_settings`; if that equals today's local date it shows nothing, otherwise it loads the snapshot once with `loadCoachSnapshot(database, now)` (in `src/hooks/loadCoachSnapshot.ts`, the plain async loader that `useCoachSnapshot` also uses), picks the tip (`chooseTipOfTheDay` when the load succeeds, `chooseGeneralTip` when it fails) and stores today's date. When the top insight is `noData`, `chooseTipOfTheDay` returns the rotating general tip instead, so a user with fewer than 3 finished sessions never sees the "not enough data" message in the bubble (the coach chat still shows it). `useCoachSnapshot` itself still reloads on every data version change and keeps a ready snapshot if a later reload fails. So the tip shows at most once per local day. It clears the text after `durations.tipBubbleVisible` (6000 ms). `CoachFloatingButton` shows `tipText` in a bubble that is a `Touchable`, and tapping it opens the coach like the button does.
 
 ### Hooks
 
@@ -1096,6 +1113,120 @@ While the snapshot loads, the typing indicator shows. Every Nuggie bubble and th
 | `durations.typingDotStagger` | 150 | Delay between neighbouring typing dots |
 | `durations.tipBubbleVisible` | 6000 | How long the tip bubble stays before hiding itself |
 
+## Notifications
+
+Phase 09b adds local notifications with `expo-notifications`. There is no push server.
+
+The `expo-notifications` config plugin is deliberately left out of app.json. It always adds the push `aps-environment` entitlement, which the free Personal Team can't sign. Local notifications don't need it, and the native module autolinks without the plugin. `package.json` lists `expo-notifications` at `~57.0.21`; installing it needs a native rebuild with `bun run device`.
+
+### Module Boundary
+
+`src/notifications/` is the only place that imports `expo-notifications`, following the Apple Health precedent. Five adapter files import it (`openNotificationSystemSettings.ts` only wraps `Linking.openSettings()` from React Native):
+
+| File | Purpose |
+| --- | --- |
+| `notificationPermission.ts` | `getNotificationPermissionStatus()` reads `undetermined`, `granted` or `denied` without prompting. `requestNotificationPermission()` returns `granted` or `denied` and asks iOS only when permission has not been decided |
+| `notificationScheduling.ts` | `schedulePlannedNotification(plannedNotification)` schedules a DATE trigger with the content, the sound choice and `data.route`. `cancelPendingNotificationsWithIdentifierPrefix(identifierPrefix)` cancels the pending requests whose identifier starts with the prefix. `scheduleRestTimerNotification(seconds, sessionRoute)` and `cancelRestTimerNotification()` handle the rest alert (see Rest Alert) |
+| `notificationHandler.ts` | `configureNotificationHandler()`, called at module scope in the root layout, picks the foreground presentation from the identifier's kind |
+| `notificationTaps.ts` | `takeLastNotificationTap()` reads and clears the response that opened the app, and `subscribeToNotificationTaps(listener)` follows later taps. Both give a `NotificationTap` (`identifier`, `route`) and ignore a response they have already handled |
+| `notificationReceived.ts` | `subscribeToReceivedNotificationIdentifiers(listener)` follows notifications delivered while the app is in the foreground and passes each request identifier |
+
+### Pure Modules
+
+- `notificationSettingKeys.ts`: `workout_reminders_enabled`, `reminder_lead_minutes`, `rest_alerts_enabled` and `weekly_summary_enabled`, with the `true` and `false` values, plus `notification_permission_sheet_shown_at` and the `notificationSettingKeys` list that the settings loader and writer iterate over
+- `NotificationSettings.ts` and `parseNotificationSettings.ts`: every toggle defaults to on, and the lead time is 15, 30 or 60 minutes, defaulting to 30
+- `notificationIdentifiers.ts`: the three prefixes (see Identifiers), `workoutReminderIdentifier(date, planEntryId)`, `weeklySummaryIdentifier(sundayDate)`, `restTimerIdentifier` and `notificationKindForIdentifier`, which returns `workoutReminder`, `weeklySummary`, `restTimer` or `other`, and `isRecordedNotificationKind(kind)`, true for reminders and the summary only
+- `foregroundPresentation.ts`: `foregroundPresentationFor(kind)` gives the banner, list, sound and badge flags per kind. Reminders, the summary and `other` show with sound, `restTimer` is hidden, and nothing sets the badge
+- `PlannedNotification.ts`: identifier, title, body, nuggie, route, fire time and whether it plays a sound
+- `buildWorkoutReminders.ts`: one reminder per planned workout with a time of day in the 14-day window (today and the 13 days after), firing at its time minus the lead time when that is still in the future. The title is "Noop noop! 🦄", the body reads "Push Day at 17:30 — Nuggie's ready when you are!", the nuggie is `notification`, and the route is the workout detail from `resolveScheduledWorkoutRoute` as a string
+- `nextSundayAtSeven.ts`: the coming Sunday at 19:00 local time. On a Sunday before 19:00 it is today, and at or after 19:00 it is the next Sunday
+- `summaryWeekDates.ts` and `buildWeeklySummary.ts`: the seven dates of the week that contains the summary's Sunday (from `startOfWeek`, so the week starts on Monday like the Home streak tile), and the pure builder. It takes `completedCount`, `plannedCount`, `recordCount` and `now` and returns a `PlannedNotification` with the title "Noop noop! 🦄", the `coach` nuggie, the route `/coach`, the default sound, the fire time and the identifier `weekly-summary:<Sunday date>`. The body reads "This week: 4/5 workouts, 2 new records 🏆", "1 new record 🏆" for one, "This week: 3/4 workouts 💪" with none, "This week: 2 workouts done 💪" with nothing planned, and "Rest week! Nuggie's proud of you anyway 🦄" when nothing was planned or done
+- `encodeNotificationSettings.ts` (see Notification Settings), `mapRestTimerChange.ts` (see Rest Alert) and `shouldShowNotificationPermissionSheet.ts` (see Permission Sheet)
+- `workoutReminderWindow.ts` (the 14-day window), `routeToHref.ts` (turns a `{ pathname, params }` route into a string), `readNotificationRoute.ts` (reads `data.route` and accepts only strings starting with `/`), `createQueuedRunner.ts` (one run at a time, with at most one queued rerun, passing failures to an `onError` callback), `isCurrentRoute.ts` (true when a route's path, without query or hash, equals the current pathname), `omitDeliveredNotifications.ts` (drops planned notifications whose identifier is in a set of delivered identifiers), `reportNotificationError.ts` (a `console.warn` "Notification error" in `__DEV__`) and `notificationsConfiguration.ts` (titles, bodies and the 2000 ms debounce)
+
+### Identifiers
+
+Every scheduled request has an identifier whose prefix gives its kind:
+
+| Identifier | Kind | Recorded in `notifications` |
+| --- | --- | --- |
+| `workout-reminder:<date>:<planEntryId>` | Workout reminder | Yes |
+| `weekly-summary:<Sunday date>` | Sunday summary | Yes |
+| `rest-timer:alert` | Rest alert | No |
+
+### Recording
+
+The app records what it schedules, not what it hears, because iOS runs no JS for notifications delivered in the background. When a reminder or summary is scheduled, `upsertNotification` writes its row by `identifier` with `created_at` set to the fire time. The centre and the unread count list only rows whose `created_at` is in the past, so a row appears once its notification would have been delivered. A reschedule deletes the future rows of the kind it replaces (`deleteFutureNotificationsWithIdentifierPrefix`), so no row is duplicated or left orphaned; past rows stay.
+
+### Reconciling
+
+`useNotificationReconciler()` runs `reconcileNotifications(database)` on mount, when the app returns to the foreground and 2 seconds after the last data version bump, through one queued runner (the reconcile triggers). Each run loads the settings, reads the permission status (it never prompts), then reads the current time and, for each scheduled kind, cancels the pending requests with that kind's prefix, deletes its future rows, then schedules each planned notification again and upserts its row, except a planned notification whose identifier already has a past row. A delivered reminder is never scheduled again: after deleting the future rows, the reconciler reads the past identifiers for the prefix with `listPastNotificationIdentifiersWithPrefix` and filters the plan with the pure `omitDeliveredNotifications`, so changing the lead time or moving an entry later after its reminder fired does not fire it twice. Each notification is scheduled on its own: a failure is reported with `reportNotificationError` (a `console.warn` in `__DEV__`), its row is not written, and the rest still go ahead. Each kind is reconciled on its own, so a failure in one is reported and the other still runs. Without granted permission, the pending requests and future rows are still cleared and nothing is scheduled. A change to a setting reschedules too, because `useNotificationSettings` bumps the data version.
+
+The weekly summary is a single non-repeating DATE notification for the coming Sunday at 19:00, because a repeating trigger would repeat stale text. `planWeeklySummary` returns nothing when `isWeeklySummaryEnabled` is off. Otherwise it builds the week that the Sunday ends (`summaryWeekDates`), loads the plan, that week's sessions and every finished set, and counts completed and planned workouts with `calculateWeeklyStreak` (passing the Sunday as `today`; the counts do not depend on `today`, so later days of the week count as planned but not yet done) and records with `countPersonalRecordsInRange` over the week's dates. The text is rebuilt on every run, so it holds the numbers as of the last reconcile. Every run cancels the pending `weekly-summary:` requests, deletes the future summary rows and schedules again, upserting the row with `created_at` set to the fire time.
+
+### Permission Sheet
+
+The route `notifications/permission` is a `formSheet` that renders the `NotificationPermissionSheet` organism: the `notification` nuggie, a short explanation, "Sounds noopy!" and "Not now". `useNotificationPermissionSheet()` on Home opens it once, on the first visit, when the `notification_permission_sheet_shown_at` setting is empty and iOS permission is still undetermined (`shouldShowNotificationPermissionSheet`). The setting is written when the sheet opens. "Sounds noopy!" calls `requestNotificationPermission()`, closes the sheet and bumps the data version so the reconciler schedules; "Not now" only closes it.
+
+### Tap Routing
+
+`useNotificationTapRouting()` handles the response that opened the app, then listens for taps. Each tap on a reminder or summary marks the row with that identifier read, bumps the data version and pushes the route from the content data, unless the route's path is already the current pathname (read with `usePathname()`; `isCurrentRoute`), so tapping the rest alert while the session screen is on top does not stack a second session screen. A tap on the rest alert (`restTimer` kind) writes nothing and bumps nothing, so it does not trigger a reconcile mid-session. `useNotificationReconciler`, `useNotificationTapRouting`, `useNotificationReceivedRefresh` and `useRestAlertScheduling` are mounted once by `NotificationServices` in the root layout, inside `SQLiteProvider` and after the `Stack`; `configureNotificationHandler()` runs at module scope there. A failed mark-as-read write goes to `reportNotificationError` and the navigation still happens.
+
+`useNotificationReceivedRefresh()` listens through `subscribeToReceivedNotificationIdentifiers` and calls `bumpDataVersion()` when a reminder or summary is delivered while the app is in the foreground, so the Home bell updates without a focus change. It ignores the rest alert. A delivered row's `created_at` is its fire time, which is already past when the listener runs on the same device clock, so the reload shows it.
+
+### Notification Centre
+
+`/notifications` (`notifications/index`, a stack push titled "Notifications", registered in the root layout) lists the past rows from `listPastNotifications` through the `NotificationList` organism. It renders `NotificationRow` molecules, or the `EmptyState` with the `notification` nuggie, "All caught up!" and "Nuggie will let you know when something's up." when there are none, or an `EmptyState` "Could not load notifications" if the first load fails.
+
+| Piece | Behaviour |
+| --- | --- |
+| `NotificationRow` (molecule) | The stored `nuggie` (`notification` for reminders, `coach` for summaries) as a small round `NuggieImage`, the title, the body and a relative time. Title and body are bold, with an `UnreadDot`, while `readAt` is empty. Takes `notification`, `now` and `onPress` |
+| `NotificationList` (organism) | Takes `notifications`, `now` and `onPressNotification` |
+| `UnreadDot` (atom) | A small `accent` (baby-pink) dot, hidden from accessibility, sized by `sizes.unreadDot` |
+| `NotificationBell` (molecule) | The `bell` SF Symbol in a 44-point touch target, with an `UnreadDot` overlaid when `unreadCount` is above 0. Its accessibility label is "Notifications", "Notifications, 1 unread" or "Notifications, N unread" |
+| `useNotifications()` | Loads the past rows on data version changes and on focus. Returns `notifications` (null while loading), `hasLoadFailed`, `markRead(notificationId)` and `markAllRead()`. Both writes bump the data version |
+| `useUnreadNotificationCount()` | The count of past unread rows, reloaded on data version changes (including a foreground delivery, see Tap Routing) and on focus. Home passes it to the bell |
+| `formatRelativeTime(isoTimestamp, now)` (`src/dates`) | "Just now" under a minute, "Nm ago" within the hour, "Nh ago" later the same day, "Yesterday" for the previous calendar day, otherwise the day and short month such as "3 Oct" |
+
+Tapping a row marks it read and pushes its stored `route`, when it has one; a failed write goes to `reportNotificationError` and the navigation still happens. A failed unread count load keeps the previous count. "Mark all read" is a text button in the header's right slot, shown only while a row is unread. Only rows whose `created_at` is not in the future are listed or counted: `listPastNotifications`, `countPastUnreadNotifications` and `markAllNotificationsRead` all filter on `created_at <= now`. Rest alerts are never recorded, so they never appear.
+
+New theme tokens:
+
+| Token | Value | Purpose |
+| --- | --- | --- |
+| `sizes.unreadDot` | 10 | Diameter of the unread dot |
+| `sizes.bellUnreadDotInset` | 10 | Distance of the bell's dot from the top and right of its touch target |
+| `sizes.notificationRowNuggie` | 44 | Size of the nuggie on a notification row |
+| `sizes.bellIcon` | 24 | Size of the bell symbol |
+| `sizes.rowDividerWidth` | 1 | Width of the divider under a notification row |
+| `fontWeights.regular` | '400' | Weight of a read notification's text. `fontWeights` is a new theme group (`theme.fontWeights`) |
+| `fontWeights.heavy` | '800' | Weight of an unread notification's text |
+
+### Notification Settings
+
+`/notifications/settings` (`notifications/settings`, a stack push titled "Notifications", registered in the root layout) is opened from the "Notifications" `SettingsRow` on the Profile hub. From top to bottom:
+
+1. A permission row, from `useNotificationPermissionStatus()`. When the status is `denied` it is a `SettingsRow` "Notifications are off for Nuggie's Gym" with the subtitle "Turn on in Settings", which calls `Linking.openSettings()` through `openNotificationSystemSettings()` in `src/notifications`. When `undetermined` it is "Allow notifications for Nuggie's Gym", which uses `requestNotificationPermission()` and then bumps the data version. When `granted` there is no row. The status is read again on focus and when the app becomes active, so coming back from iOS Settings updates the screen.
+2. Three `ToggleRow`s: "Workout reminders", "Rest timer alerts" and "Sunday summary".
+3. While reminders are on, a "Remind me" group of three `ChoiceRow`s: "15 minutes before", "30 minutes before" and "60 minutes before", with a checkmark on the selected one. The labels are too long for three `SegmentedControl` segments, so rows are used.
+
+| Piece | Behaviour |
+| --- | --- |
+| `Switch` (primitive) | Wraps the native `Switch`. `border` track when off, `accent` track when on, `surface` thumb. Takes `value`, `onValueChange`, `accessibilityLabel` and `disabled` |
+| `ToggleRow` (molecule) | `SettingsRow`'s layout with a `Switch` on the right. Takes `title`, `subtitle`, `value` and `onValueChange` |
+| `ChoiceRow` (molecule) | `SettingsRow`'s layout with an `accent` `checkmark` while selected. A radio-role button. Takes `title`, `isSelected` and `onPress` |
+| `encodeNotificationSettings(settings)` | The inverse of `parseNotificationSettings`: toggles as `'true'` or `'false'`, the lead time as `'15'`, `'30'` or `'60'`. Pure; the tests round-trip every combination |
+| `useNotificationSettings()` | Loads the settings on focus through `loadNotificationSettings`. Returns `settings` (null while loading) and `updateSettings(changes)`, which updates the UI first, writes only the changed keys with `setSetting` and calls `bumpDataVersion()` so the reconciler reschedules within about 2 seconds. Turning reminders off leaves none pending; a new lead time moves them. A failed write reverts only the changed keys and goes to `reportNotificationError`. Turning rest alerts off also cancels a pending rest alert |
+| `useNotificationPermissionStatus()` | Returns `permissionStatus` (null while reading), `askForPermission()` and `openSystemSettings()` |
+
+The reconciler plans nothing for a kind whose setting is off, and `useRestAlertScheduling` reads the settings on every schedule.
+
+### Rest Alert
+
+`useRestAlertScheduling()` subscribes to `restTimerStore` and is mounted by `NotificationServices` alongside the other two hooks, so the session hooks are untouched. Each store change goes through the pure `mapRestTimerChange(previousState, nextState, nowMilliseconds)`: a running timer gives `schedule` with the seconds left (the full rest on start, the time left on resume), a pause, clear or natural end gives `cancel`, and idle staying idle gives `nothing`. Under one second also cancels, since `TIME_INTERVAL` needs at least 1.
+
+Actions run one after another on a promise chain. A schedule action loads the settings, skips when `areRestAlertsEnabled` is off or permission is not granted, reads the in-progress session with `getActiveSession` to build `/sessions/<id>` (no route if there is none), then checks the timer state is still the one that triggered it before calling `scheduleRestTimerNotification(seconds, sessionRoute)`. `cancelRestTimerNotification()` cancels the fixed identifier `rest-timer:alert`, so scheduling again replaces it. The alert is a `TIME_INTERVAL` trigger with no sound, titled "Noop noop! 🦄" with the body "Rest's up! Back to it 💪". It is never upserted into the `notifications` table. The root layout's notification handler uses `foregroundPresentationFor('restTimer')`, which hides it while the app is in the foreground (no banner, list or sound), because the in-session timer and haptic already cover it; with the phone locked or the app in the background iOS shows the banner, without sound.
+
 ## App Start
 
 When the app launches:
@@ -1123,17 +1254,18 @@ src/
     stats/                  [metric] 14-day detail screen with chart
     profile/                edit, apple-health, measurements/index, measurements/new
     progress/               index, records, classes, exercises/[exerciseId]
+    notifications/          index (centre), settings, permission (formSheet)
     sessions/               [sessionId] logger, finishing, summary screens, [sessionId]/link-health-workout sheet
   components/
-    primitives/             themed wrappers: Box, Typography, Touchable, TextField, Stack, Image, Icon, List, SectionedList, ScrollBox, AnimatedBox, SwipeableBox, LongPressDragBox, WindowMeasuredBox, TimePickerBox, PagedList, SnapList, ProgressRingBox, ShakeBox, PulseBox
-    atoms/                  smallest UI pieces: Button, TextButton, IconButton, Badge, Chip, Checkbox, NuggieImage, Card, NumberInput, DurationInput, DragHandle, SupersetBracket, Toast, TimeLabel, StatusChip, DayMarker, PageDots, StreakDots, TrendArrow, DatePickerField, TypingIndicator
-    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField, PlanEntryRow, DaySectionHeader, PlanRow, RestDay, ActivePlanBanner, DayChip, ScheduledWorkoutCard, HeaderImageCard, WorkoutDetailExerciseRow, ActiveSessionBanner, PersonalRecordRow, RestTimerBar, SessionSetRow, SessionTopBar, StatTile, HealthPermissionCard, HealthWorkoutRow, LinkedHealthWorkoutRow, HealthSuggestionBanner, GreetingHeader, TodayWorkoutCard, NuggieActionCard, RestDayCard, NoPlanCard, WeeklyStreakTile, StatBarRow, ProfileSummaryHeader, SettingsRow, MeasurementRow, RangeSwitcher, ClassCountTile, StatisticLine, CoachMessageBubble, UserMessageBubble, PromptChip
-    organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter, PlanWeekEditor, AddPlanEntrySheet, ActivatePlanSheet, EntryTimeSheet, CopyDaySheet, WeekStrip, DayWorkoutList, IndividualWorkoutDetail, ClassWorkoutDetail, SessionLogger, ClassSessionView, SessionExerciseCard, SessionSummary, LinkHealthWorkoutSheet, TodayCarousel, StatTileGrid, StatBarList, HealthMetricBarList, StreakBarList, ProfileForm, MeasurementForm, ProgressOverview, RecentRecordsSection, PersonalRecordItemRow, ClassCountSection, ClassStatisticsCard, ExerciseProgressSection, ExerciseHistoryList, ProgressChartFrame, ProgressLineChart, ProgressBarChart, CoachConversation, PromptChipBar
+    primitives/             themed wrappers: Box, Typography, Touchable, TextField, Stack, Image, Icon, List, SectionedList, ScrollBox, AnimatedBox, SwipeableBox, LongPressDragBox, WindowMeasuredBox, TimePickerBox, PagedList, SnapList, ProgressRingBox, ShakeBox, PulseBox, Switch
+    atoms/                  smallest UI pieces: Button, TextButton, IconButton, Badge, Chip, Checkbox, NuggieImage, Card, NumberInput, DurationInput, DragHandle, SupersetBracket, Toast, TimeLabel, StatusChip, DayMarker, PageDots, StreakDots, TrendArrow, DatePickerField, TypingIndicator, UnreadDot
+    molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField, PlanEntryRow, DaySectionHeader, PlanRow, RestDay, ActivePlanBanner, DayChip, ScheduledWorkoutCard, HeaderImageCard, WorkoutDetailExerciseRow, ActiveSessionBanner, PersonalRecordRow, RestTimerBar, SessionSetRow, SessionTopBar, StatTile, HealthPermissionCard, HealthWorkoutRow, LinkedHealthWorkoutRow, HealthSuggestionBanner, GreetingHeader, TodayWorkoutCard, NuggieActionCard, RestDayCard, NoPlanCard, WeeklyStreakTile, StatBarRow, ProfileSummaryHeader, SettingsRow, MeasurementRow, RangeSwitcher, ClassCountTile, StatisticLine, CoachMessageBubble, UserMessageBubble, PromptChip, NotificationBell, NotificationRow, ToggleRow, ChoiceRow
+    organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter, PlanWeekEditor, AddPlanEntrySheet, ActivatePlanSheet, EntryTimeSheet, CopyDaySheet, WeekStrip, DayWorkoutList, IndividualWorkoutDetail, ClassWorkoutDetail, SessionLogger, ClassSessionView, SessionExerciseCard, SessionSummary, LinkHealthWorkoutSheet, TodayCarousel, StatTileGrid, StatBarList, HealthMetricBarList, StreakBarList, ProfileForm, MeasurementForm, ProgressOverview, RecentRecordsSection, PersonalRecordItemRow, ClassCountSection, ClassStatisticsCard, ExerciseProgressSection, ExerciseHistoryList, ProgressChartFrame, ProgressLineChart, ProgressBarChart, CoachConversation, PromptChipBar, NotificationList
   database/
-    migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2), addSessionExerciseRestSeconds (v3)
-    repositories/           one file per entity: exerciseRepository, workoutRepository, planRepository, scheduleRepository, sessionRepository, appSettingsRepository, healthSnapshotRepository, profileRepository, bodyMeasurementRepository, progressRepository
+    migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2), addSessionExerciseRestSeconds (v3), addNotificationIdentifier (v4)
+    repositories/           one file per entity: exerciseRepository, workoutRepository, planRepository, scheduleRepository, sessionRepository, appSettingsRepository, healthSnapshotRepository, profileRepository, bodyMeasurementRepository, progressRepository, notificationRepository
   exercises/                pure exercise logic with tests: validation, A–Z grouping, filtering, selection, body part param parsing
-  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan, usePlanActions, useScheduledWorkouts, useWeekPages, useSelectedDate, useScheduledWeeks, useSession, useStartSession, useActiveSession, useFinishedSession, useRestTimer, useSessionExercisePicks, useHealthAuthorization, useDailyHealth, useOverlappingHealthWorkouts, useUnlinkHealthWorkout, useProfile, useWeeklyStreak, useHealthRange, useFocusReloadKey, useProfileForm, useBodyMeasurements, useMeasurementForm, useTrainingTotals, usePersonalRecords, useNewRecordCount, useExercisesWithHistory, useExerciseHistory, useClassStatistics, useCoachSnapshot, useCoachConversation, useTipOfTheDay
+  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan, usePlanActions, useScheduledWorkouts, useWeekPages, useSelectedDate, useScheduledWeeks, useSession, useStartSession, useActiveSession, useFinishedSession, useRestTimer, useSessionExercisePicks, useHealthAuthorization, useDailyHealth, useOverlappingHealthWorkouts, useUnlinkHealthWorkout, useProfile, useWeeklyStreak, useHealthRange, useFocusReloadKey, useProfileForm, useBodyMeasurements, useMeasurementForm, useTrainingTotals, usePersonalRecords, useNewRecordCount, useExercisesWithHistory, useExerciseHistory, useClassStatistics, useCoachSnapshot, useCoachConversation, useTipOfTheDay, useNotifications, useUnreadNotificationCount, useNotificationSettings, useNotificationPermissionStatus, useNotificationReconciler, useNotificationTapRouting, useNotificationReceivedRefresh, useRestAlertScheduling, useNotificationPermissionSheet, plus the plain loaders `reconcileNotifications` and `loadNotificationSettings`
   stores/                   exercisePickerStore, workoutSavedStore for returning values between screens; dataVersionStore, restTimerStore for module-level state; with tests
   plans/                    pure plan logic with tests: build scheduled workouts, time of day, summaries, copy day, weekday grouping, day marker state, week cache
   workouts/                 pure builder logic with tests: reducer, normalisation, grouping blocks, target set columns, save rows, drag maths, rest presets, class type nuggies, editor context and provider, duration estimation, target set descriptions
@@ -1150,7 +1282,8 @@ src/
   types/                    shared domain types (Exercise, Workout, Session, Plan, ScheduledWorkout, etc.)
   theme/                    design tokens and theme provider
   health/                   Apple Health integration (phase 06); range backfill, trend and step progress helpers (phase 07)
-  coach/                    pure coach logic with tests (phase 09a): snapshot, rule registry and rules/, answers, greeting, tip of the day, conversation reducer. No React Native, expo-sqlite or expo-router imports. Notifications arrive in phase 09b
+  coach/                    pure coach logic with tests (phase 09a): snapshot, rule registry and rules/, answers, greeting, tip of the day, conversation reducer. No React Native, expo-sqlite or expo-router imports
+  notifications/            local notifications (phase 09b): expo-notifications adapters (permission, scheduling, handler, taps, received), settings, reminder builder and identifiers
 ```
 
 **Note on typed routes:** Expo Router generates TypeScript types for file-based routes into `.expo/types/router.d.ts` during `npx expo start` on the development machine. A fresh checkout needs one dev-server start before `bun run typecheck` accepts new route references.

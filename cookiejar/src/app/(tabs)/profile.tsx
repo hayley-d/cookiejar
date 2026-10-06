@@ -42,6 +42,10 @@ function openProgress() {
   router.push('/progress');
 }
 
+function openNotificationSettings() {
+  router.push('/notifications/settings');
+}
+
 function openExerciseLibrary() {
   router.push('/exercises');
 }
@@ -105,6 +109,7 @@ export default function ProfileScreen() {
               subtitle={describeHealthAccessStatus(hasRequestedAuthorization).caption}
               onPress={openAppleHealth}
             />
+            <SettingsRow title="Notifications" onPress={openNotificationSettings} />
           </Box>
         </ScrollBox>
       </Box>

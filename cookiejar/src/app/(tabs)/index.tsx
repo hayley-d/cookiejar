@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/molecules/EmptyState';
 import { GreetingHeader } from '@/components/molecules/GreetingHeader';
 import { NoPlanCard } from '@/components/molecules/NoPlanCard';
+import { NotificationBell } from '@/components/molecules/NotificationBell';
 import { RestDayCard } from '@/components/molecules/RestDayCard';
 import { WeeklyStreakTile } from '@/components/molecules/WeeklyStreakTile';
 import { StatTileGrid } from '@/components/organisms/StatTileGrid';
@@ -20,9 +21,11 @@ import { shouldShowHealthAccessHint } from '@/health/shouldShowHealthAccessHint'
 import { useDailyHealth } from '@/hooks/useDailyHealth';
 import { useHealthAuthorization } from '@/hooks/useHealthAuthorization';
 import { useHealthRange } from '@/hooks/useHealthRange';
+import { useNotificationPermissionSheet } from '@/hooks/useNotificationPermissionSheet';
 import { useProfile } from '@/hooks/useProfile';
 import { useScheduledWorkoutsForDate } from '@/hooks/useScheduledWorkouts';
 import { useStartSession } from '@/hooks/useStartSession';
+import { useUnreadNotificationCount } from '@/hooks/useUnreadNotificationCount';
 import { useWeeklyStreak } from '@/hooks/useWeeklyStreak';
 import type { StatsMetric } from '@/stats/parseStatsMetric';
 import { useTheme } from '@/theme/useTheme';
@@ -37,6 +40,7 @@ const showHealthAccessInstructions = () => {
 
 export default function HomeScreen() {
   const theme = useTheme();
+  useNotificationPermissionSheet();
   const now = new Date();
   const today = toLocalDateString(now);
   const { displayName, dailyStepGoal, weeklyWorkoutTarget } = useProfile();
@@ -54,6 +58,7 @@ export default function HomeScreen() {
   const todayWorkouts = useScheduledWorkoutsForDate(today);
   const { startSession } = useStartSession();
   const weeklyStreak = useWeeklyStreak(now, weeklyWorkoutTarget);
+  const unreadNotificationCount = useUnreadNotificationCount();
 
   const startScheduledWorkout = useCallback(
     (scheduledWorkout: ScheduledWorkout) => {
@@ -79,6 +84,10 @@ export default function HomeScreen() {
     router.navigate({ pathname: '/stats/[metric]', params: { metric } });
   };
 
+  const openNotifications = () => {
+    router.push('/notifications');
+  };
+
   const navigateToPlanNew = () => {
     router.navigate('/plans/new');
   };
@@ -89,7 +98,11 @@ export default function HomeScreen() {
     <SafeAreaView edges={['top']} style={{ flex: 1 }}>
       <Box flex={1} background="background">
         <ScrollBox showsVerticalScrollIndicator={false} contentBottomPadding={theme.sizes.coachButtonClearance}>
-          <GreetingHeader displayName={displayName} now={now} />
+          <GreetingHeader
+            displayName={displayName}
+            now={now}
+            accessory={<NotificationBell unreadCount={unreadNotificationCount} onPress={openNotifications} />}
+          />
           {todayWorkouts.status === 'ready' ? (
             todayWorkouts.scheduledWorkouts.length > 0 ? (
               <TodayCarousel
