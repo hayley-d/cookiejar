@@ -111,6 +111,15 @@ export default function RootLayout() {
                   sheetGrabberVisible: true,
                 }}
               />
+              <Stack.Screen
+                name="notifications/permission"
+                options={{
+                  presentation: 'formSheet',
+                  headerShown: false,
+                  sheetAllowedDetents: [0.55],
+                  sheetGrabberVisible: true,
+                }}
+              />
               <Stack.Screen name="progress/index" options={{ title: 'Progress', headerLargeTitleEnabled: false }} />
               <Stack.Screen
                 name="progress/records"

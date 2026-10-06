@@ -9,7 +9,7 @@ import { listSessionsBetween } from '@/database/repositories/scheduleRepository'
 import { loadNotificationSettings } from '@/hooks/loadNotificationSettings';
 import { buildWorkoutReminders } from '@/notifications/buildWorkoutReminders';
 import { workoutReminderIdentifierPrefix } from '@/notifications/notificationIdentifiers';
-import { requestNotificationPermission } from '@/notifications/notificationPermission';
+import { getNotificationPermissionStatus } from '@/notifications/notificationPermission';
 import {
   cancelPendingNotificationsWithIdentifierPrefix,
   schedulePlannedNotification,
@@ -69,9 +69,9 @@ async function planWorkoutReminders(context: ReconcileContext): Promise<PlannedN
 
 export async function reconcileNotifications(database: SQLiteDatabase): Promise<void> {
   const settings = await loadNotificationSettings(database);
-  const permissionOutcome = await requestNotificationPermission();
+  const permissionStatus = await getNotificationPermissionStatus();
   const now = new Date();
-  const context: ReconcileContext = { database, settings, canSchedule: permissionOutcome === 'granted', now };
+  const context: ReconcileContext = { database, settings, canSchedule: permissionStatus === 'granted', now };
 
   const workoutReminders = await planWorkoutReminders(context);
   await replacePlannedNotifications(context, workoutReminderIdentifierPrefix, workoutReminders);

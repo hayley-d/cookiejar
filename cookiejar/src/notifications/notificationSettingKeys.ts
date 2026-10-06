@@ -14,3 +14,5 @@ export type NotificationSettingKey = (typeof notificationSettingKeys)[number];
 
 export const enabledSettingValue = 'true';
 export const disabledSettingValue = 'false';
+
+export const notificationPermissionSheetShownAtSettingKey = 'notification_permission_sheet_shown_at';

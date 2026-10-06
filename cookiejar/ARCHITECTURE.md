@@ -1123,7 +1123,7 @@ The `expo-notifications` config plugin is deliberately left out of app.json. It 
 
 | File | Purpose |
 | --- | --- |
-| `notificationPermission.ts` | `requestNotificationPermission()` returns `granted` or `denied`. It asks iOS only when permission has not been decided |
+| `notificationPermission.ts` | `getNotificationPermissionStatus()` reads `undetermined`, `granted` or `denied` without prompting. `requestNotificationPermission()` returns `granted` or `denied` and asks iOS only when permission has not been decided |
 | `notificationScheduling.ts` | `schedulePlannedNotification(plannedNotification)` schedules a DATE trigger with the content, the sound choice and `data.route`. `cancelPendingNotificationsWithIdentifierPrefix(identifierPrefix)` cancels the pending requests whose identifier starts with the prefix |
 | `notificationHandler.ts` | `configureNotificationHandler()`, called at module scope in the root layout, picks the foreground presentation from the identifier's kind |
 | `notificationTaps.ts` | `takeLastNotificationTap()` reads and clears the response that opened the app, and `subscribeToNotificationTaps(listener)` follows later taps. Both give a `NotificationTap` (`identifier`, `route`) and ignore a response they have already handled |
@@ -1140,7 +1140,11 @@ The `expo-notifications` config plugin is deliberately left out of app.json. It 
 
 ### Reconciling
 
-`useNotificationReconciler()` runs `reconcileNotifications(database)` on mount, when the app returns to the foreground and 2 seconds after the last data version bump, through one queued runner. Each run loads the settings, requests permission, then reads the current time (so a long first-launch prompt can't leave a past fire time) and, for each scheduled kind, cancels the pending requests with that kind's prefix, deletes its future rows, then schedules each planned notification again and upserts its row. Each notification is scheduled on its own: a failure is reported with `reportNotificationError` (a `console.warn` in `__DEV__`), its row is not written, and the rest still go ahead. Without permission, nothing is scheduled.
+`useNotificationReconciler()` runs `reconcileNotifications(database)` on mount, when the app returns to the foreground and 2 seconds after the last data version bump, through one queued runner. Each run loads the settings, reads the permission status (it never prompts), then reads the current time (so a long first-launch prompt can't leave a past fire time) and, for each scheduled kind, cancels the pending requests with that kind's prefix, deletes its future rows, then schedules each planned notification again and upserts its row. Each notification is scheduled on its own: a failure is reported with `reportNotificationError` (a `console.warn` in `__DEV__`), its row is not written, and the rest still go ahead. Without granted permission, nothing is scheduled.
+
+### Permission Sheet
+
+The route `notifications/permission` is a `formSheet` that renders the `NotificationPermissionSheet` organism: the `notification` nuggie, a short explanation, "Sounds noopy!" and "Not now". `useNotificationPermissionSheet()` on Home opens it once, on the first visit, when the `notification_permission_sheet_shown_at` setting is empty and iOS permission is still undetermined (`shouldShowNotificationPermissionSheet`). The setting is written when the sheet opens. "Sounds noopy!" calls `requestNotificationPermission()`, closes the sheet and bumps the data version so the reconciler schedules; "Not now" only closes it.
 
 ### Tap Routing
 

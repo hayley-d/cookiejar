@@ -20,6 +20,7 @@ import { shouldShowHealthAccessHint } from '@/health/shouldShowHealthAccessHint'
 import { useDailyHealth } from '@/hooks/useDailyHealth';
 import { useHealthAuthorization } from '@/hooks/useHealthAuthorization';
 import { useHealthRange } from '@/hooks/useHealthRange';
+import { useNotificationPermissionSheet } from '@/hooks/useNotificationPermissionSheet';
 import { useProfile } from '@/hooks/useProfile';
 import { useScheduledWorkoutsForDate } from '@/hooks/useScheduledWorkouts';
 import { useStartSession } from '@/hooks/useStartSession';
@@ -37,6 +38,7 @@ const showHealthAccessInstructions = () => {
 
 export default function HomeScreen() {
   const theme = useTheme();
+  useNotificationPermissionSheet();
   const now = new Date();
   const today = toLocalDateString(now);
   const { displayName, dailyStepGoal, weeklyWorkoutTarget } = useProfile();
