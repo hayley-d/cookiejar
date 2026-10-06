@@ -1,7 +1,7 @@
-import { EmptyState } from "@/components/molecules/EmptyState";
-import { NotificationRow } from "@/components/molecules/NotificationRow";
-import { List } from "@/components/primitives/List";
-import type { AppNotification } from "@/types/AppNotification";
+import { EmptyState } from '@/components/molecules/EmptyState';
+import { NotificationRow } from '@/components/molecules/NotificationRow';
+import { List } from '@/components/primitives/List';
+import type { AppNotification } from '@/types/AppNotification';
 
 type NotificationListProperties = {
   notifications: AppNotification[];
@@ -9,11 +9,7 @@ type NotificationListProperties = {
   onPressNotification: (notification: AppNotification) => void;
 };
 
-export function NotificationList({
-  notifications,
-  now,
-  onPressNotification,
-}: NotificationListProperties) {
+export function NotificationList({ notifications, now, onPressNotification }: NotificationListProperties) {
   if (notifications.length === 0) {
     return (
       <EmptyState
@@ -29,13 +25,7 @@ export function NotificationList({
       data={notifications}
       keyExtractor={(notification) => String(notification.id)}
       gap="none"
-      renderItem={({ item }) => (
-        <NotificationRow
-          notification={item}
-          now={now}
-          onPress={onPressNotification}
-        />
-      )}
+      renderItem={({ item }) => <NotificationRow notification={item} now={now} onPress={onPressNotification} />}
     />
   );
 }

@@ -1,5 +1,5 @@
-import { Box } from "@/components/primitives/Box";
-import { useTheme } from "@/theme/useTheme";
+import { Box } from '@/components/primitives/Box';
+import { useTheme } from '@/theme/useTheme';
 
 export function UnreadDot() {
   const theme = useTheme();

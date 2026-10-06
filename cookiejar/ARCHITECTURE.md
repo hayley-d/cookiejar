@@ -1168,7 +1168,7 @@ The route `notifications/permission` is a `formSheet` that renders the `Notifica
 | `useUnreadNotificationCount()` | The count of past unread rows, reloaded on data version changes and on focus. Home passes it to the bell |
 | `formatRelativeTime(isoTimestamp, now)` (`src/dates`) | "Just now" under a minute, "Nm ago" within the hour, "Nh ago" later the same day, "Yesterday" for the previous calendar day, otherwise the day and short month such as "3 Oct" |
 
-Tapping a row marks it read and pushes its stored `route`, when it has one. "Mark all read" is a text button in the header's right slot, shown only while a row is unread. Only rows whose `created_at` is not in the future are listed or counted: `listPastNotifications`, `countPastUnreadNotifications` and `markAllNotificationsRead` all filter on `created_at <= now`. Rest alerts are never recorded, so they never appear.
+Tapping a row marks it read and pushes its stored `route`, when it has one; a failed write goes to `reportNotificationError` and the navigation still happens. A failed unread count load keeps the previous count. "Mark all read" is a text button in the header's right slot, shown only while a row is unread. Only rows whose `created_at` is not in the future are listed or counted: `listPastNotifications`, `countPastUnreadNotifications` and `markAllNotificationsRead` all filter on `created_at <= now`. Rest alerts are never recorded, so they never appear.
 
 New theme tokens:
 
@@ -1177,6 +1177,10 @@ New theme tokens:
 | `sizes.unreadDot` | 10 | Diameter of the unread dot |
 | `sizes.bellUnreadDotInset` | 10 | Distance of the bell's dot from the top and right of its touch target |
 | `sizes.notificationRowNuggie` | 44 | Size of the nuggie on a notification row |
+| `sizes.bellIcon` | 24 | Size of the bell symbol |
+| `sizes.rowDividerWidth` | 1 | Width of the divider under a notification row |
+| `fontWeights.regular` | '400' | Weight of a read notification's text. `fontWeights` is a new theme group (`theme.fontWeights`) |
+| `fontWeights.heavy` | '800' | Weight of an unread notification's text |
 
 ### Rest Alert
 

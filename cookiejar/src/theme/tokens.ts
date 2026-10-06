@@ -155,7 +155,14 @@ export const sizes = {
   unreadDot: 10,
   bellUnreadDotInset: 10,
   notificationRowNuggie: 44,
+  bellIcon: 24,
+  rowDividerWidth: 1,
 };
+
+export const fontWeights = {
+  regular: '400',
+  heavy: '800',
+} satisfies Record<string, TextStyle['fontWeight']>;
 
 export const durations = {
   dragLongPress: 300,
@@ -210,6 +217,7 @@ export type Theme = {
   radii: typeof radii;
   sizes: typeof sizes;
   durations: typeof durations;
+  fontWeights: typeof fontWeights;
   typography: typeof typography;
   shadows: ReturnType<typeof createShadows>;
 };
@@ -222,6 +230,7 @@ export function createTheme(colorScheme: ColorSchemeName): Theme {
     radii,
     sizes,
     durations,
+    fontWeights,
     typography,
     shadows: createShadows(palettes[colorScheme]),
   };

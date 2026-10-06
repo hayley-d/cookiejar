@@ -1,22 +1,20 @@
-import { useSQLiteContext } from "expo-sqlite";
-import { useCallback, useEffect, useState } from "react";
+import { useSQLiteContext } from 'expo-sqlite';
+import { useCallback, useEffect, useState } from 'react';
 
 import {
   listPastNotifications,
   markAllNotificationsRead,
   markNotificationRead,
-} from "@/database/repositories/notificationRepository";
-import { useFocusReloadKey } from "@/hooks/useFocusReloadKey";
-import { bumpDataVersion, useDataVersion } from "@/stores/dataVersionStore";
-import type { AppNotification } from "@/types/AppNotification";
+} from '@/database/repositories/notificationRepository';
+import { useFocusReloadKey } from '@/hooks/useFocusReloadKey';
+import { bumpDataVersion, useDataVersion } from '@/stores/dataVersionStore';
+import type { AppNotification } from '@/types/AppNotification';
 
 export function useNotifications() {
   const database = useSQLiteContext();
   const dataVersion = useDataVersion();
   const focusCount = useFocusReloadKey();
-  const [notifications, setNotifications] = useState<AppNotification[] | null>(
-    null,
-  );
+  const [notifications, setNotifications] = useState<AppNotification[] | null>(null);
   const [hasLoadFailed, setHasLoadFailed] = useState(false);
 
   useEffect(() => {

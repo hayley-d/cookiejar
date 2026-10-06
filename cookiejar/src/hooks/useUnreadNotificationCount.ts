@@ -1,9 +1,10 @@
-import { useSQLiteContext } from "expo-sqlite";
-import { useEffect, useState } from "react";
+import { useSQLiteContext } from 'expo-sqlite';
+import { useEffect, useState } from 'react';
 
-import { countPastUnreadNotifications } from "@/database/repositories/notificationRepository";
-import { useFocusReloadKey } from "@/hooks/useFocusReloadKey";
-import { useDataVersion } from "@/stores/dataVersionStore";
+import { countPastUnreadNotifications } from '@/database/repositories/notificationRepository';
+import { useFocusReloadKey } from '@/hooks/useFocusReloadKey';
+import { reportNotificationError } from '@/notifications/reportNotificationError';
+import { useDataVersion } from '@/stores/dataVersionStore';
 
 export function useUnreadNotificationCount(): number {
   const database = useSQLiteContext();
@@ -13,14 +14,11 @@ export function useUnreadNotificationCount(): number {
 
   useEffect(() => {
     let isActive = true;
-    countPastUnreadNotifications(database, new Date()).then(
-      (loadedCount) => {
-        if (isActive) {
-          setUnreadCount(loadedCount);
-        }
-      },
-      () => {},
-    );
+    countPastUnreadNotifications(database, new Date()).then((loadedCount) => {
+      if (isActive) {
+        setUnreadCount(loadedCount);
+      }
+    }, reportNotificationError);
     return () => {
       isActive = false;
     };
