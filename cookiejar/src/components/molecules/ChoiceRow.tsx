@@ -28,7 +28,7 @@ export function ChoiceRow({ title, isSelected, onPress }: ChoiceRowProperties) {
         justify="space-between"
         gap="medium"
         paddingVertical="medium"
-        style={{ borderBottomWidth: 1, borderBottomColor: theme.colors.border }}
+        style={{ borderBottomWidth: theme.sizes.rowDividerWidth, borderBottomColor: theme.colors.border }}
       >
         <Typography variant="label">{title}</Typography>
         {isSelected ? <Icon name="checkmark" size={checkmarkSize} color="accent" weight="semibold" /> : null}

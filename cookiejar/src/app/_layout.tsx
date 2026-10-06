@@ -9,6 +9,7 @@ import { NuggieLoadingScreen } from '@/components/organisms/NuggieLoadingScreen'
 import { databaseName } from '@/database/databaseName';
 import { migrateDatabase } from '@/database/migrateDatabase';
 import { useNotificationReconciler } from '@/hooks/useNotificationReconciler';
+import { useNotificationReceivedRefresh } from '@/hooks/useNotificationReceivedRefresh';
 import { useNotificationTapRouting } from '@/hooks/useNotificationTapRouting';
 import { useRestAlertScheduling } from '@/hooks/useRestAlertScheduling';
 import { configureNotificationHandler } from '@/notifications/notificationHandler';
@@ -43,6 +44,7 @@ function DatabaseReadySignal({ onReady }: DatabaseReadySignalProperties) {
 
 function NotificationServices() {
   useNotificationReconciler();
+  useNotificationReceivedRefresh();
   useNotificationTapRouting();
   useRestAlertScheduling();
 

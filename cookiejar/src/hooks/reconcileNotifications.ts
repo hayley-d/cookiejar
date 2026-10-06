@@ -2,6 +2,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import {
   deleteFutureNotificationsWithIdentifierPrefix,
+  listPastNotificationIdentifiersWithPrefix,
   upsertNotification,
 } from '@/database/repositories/notificationRepository';
 import { getActivePlanWithEntries } from '@/database/repositories/planRepository';
@@ -20,6 +21,7 @@ import {
   cancelPendingNotificationsWithIdentifierPrefix,
   schedulePlannedNotification,
 } from '@/notifications/notificationScheduling';
+import { omitDeliveredNotifications } from '@/notifications/omitDeliveredNotifications';
 import type { NotificationSettings } from '@/notifications/NotificationSettings';
 import type { PlannedNotification } from '@/notifications/PlannedNotification';
 import { reportNotificationError } from '@/notifications/reportNotificationError';
@@ -46,7 +48,12 @@ async function replacePlannedNotifications(
   if (!context.canSchedule) {
     return;
   }
-  for (const plannedNotification of plannedNotifications) {
+  const deliveredIdentifiers = await listPastNotificationIdentifiersWithPrefix(
+    context.database,
+    identifierPrefix,
+    context.now,
+  );
+  for (const plannedNotification of omitDeliveredNotifications(plannedNotifications, deliveredIdentifiers)) {
     try {
       await schedulePlannedNotification(plannedNotification);
       await upsertNotification(context.database, {

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { foregroundPresentationFor } from '@/notifications/foregroundPresentation';
 import {
+  isRecordedNotificationKind,
   notificationKindForIdentifier,
   restTimerIdentifier,
   weeklySummaryIdentifier,
@@ -57,5 +58,14 @@ describe('foregroundPresentationFor the rest alert', () => {
       shouldPlaySound: false,
       shouldSetBadge: false,
     });
+  });
+});
+
+describe('isRecordedNotificationKind', () => {
+  test('is true for reminders and the weekly summary only', () => {
+    expect(isRecordedNotificationKind('workoutReminder')).toBe(true);
+    expect(isRecordedNotificationKind('weeklySummary')).toBe(true);
+    expect(isRecordedNotificationKind('restTimer')).toBe(false);
+    expect(isRecordedNotificationKind('other')).toBe(false);
   });
 });

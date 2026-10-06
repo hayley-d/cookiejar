@@ -87,6 +87,20 @@ export async function listPastNotifications(database: SQLiteDatabase, now: Date)
   return rows.map(toAppNotification);
 }
 
+export async function listPastNotificationIdentifiersWithPrefix(
+  database: SQLiteDatabase,
+  identifierPrefix: string,
+  now: Date,
+): Promise<Set<string>> {
+  const rows = await database.getAllAsync<{ identifier: string }>(
+    'SELECT identifier FROM notifications WHERE substr(identifier, 1, length(?)) = ? AND created_at <= ?',
+    identifierPrefix,
+    identifierPrefix,
+    now.toISOString(),
+  );
+  return new Set(rows.map((row) => row.identifier));
+}
+
 export async function countPastUnreadNotifications(database: SQLiteDatabase, now: Date): Promise<number> {
   const row = await database.getFirstAsync<CountRow>(
     'SELECT COUNT(*) AS count FROM notifications WHERE created_at <= ? AND read_at IS NULL',

@@ -27,3 +27,7 @@ export function notificationKindForIdentifier(identifier: string): NotificationK
   }
   return 'other';
 }
+
+export function isRecordedNotificationKind(kind: NotificationKind): boolean {
+  return kind === 'workoutReminder' || kind === 'weeklySummary';
+}

@@ -20,7 +20,7 @@ export function ToggleRow({ title, subtitle, value, onValueChange }: ToggleRowPr
       justify="space-between"
       gap="medium"
       paddingVertical="medium"
-      style={{ borderBottomWidth: 1, borderBottomColor: theme.colors.border }}
+      style={{ borderBottomWidth: theme.sizes.rowDividerWidth, borderBottomColor: theme.colors.border }}
     >
       <Box flex={1} gap="extraSmall">
         <Typography variant="label">{title}</Typography>
