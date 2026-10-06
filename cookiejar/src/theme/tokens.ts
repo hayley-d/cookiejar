@@ -152,6 +152,9 @@ export const sizes = {
   coachAvatar: 36,
   typingDot: 8,
   chatBubbleMaximumWidth: 300,
+  unreadDot: 10,
+  bellUnreadDotInset: 10,
+  notificationRowNuggie: 44,
 };
 
 export const durations = {

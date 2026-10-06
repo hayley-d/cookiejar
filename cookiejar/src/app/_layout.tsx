@@ -112,6 +112,10 @@ export default function RootLayout() {
                 }}
               />
               <Stack.Screen
+                name="notifications/index"
+                options={{ title: 'Notifications', headerLargeTitleEnabled: false }}
+              />
+              <Stack.Screen
                 name="notifications/permission"
                 options={{
                   presentation: 'formSheet',
