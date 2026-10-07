@@ -25,24 +25,31 @@ export function CoachFloatingButton({ tipText }: CoachFloatingButtonProperties) 
   return (
     <View>
       {tipText ? (
-        <Touchable
-          onPress={openCoach}
-          accessibilityLabel={tipText}
-          style={[
-            {
-              position: 'absolute',
-              right: buttonSize + theme.spacing.small,
-              top: 0,
-              maxWidth: 220,
-              backgroundColor: theme.colors.surface,
-              borderRadius: theme.radii.large,
-              padding: theme.spacing.small + theme.spacing.extraSmall,
-            },
-            theme.shadows.card,
-          ]}
+        <View
+          pointerEvents="box-none"
+          style={{
+            position: 'absolute',
+            right: buttonSize + theme.spacing.small,
+            bottom: 0,
+            width: theme.sizes.tipBubbleMaximumWidth,
+            alignItems: 'flex-end',
+          }}
         >
-          <Typography variant="caption">{tipText}</Typography>
-        </Touchable>
+          <Touchable
+            onPress={openCoach}
+            accessibilityLabel={tipText}
+            style={[
+              {
+                backgroundColor: theme.colors.surface,
+                borderRadius: theme.radii.large,
+                padding: theme.spacing.small + theme.spacing.extraSmall,
+              },
+              theme.shadows.card,
+            ]}
+          >
+            <Typography variant="caption">{tipText}</Typography>
+          </Touchable>
+        </View>
       ) : null}
       <Touchable
         onPress={openCoach}

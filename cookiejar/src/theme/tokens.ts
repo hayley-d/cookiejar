@@ -122,6 +122,7 @@ export const sizes = {
   sessionTopBarSideSlot: 88,
   previousColumn: 72,
   coachButton: 64,
+  tipBubbleMaximumWidth: 220,
   healthPermissionNuggie: 72,
   todayCardWidthRatio: 0.82,
   todayCardImageHeight: 180,
