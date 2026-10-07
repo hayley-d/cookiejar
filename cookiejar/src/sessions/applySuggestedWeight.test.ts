@@ -37,6 +37,12 @@ describe('applySuggestedWeight', () => {
     ]);
   });
 
+  test('fills sets whose explicit target weights are all zero', () => {
+    expect(weightsOf(applySuggestedWeight('repetitions_and_weight', targets(0, 0), suggestion))).toEqual([
+      62.5, 62.5,
+    ]);
+  });
+
   test('leaves other tracking types untouched', () => {
     const sets = targets(null, 20);
     expect(applySuggestedWeight('repetitions', sets, suggestion)).toBe(sets);

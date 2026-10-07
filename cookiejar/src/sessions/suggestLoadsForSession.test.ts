@@ -83,4 +83,17 @@ describe('suggestLoadsForSession', () => {
     expect(suggestLoadsForSession(session, new Map([[5, threeSessions]]), 'strength').get(10)?.weightKilograms).toBe(62.5);
     expect(suggestLoadsForSession(session, new Map([[5, threeSessions]]), 'hypertrophy').get(10)?.weightKilograms).toBe(60);
   });
+
+  test('takes the rep range top from the sets that receive the suggestion', () => {
+    const pyramid = makeExercise(10, 5, 'repetitions_and_weight', 8);
+    const baseSet = pyramid.sets[0];
+    pyramid.sets = [
+      { ...baseSet, id: 101, position: 1, targetRepetitions: 15, targetWeightKilograms: 40 },
+      { ...baseSet, id: 102, position: 2, targetRepetitions: 12, targetWeightKilograms: 50 },
+      { ...baseSet, id: 103, position: 3, targetRepetitions: 8, targetWeightKilograms: 60 },
+    ];
+    const threeSessions = [0, 1, 2].map(() => [{ weightKilograms: 60, repetitions: 8 }]);
+    const suggestion = suggestLoadsForSession(makeSession([pyramid]), new Map([[5, threeSessions]]), null).get(10);
+    expect(suggestion?.weightKilograms).toBe(62.5);
+  });
 });

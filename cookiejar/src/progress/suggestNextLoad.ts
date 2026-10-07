@@ -28,11 +28,10 @@ export function suggestNextLoad(
     .map(weightedSets)
     .filter((sets) => sets.length > 0)
     .slice(0, sessionsConsidered);
-  const latestSession = sessions[0];
-  if (latestSession === undefined) {
+  if (sessions.length === 0) {
     return null;
   }
-  const workingWeight = heaviestWeight(latestSession);
+  const workingWeight = heaviestWeight(sessions.flat());
   const hold: LoadSuggestion = { weightKilograms: workingWeight, increasedByKilograms: null };
   if (sessions.length < sessionsConsidered) {
     return hold;

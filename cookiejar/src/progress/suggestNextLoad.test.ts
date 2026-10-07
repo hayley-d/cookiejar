@@ -43,6 +43,18 @@ describe('suggestNextLoad', () => {
     expect(suggestNextLoad(sessions, 12)).toEqual({ weightKilograms: 60, increasedByKilograms: null });
   });
 
+  test('a lighter latest session holds the heaviest weight in the window', () => {
+    const sessions = [makeSession(55, 12, 12), makeSession(60, 12, 12), makeSession(60, 12, 12)];
+    expect(suggestNextLoad(sessions, 12)).toEqual({ weightKilograms: 60, increasedByKilograms: null });
+  });
+
+  test('a lighter latest session with fewer sessions holds the heaviest across them', () => {
+    expect(suggestNextLoad([makeSession(55, 12), makeSession(60, 12)], 12)).toEqual({
+      weightKilograms: 60,
+      increasedByKilograms: null,
+    });
+  });
+
   test('a lighter earlier session holds the working weight', () => {
     const sessions = [makeSession(60, 12, 12), makeSession(57.5, 12, 12), makeSession(60, 12, 12)];
     expect(suggestNextLoad(sessions, 12)).toEqual({ weightKilograms: 60, increasedByKilograms: null });

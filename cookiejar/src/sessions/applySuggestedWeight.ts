@@ -1,4 +1,5 @@
 import type { LoadSuggestion } from '@/progress/suggestNextLoad';
+import { takesSuggestedWeight } from '@/sessions/takesSuggestedWeight';
 import type { TrackingType } from '@/types/TrackingType';
 
 type SuggestibleSet = {
@@ -13,9 +14,7 @@ export function applySuggestedWeight<Set extends SuggestibleSet>(
   if (suggestion === null || trackingType !== 'repetitions_and_weight') {
     return sets;
   }
-  const heaviestTargetWeight = Math.max(0, ...sets.map((set) => set.targetWeightKilograms ?? 0));
-  return sets.map((set) => {
-    const takesSuggestion = set.targetWeightKilograms === null || set.targetWeightKilograms === heaviestTargetWeight;
-    return takesSuggestion ? { ...set, targetWeightKilograms: suggestion.weightKilograms } : set;
-  });
+  return sets.map((set) =>
+    takesSuggestedWeight(set, sets) ? { ...set, targetWeightKilograms: suggestion.weightKilograms } : set,
+  );
 }

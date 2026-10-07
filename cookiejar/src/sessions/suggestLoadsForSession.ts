@@ -1,5 +1,6 @@
 import { suggestNextLoad, type LoadSuggestion, type SuggestionSet } from '@/progress/suggestNextLoad';
 import { topRepetitionsFor } from '@/progress/topRepetitionsFor';
+import { takesSuggestedWeight } from '@/sessions/takesSuggestedWeight';
 import type { FitnessGoal } from '@/types/Profile';
 import type { SessionExerciseWithSets, SessionWithExercises } from '@/types/SessionWithExercises';
 
@@ -17,7 +18,7 @@ export function suggestLoadForExercise(
   }
   const recentSessions = recentSessionsByExerciseId.get(sessionExercise.exerciseId) ?? [];
   const topRepetitions = topRepetitionsFor(
-    sessionExercise.sets.map((set) => set.targetRepetitions),
+    sessionExercise.sets.filter((set) => takesSuggestedWeight(set, sessionExercise.sets)).map((set) => set.targetRepetitions),
     goal,
   );
   return suggestNextLoad(recentSessions, topRepetitions);

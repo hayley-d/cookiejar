@@ -22,9 +22,8 @@ import {
   updateSessionSet,
 } from '@/database/repositories/sessionRepository';
 import { notesToStore } from '@/exercises/notesToStore';
-import { sessionsConsidered } from '@/progress/suggestNextLoad';
+import { sessionsConsidered, type SuggestionSet } from '@/progress/suggestNextLoad';
 import { applySuggestedWeight } from '@/sessions/applySuggestedWeight';
-import type { SuggestionSet } from '@/progress/suggestNextLoad';
 import type { PreviousSessionSet } from '@/sessions/describePreviousSet';
 import { actualValuesOf, fillSetForTick, type SetCompletionOutcome, type SetValues } from '@/sessions/fillSetForTick';
 import { mergeReloadedSession } from '@/sessions/mergeReloadedSession';
