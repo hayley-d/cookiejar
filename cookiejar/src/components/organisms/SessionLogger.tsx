@@ -11,6 +11,7 @@ import { ScrollBox } from '@/components/primitives/ScrollBox';
 import { TextField } from '@/components/primitives/TextField';
 import { Typography } from '@/components/primitives/Typography';
 import { useRestTimer } from '@/hooks/useRestTimer';
+import type { LoadSuggestion } from '@/progress/suggestNextLoad';
 import type { PreviousSessionSet } from '@/sessions/describePreviousSet';
 import type { SetCompletionOutcome, SetValues } from '@/sessions/fillSetForTick';
 import { toSupersetCardPositions } from '@/workouts/supersetCardPositions';
@@ -21,6 +22,7 @@ type SessionLoggerProperties = {
   session: SessionWithExercises;
   isFinishing: boolean;
   previousSetsByExerciseId: Map<number, PreviousSessionSet[]>;
+  suggestionsBySessionExerciseId: Map<number, LoadSuggestion>;
   onChangeSetValues: (sessionSetId: number, changes: Partial<SetValues>) => void;
   onToggleSetCompletion: (sessionSetId: number) => SetCompletionOutcome;
   onAddSet: (sessionExerciseId: number) => void;
@@ -53,6 +55,7 @@ export function SessionLogger({
   session,
   isFinishing,
   previousSetsByExerciseId,
+  suggestionsBySessionExerciseId,
   onChangeSetValues,
   onToggleSetCompletion,
   onAddSet,
@@ -93,6 +96,7 @@ export function SessionLogger({
               label={cardPositions[index]?.label ?? null}
               bracket={cardPositions[index]?.bracket ?? null}
               previousSets={previousSetsByExerciseId.get(sessionExercise.exerciseId) ?? []}
+              suggestion={suggestionsBySessionExerciseId.get(sessionExercise.id) ?? null}
               onChangeSetValues={onChangeSetValues}
               onToggleSetCompletion={onToggleSetCompletion}
               onAddSet={() => onAddSet(sessionExercise.id)}

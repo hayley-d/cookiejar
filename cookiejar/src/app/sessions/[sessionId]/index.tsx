@@ -38,6 +38,7 @@ export default function SessionLoggerScreen() {
   const {
     sessionLookup,
     previousSetsByExerciseId,
+    suggestionsBySessionExerciseId,
     changeSetValues,
     toggleSetCompletion,
     addSet,
@@ -159,6 +160,7 @@ export default function SessionLoggerScreen() {
         session={sessionLookup.session}
         isFinishing={isFinishing}
         previousSetsByExerciseId={previousSetsByExerciseId}
+        suggestionsBySessionExerciseId={suggestionsBySessionExerciseId}
         onChangeSetValues={changeSetValues}
         onToggleSetCompletion={toggleSetCompletion}
         onAddSet={addSet}
