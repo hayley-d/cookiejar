@@ -3,6 +3,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import { isRequestForActiveSession } from '@/sessions/resolveStartAgainstActiveSession';
 import { resolveSessionStart, type ExistingPlanEntrySession } from '@/sessions/resolveSessionStart';
 import type { CompletedSet } from '@/progress/detectPersonalRecords';
+import type { SuggestionSet } from '@/progress/suggestNextLoad';
 import type { PreviousSessionSet } from '@/sessions/describePreviousSet';
 import type { SetValues } from '@/sessions/fillSetForTick';
 import { normaliseSessionExercises } from '@/sessions/normaliseSessionExercises';
@@ -413,6 +414,66 @@ export async function getPreviousSessionSets(
     durationSeconds: setRow.duration_seconds,
     distanceMeters: setRow.distance_meters,
   }));
+}
+
+type RecentWeightedSetRow = {
+  session_id: number;
+  repetitions: number | null;
+  weight_kilograms: number;
+};
+
+export async function getRecentWeightedSessions(
+  database: SQLiteDatabase,
+  exerciseId: number,
+  beforeSessionId: number,
+  sessionLimit: number,
+): Promise<SuggestionSet[][]> {
+  const setRows = await database.getAllAsync<RecentWeightedSetRow>(
+    `WITH recent_sessions AS (
+      SELECT sessions.id, sessions.started_at
+      FROM sessions
+      JOIN session_exercises ON session_exercises.session_id = sessions.id
+      JOIN session_sets ON session_sets.session_exercise_id = session_exercises.id
+      WHERE session_exercises.exercise_id = ?
+        AND session_exercises.tracking_type = 'repetitions_and_weight'
+        AND session_sets.completed_at IS NOT NULL
+        AND session_sets.weight_kilograms > 0
+        AND sessions.finished_at IS NOT NULL
+        AND sessions.id <> ?
+        AND sessions.started_at < (SELECT started_at FROM sessions WHERE id = ?)
+      GROUP BY sessions.id, sessions.started_at
+      ORDER BY sessions.started_at DESC, sessions.id DESC
+      LIMIT ?
+    )
+    SELECT recent_sessions.id AS session_id, session_sets.repetitions, session_sets.weight_kilograms
+    FROM recent_sessions
+    JOIN session_exercises ON session_exercises.session_id = recent_sessions.id
+    JOIN session_sets ON session_sets.session_exercise_id = session_exercises.id
+    WHERE session_exercises.exercise_id = ?
+      AND session_exercises.tracking_type = 'repetitions_and_weight'
+      AND session_sets.completed_at IS NOT NULL
+      AND session_sets.weight_kilograms > 0
+    ORDER BY recent_sessions.started_at DESC, recent_sessions.id DESC, session_exercises.position,
+      session_sets.position, session_sets.id`,
+    exerciseId,
+    beforeSessionId,
+    beforeSessionId,
+    sessionLimit,
+    exerciseId,
+  );
+  const sessions: SuggestionSet[][] = [];
+  let currentSessionId: number | null = null;
+  for (const setRow of setRows) {
+    if (setRow.session_id !== currentSessionId) {
+      sessions.push([]);
+      currentSessionId = setRow.session_id;
+    }
+    sessions[sessions.length - 1]?.push({
+      weightKilograms: setRow.weight_kilograms,
+      repetitions: setRow.repetitions,
+    });
+  }
+  return sessions;
 }
 
 const defaultAddedExerciseRestSeconds = 90;

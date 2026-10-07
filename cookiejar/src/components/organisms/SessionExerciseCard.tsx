@@ -7,10 +7,13 @@ import { IconButton } from '@/components/atoms/IconButton';
 import { SupersetBracket } from '@/components/atoms/SupersetBracket';
 import { TextButton } from '@/components/atoms/TextButton';
 import { SessionSetRow } from '@/components/molecules/SessionSetRow';
+import { SuggestedIncreaseChip } from '@/components/molecules/SuggestedIncreaseChip';
 import { Box } from '@/components/primitives/Box';
 import { Image } from '@/components/primitives/Image';
 import { SwipeableBox } from '@/components/primitives/SwipeableBox';
 import { Typography } from '@/components/primitives/Typography';
+import type { LoadSuggestion } from '@/progress/suggestNextLoad';
+import { applySuggestedWeight } from '@/sessions/applySuggestedWeight';
 import { describePreviousSet, matchPreviousSets, type PreviousSessionSet } from '@/sessions/describePreviousSet';
 import type { SetCompletionOutcome, SetValues } from '@/sessions/fillSetForTick';
 import { useTheme } from '@/theme/useTheme';
@@ -24,6 +27,7 @@ type SessionExerciseCardProperties = {
   label: string | null;
   bracket: SupersetBracketPosition | null;
   previousSets: PreviousSessionSet[];
+  suggestion: LoadSuggestion | null;
   onChangeSetValues: (sessionSetId: number, changes: Partial<SetValues>) => void;
   onToggleSetCompletion: (sessionSetId: number) => SetCompletionOutcome;
   onAddSet: () => void;
@@ -45,6 +49,7 @@ export function SessionExerciseCard({
   label,
   bracket,
   previousSets,
+  suggestion,
   onChangeSetValues,
   onToggleSetCompletion,
   onAddSet,
@@ -60,6 +65,7 @@ export function SessionExerciseCard({
   const { imageUrl } = exercise;
   const showsImage = imageUrl !== null && imageUrl !== failedImageUrl;
   const columns = targetSetColumns(sessionExercise.trackingType);
+  const displayedSets = applySuggestedWeight(sessionExercise.trackingType, sessionExercise.sets, suggestion);
   const matchedPreviousSets = matchPreviousSets(sessionExercise.sets, previousSets);
 
   const openRestMenu = () => {
@@ -157,6 +163,9 @@ export function SessionExerciseCard({
                   ? 'No rest'
                   : `Rest ${formatRestSeconds(sessionExercise.restSeconds)}`}
               </Typography>
+              {suggestion?.increasedByKilograms == null ? null : (
+                <SuggestedIncreaseChip increasedByKilograms={suggestion.increasedByKilograms} />
+              )}
               {exercise.notes === null ? null : (
                 <Typography variant="caption" color="textSecondary">
                   {exercise.notes}
@@ -195,7 +204,7 @@ export function SessionExerciseCard({
                 No sets
               </Typography>
             ) : (
-              sessionExercise.sets.map((set, index) => (
+              displayedSets.map((set, index) => (
                 <SwipeableBox key={set.id} actionLabel="Remove" onSwipeLeft={() => onRemoveSet(set.id)}>
                   <SessionSetRow
                     setNumber={index + 1}

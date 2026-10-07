@@ -5,7 +5,7 @@ import { metersToKilometers, type TargetSetField, type TargetSetValues } from '@
 const metersPerKilometer = 1000;
 const missingValueText = '—';
 
-function formatWeight(weightKilograms: number): string {
+export function formatWeight(weightKilograms: number): string {
   return String(weightKilograms);
 }
 

@@ -573,6 +573,25 @@ Phase 10 adds one optional free-text note per exercise, stored on `exercises.not
 
 The card's ⋯ menu is Rest time, Add note or Edit note (Edit when `exercise.notes` is not `null`), Replace exercise, Remove exercise, Cancel. The note option opens `Alert.prompt` (plain text, pre-filled with the current note) and Save calls `onChangeNote`. `SessionLogger` passes the exercise's `exerciseId` to `changeExerciseNote(exerciseId, notes)` on `useSession`, which runs the text through `notesToStore`, updates the loaded session with `withExerciseNotes` and enqueues `updateExerciseNotes` on the write queue. It does not reload the session; the queued write bumps `dataVersion` like every other logger write. Saving a blank note clears it.
 
+### Suggested Weights
+
+Phase 11 suggests a working weight for each weighted exercise in a session, from its last three sessions and the profile goal. It adds no table and no migration. A suggestion is computed on every render, never stored.
+
+`src/progress/loadIncrement.ts` holds the shared load increment rule: `incrementForLoad(loadKilograms)` is 1 kg under 20 kg and 2.5 kg otherwise, and `roundDownToIncrement` floors a load to that step. The coach plateau prescription (`loadForRepetitions` in `plateauPrescription.ts`) and the suggestion both use it, so the two never disagree on a step size.
+
+These pure modules import no React Native and are covered by `bun test`:
+
+- `src/progress/suggestNextLoad.ts`: `suggestNextLoad(recentSessionsNewestFirst, topRepetitions)` returns a `LoadSuggestion` (`weightKilograms`, `increasedByKilograms`) or `null` with no weighted history. It looks at the last `sessionsConsidered` (3) sessions that have weighted sets. The working weight is the heaviest weight across them, so it never drops within the window. With fewer than 3, or when any of them peaked lighter than the working weight, it holds. Otherwise it averages the repetitions of every set at or above the working weight, and when that average reaches `topRepetitions` it adds `incrementForLoad` and sets `increasedByKilograms`
+- `src/progress/topRepetitionsFor.ts`: `topRepetitionsFor(targetRepetitions, goal)` is the highest target repetitions among the sets that receive the suggestion. Without any, it falls back to the goal's rep range top (strength 6, endurance 20, hypertrophy, general fitness and weight loss 12, no goal 12)
+- `src/sessions/suggestLoadsForSession.ts`: `suggestLoadForExercise` returns `null` unless the tracking type is `repetitions_and_weight`, then combines the history, `topRepetitionsFor` (fed only the target repetitions of sets that `takesSuggestedWeight`) and `suggestNextLoad`. `suggestLoadsForSession` maps every session exercise to its suggestion, keyed by `session_exercises.id`
+- `src/sessions/applySuggestedWeight.ts`: `applySuggestedWeight(trackingType, sets, suggestion)` replaces `targetWeightKilograms` with the suggested weight on sets where `takesSuggestedWeight` (`takesSuggestedWeight.ts`) holds: no target weight, or the exercise's heaviest target weight. Lighter target sets (a pyramid, warm-ups) keep their own. It returns the sets untouched for other tracking types or without a suggestion
+
+`getRecentWeightedSessions(database, exerciseId, beforeSessionId, sessionLimit)` in `sessionRepository.ts` is the history query. It returns up to `sessionLimit` finished sessions that started before the current one, newest first, each as its completed `repetitions_and_weight` sets with a weight above 0 (`SuggestionSet[][]`). It matches by `exercise_id`, so a replaced exercise uses its own history.
+
+`useSession` loads the history in an effect keyed by the session id and the exercise ids: `getProfile` for the goal and `getRecentWeightedSessions` for each exercise, kept as `{ sessionId, goal, recentSessionsByExerciseId }` in state and in a ref. It discards a result that belongs to another session or arrives after cleanup, and a failed load leaves no suggestions. It returns `suggestionsBySessionExerciseId` from `suggestLoadsForSession`, passed through `SessionLogger` to each `SessionExerciseCard`.
+
+The card runs `applySuggestedWeight` over its sets, so the suggested weight shows as the weight placeholder. Focusing the field accepts the placeholder like any other (`acceptPlaceholder`). `toggleSetCompletion` recomputes the suggestion from the ref and passes the effective set to `fillSetForTick`, so ticking an untouched set fills the suggested weight. When `increasedByKilograms` is set, the card shows `SuggestedIncreaseChip` (molecule, a `Badge` reading "↑ 2.5 kg · Nuggie") as its own row in the header column, below the rest caption.
+
 ### Session Exercise Rest Seconds
 
 Starting a session copies `rest_seconds` from the workout item, including null for rest that is off. Exercises added mid-session get an explicit 90 seconds. The card's ⋯ menu offers a "Rest time" picker to edit `rest_seconds` for that session's exercise. The edit calls `updateSessionExerciseRest` and the hook bumps `dataVersion` afterward so the calendar markers recompute.
@@ -662,6 +681,7 @@ Session-specific hooks manage the logger state and rest timer:
 | `removeSessionExercise(database, sessionId, sessionExerciseId)` | Deletes the exercise and all its sets, then renormalises remaining exercises (positions and superset groups) in one transaction |
 | `updateSessionExerciseRest(database, sessionId, sessionExerciseId, restSeconds)` | Updates rest_seconds for the exercise. The hook bumps dataVersion |
 | `updateSessionNotes(database, sessionId, notes)` | Updates session notes |
+| `getRecentWeightedSessions(database, exerciseId, beforeSessionId, sessionLimit)` | Phase 11. Returns up to `sessionLimit` finished sessions that started before `beforeSessionId`, newest first, each as the exercise's completed weighted sets (`SuggestionSet[][]`). Feeds the suggested weights |
 | `getPreviousSessionSets(database, exerciseId, beforeSessionId)` | Returns completed sets from the most recent finished session where the exercise appeared and started before the session `beforeSessionId`. Each set includes `position` and the value fields. Returns empty array if no earlier session has that exercise |
 | `finishSession(database, sessionId)` | Deletes all unticked session sets and any exercises left with no sets, then sets `finished_at` to now. The hook bumps dataVersion |
 | `discardSession(database, sessionId)` | Deletes the session row (cascades delete exercises, sets). The hook bumps dataVersion |

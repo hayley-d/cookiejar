@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, AppState } from 'react-native';
 
 import { updateExerciseNotes } from '@/database/repositories/exerciseRepository';
+import { getProfile } from '@/database/repositories/profileRepository';
 import {
   addSessionExercises,
   addSessionSet,
@@ -10,6 +11,7 @@ import {
   discardSession,
   finishSession,
   getPreviousSessionSets,
+  getRecentWeightedSessions,
   getSessionWithExercises,
   removeSessionExercise,
   removeSessionSet,
@@ -20,15 +22,24 @@ import {
   updateSessionSet,
 } from '@/database/repositories/sessionRepository';
 import { notesToStore } from '@/exercises/notesToStore';
+import { sessionsConsidered, type SuggestionSet } from '@/progress/suggestNextLoad';
+import { applySuggestedWeight } from '@/sessions/applySuggestedWeight';
 import type { PreviousSessionSet } from '@/sessions/describePreviousSet';
 import { actualValuesOf, fillSetForTick, type SetCompletionOutcome, type SetValues } from '@/sessions/fillSetForTick';
 import { mergeReloadedSession } from '@/sessions/mergeReloadedSession';
 import { valuesForAddedSet } from '@/sessions/valuesForAddedSet';
 import { resolveRestTimerStart } from '@/sessions/resolveRestTimerStart';
 import { findSessionSet, withSessionSetChanges } from '@/sessions/sessionSetChanges';
+import {
+  suggestLoadForExercise,
+  suggestLoadsForSession,
+  type LoadSuggestionsBySessionExerciseId,
+  type RecentSessionsByExerciseId,
+} from '@/sessions/suggestLoadsForSession';
 import { withExerciseNotes } from '@/sessions/withExerciseNotes';
 import { bumpDataVersion } from '@/stores/dataVersionStore';
 import { clearRestTimer, startRestTimer } from '@/stores/restTimerStore';
+import type { FitnessGoal } from '@/types/Profile';
 import type { SessionWithExercises } from '@/types/SessionWithExercises';
 
 export type SessionLookup =
@@ -46,6 +57,14 @@ type PreviousSetsByExerciseId = Map<number, PreviousSessionSet[]>;
 
 const noPreviousSets: PreviousSetsByExerciseId = new Map();
 
+const noSuggestions: LoadSuggestionsBySessionExerciseId = new Map();
+
+type SuggestionHistory = {
+  sessionId: number;
+  goal: FitnessGoal | null;
+  recentSessionsByExerciseId: RecentSessionsByExerciseId;
+};
+
 type WriteTask = () => Promise<void>;
 
 const textInputDebounceMilliseconds = 400;
@@ -61,6 +80,8 @@ export function useSession(sessionId: number) {
     sessionId: number;
     byExerciseId: PreviousSetsByExerciseId;
   } | null>(null);
+  const [suggestionHistory, setSuggestionHistory] = useState<SuggestionHistory | null>(null);
+  const suggestionHistoryReference = useRef<SuggestionHistory | null>(null);
   const sessionReference = useRef<SessionWithExercises | null>(null);
   const pendingValueWrites = useRef(new Map<number, ReturnType<typeof setTimeout>>());
   const pendingNotesWrite = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -120,6 +141,44 @@ export function useSession(sessionId: number) {
       () => {
         if (isActive) {
           setPreviousSets({ sessionId, byExerciseId: noPreviousSets });
+        }
+      },
+    );
+    return () => {
+      isActive = false;
+    };
+  }, [database, sessionId, exerciseIdsKey]);
+
+  useEffect(() => {
+    if (!Number.isInteger(sessionId) || exerciseIdsKey.length === 0) {
+      return;
+    }
+    let isActive = true;
+    const exerciseIds = exerciseIdsKey.split(',').map(Number);
+    Promise.all([
+      getProfile(database),
+      Promise.all(
+        exerciseIds.map(async (exerciseId): Promise<[number, SuggestionSet[][]]> => [
+          exerciseId,
+          await getRecentWeightedSessions(database, exerciseId, sessionId, sessionsConsidered),
+        ]),
+      ),
+    ]).then(
+      ([profile, entries]) => {
+        if (isActive) {
+          const history = {
+            sessionId,
+            goal: profile?.goal ?? null,
+            recentSessionsByExerciseId: new Map(entries),
+          };
+          suggestionHistoryReference.current = history;
+          setSuggestionHistory(history);
+        }
+      },
+      () => {
+        if (isActive) {
+          suggestionHistoryReference.current = null;
+          setSuggestionHistory(null);
         }
       },
     );
@@ -364,7 +423,16 @@ export function useSession(sessionId: number) {
         return 'unticked';
       }
 
-      const tickResult = fillSetForTick(found.exercise.trackingType, found.set);
+      const history = suggestionHistoryReference.current;
+      const suggestion =
+        history !== null && history.sessionId === sessionId
+          ? suggestLoadForExercise(found.exercise, history.recentSessionsByExerciseId, history.goal)
+          : null;
+      const effectiveSet =
+        applySuggestedWeight(found.exercise.trackingType, found.exercise.sets, suggestion).find(
+          (candidate) => candidate.id === sessionSetId,
+        ) ?? found.set;
+      const tickResult = fillSetForTick(found.exercise.trackingType, effectiveSet);
       if (tickResult.outcome === 'refused') {
         return 'refused';
       }
@@ -389,7 +457,7 @@ export function useSession(sessionId: number) {
       }
       return 'ticked';
     },
-    [applySessionChange, cancelPendingValueWrite, database, enqueueWrite, markValuesSaved],
+    [applySessionChange, cancelPendingValueWrite, database, enqueueWrite, markValuesSaved, sessionId],
   );
 
   const finish = useCallback(async () => {
@@ -422,9 +490,15 @@ export function useSession(sessionId: number) {
   const previousSetsByExerciseId =
     previousSets !== null && previousSets.sessionId === sessionId ? previousSets.byExerciseId : noPreviousSets;
 
+  const suggestionsBySessionExerciseId =
+    sessionLookup.status === 'found' && suggestionHistory !== null && suggestionHistory.sessionId === sessionId
+      ? suggestLoadsForSession(sessionLookup.session, suggestionHistory.recentSessionsByExerciseId, suggestionHistory.goal)
+      : noSuggestions;
+
   return {
     sessionLookup,
     previousSetsByExerciseId,
+    suggestionsBySessionExerciseId,
     changeSetValues,
     toggleSetCompletion,
     addSet,
