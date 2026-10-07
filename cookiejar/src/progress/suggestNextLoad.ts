@@ -10,7 +10,7 @@ export type LoadSuggestion = {
   increasedByKilograms: number | null;
 };
 
-const sessionsConsidered = 3;
+export const sessionsConsidered = 3;
 
 function weightedSets(sets: SuggestionSet[]): SuggestionSet[] {
   return sets.filter((set) => set.weightKilograms !== null && set.weightKilograms > 0);
