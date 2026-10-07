@@ -11,6 +11,7 @@ const squat: Exercise = {
   name: 'Squat',
   bodyPart: 'quadriceps',
   imageUrl: null,
+  notes: null,
   defaultTrackingType: 'repetitions_and_weight',
   createdAt: '',
 };

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { DuplicateExerciseNameError, type NewExercise } from '@/database/repositories/exerciseRepository';
+import { notesToStore } from '@/exercises/notesToStore';
 import {
   duplicateExerciseNameMessage,
   validateExerciseForm,
@@ -47,6 +48,7 @@ export function useExerciseForm({ initialValues, editingExerciseId, saveExercise
         bodyPart: values.bodyPart,
         defaultTrackingType: values.defaultTrackingType,
         imageUrl: imageUrlToStore(values.imageUrl),
+        notes: notesToStore(values.notes),
       });
     } catch (error) {
       if (error instanceof DuplicateExerciseNameError) {

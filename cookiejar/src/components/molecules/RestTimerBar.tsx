@@ -24,7 +24,7 @@ export function RestTimerBar({ remainingSeconds, isPaused, onTogglePause }: Rest
       paddingVertical="extraSmall"
       background="accentSoft"
     >
-      <NuggieImage name="workout" size={theme.sizes.restBarNuggie} />
+      <NuggieImage name="tired" size={theme.sizes.restBarNuggie} />
       <Box flex={1}>
         <Typography
           variant="label"

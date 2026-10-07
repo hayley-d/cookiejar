@@ -46,6 +46,7 @@ export default function SessionLoggerScreen() {
     replaceExercise,
     removeExercise,
     changeExerciseRest,
+    changeExerciseNote,
     changeNotes,
     finish,
     discard,
@@ -163,6 +164,7 @@ export default function SessionLoggerScreen() {
         onAddSet={addSet}
         onRemoveSet={removeSet}
         onChangeRest={changeExerciseRest}
+        onChangeExerciseNote={changeExerciseNote}
         onReplaceExercise={(sessionExerciseId) =>
           exercisePicks.replaceExercise(
             sessionExerciseId,

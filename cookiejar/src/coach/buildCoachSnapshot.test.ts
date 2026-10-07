@@ -43,6 +43,7 @@ const benchPress: Exercise = {
   name: 'Bench Press',
   bodyPart: 'chest',
   imageUrl: null,
+  notes: null,
   defaultTrackingType: 'repetitions_and_weight',
   createdAt: '',
 };

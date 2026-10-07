@@ -26,6 +26,10 @@ export function mergeReloadedSession(
       return {
         ...reloadedExercise,
         restSeconds: localExercise.restSeconds,
+        exercise:
+          localExercise.exercise.id === reloadedExercise.exercise.id
+            ? { ...reloadedExercise.exercise, notes: localExercise.exercise.notes }
+            : reloadedExercise.exercise,
         sets: reloadedExercise.sets.map((reloadedSet) => {
           const localSet = localExercise.sets.find((candidate) => candidate.id === reloadedSet.id);
           if (localSet === undefined) {

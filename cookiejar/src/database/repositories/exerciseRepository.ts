@@ -9,6 +9,7 @@ type ExerciseRow = {
   name: string;
   body_part: BodyPart;
   image_url: string | null;
+  notes: string | null;
   default_tracking_type: TrackingType;
   created_at: string;
 };
@@ -28,7 +29,7 @@ export class DuplicateExerciseNameError extends Error {
   }
 }
 
-const exerciseColumns = 'id, name, body_part, image_url, default_tracking_type, created_at';
+const exerciseColumns = 'id, name, body_part, image_url, notes, default_tracking_type, created_at';
 
 function toExercise(row: ExerciseRow): Exercise {
   return {
@@ -36,6 +37,7 @@ function toExercise(row: ExerciseRow): Exercise {
     name: row.name,
     bodyPart: row.body_part,
     imageUrl: row.image_url,
+    notes: row.notes,
     defaultTrackingType: row.default_tracking_type,
     createdAt: row.created_at,
   };
@@ -55,7 +57,7 @@ export async function listExercises(database: SQLiteDatabase): Promise<Exercise[
 export async function listRecentlyUsedExercises(database: SQLiteDatabase, limit?: number): Promise<Exercise[]> {
   const rows = await database.getAllAsync<ExerciseRow>(
     `SELECT exercises.id, exercises.name, exercises.body_part, exercises.image_url,
-      exercises.default_tracking_type, exercises.created_at
+      exercises.notes, exercises.default_tracking_type, exercises.created_at
     FROM exercises
     LEFT JOIN session_exercises ON session_exercises.exercise_id = exercises.id
     LEFT JOIN sessions ON sessions.id = session_exercises.session_id
@@ -78,10 +80,11 @@ export async function getExercise(database: SQLiteDatabase, exerciseId: number):
 export async function createExercise(database: SQLiteDatabase, newExercise: NewExercise): Promise<number> {
   try {
     const result = await database.runAsync(
-      'INSERT INTO exercises (name, body_part, image_url, default_tracking_type, created_at) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO exercises (name, body_part, image_url, notes, default_tracking_type, created_at) VALUES (?, ?, ?, ?, ?, ?)',
       newExercise.name,
       newExercise.bodyPart,
       newExercise.imageUrl,
+      newExercise.notes,
       newExercise.defaultTrackingType,
       new Date().toISOString(),
     );
@@ -94,6 +97,14 @@ export async function createExercise(database: SQLiteDatabase, newExercise: NewE
   }
 }
 
+export async function updateExerciseNotes(
+  database: SQLiteDatabase,
+  exerciseId: number,
+  notes: string | null,
+): Promise<void> {
+  await database.runAsync('UPDATE exercises SET notes = ? WHERE id = ?', notes, exerciseId);
+}
+
 export async function updateExercise(
   database: SQLiteDatabase,
   exerciseId: number,
@@ -101,10 +112,11 @@ export async function updateExercise(
 ): Promise<void> {
   try {
     await database.runAsync(
-      'UPDATE exercises SET name = ?, body_part = ?, image_url = ?, default_tracking_type = ? WHERE id = ?',
+      'UPDATE exercises SET name = ?, body_part = ?, image_url = ?, notes = ?, default_tracking_type = ? WHERE id = ?',
       changes.name,
       changes.bodyPart,
       changes.imageUrl,
+      changes.notes,
       changes.defaultTrackingType,
       exerciseId,
     );

@@ -29,14 +29,15 @@ type SessionExerciseCardProperties = {
   onAddSet: () => void;
   onRemoveSet: (sessionSetId: number) => void;
   onChangeRest: (restSeconds: number | null) => void;
+  onChangeNote: (notes: string) => void;
   onReplace: () => void;
   onRemove: () => void;
 };
 
-const menuOptions = ['Rest time', 'Replace exercise', 'Remove exercise', 'Cancel'];
 const restMenuIndex = 0;
-const replaceMenuIndex = 1;
-const removeMenuIndex = 2;
+const noteMenuIndex = 1;
+const replaceMenuIndex = 2;
+const removeMenuIndex = 3;
 const restMenuOptions = [...restPresetOptions, 'Cancel'];
 
 export function SessionExerciseCard({
@@ -49,6 +50,7 @@ export function SessionExerciseCard({
   onAddSet,
   onRemoveSet,
   onChangeRest,
+  onChangeNote,
   onReplace,
   onRemove,
 }: SessionExerciseCardProperties) {
@@ -83,6 +85,22 @@ export function SessionExerciseCard({
     ]);
   };
 
+  const noteMenuLabel = exercise.notes === null ? 'Add note' : 'Edit note';
+  const menuOptions = ['Rest time', noteMenuLabel, 'Replace exercise', 'Remove exercise', 'Cancel'];
+
+  const promptNote = () => {
+    Alert.prompt(
+      noteMenuLabel,
+      exercise.name,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Save', onPress: (enteredNotes?: string) => onChangeNote(enteredNotes ?? '') },
+      ],
+      'plain-text',
+      exercise.notes ?? '',
+    );
+  };
+
   const openMenu = () => {
     ActionSheetIOS.showActionSheetWithOptions(
       {
@@ -94,6 +112,8 @@ export function SessionExerciseCard({
       (optionIndex) => {
         if (optionIndex === restMenuIndex) {
           openRestMenu();
+        } else if (optionIndex === noteMenuIndex) {
+          promptNote();
         } else if (optionIndex === replaceMenuIndex) {
           onReplace();
         } else if (optionIndex === removeMenuIndex) {
@@ -137,6 +157,11 @@ export function SessionExerciseCard({
                   ? 'No rest'
                   : `Rest ${formatRestSeconds(sessionExercise.restSeconds)}`}
               </Typography>
+              {exercise.notes === null ? null : (
+                <Typography variant="caption" color="textSecondary">
+                  {exercise.notes}
+                </Typography>
+              )}
             </Box>
             <IconButton icon="ellipsis" accessibilityLabel={`More options for ${exercise.name}`} onPress={openMenu} />
           </Box>

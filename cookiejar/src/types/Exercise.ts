@@ -6,6 +6,7 @@ export type Exercise = {
   name: string;
   bodyPart: BodyPart;
   imageUrl: string | null;
+  notes: string | null;
   defaultTrackingType: TrackingType;
   createdAt: string;
 };

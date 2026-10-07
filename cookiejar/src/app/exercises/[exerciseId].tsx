@@ -32,6 +32,7 @@ function EditExercise({ exercise, usageCount }: EditExerciseProperties) {
       bodyPart: exercise.bodyPart,
       defaultTrackingType: exercise.defaultTrackingType,
       imageUrl: exercise.imageUrl ?? '',
+      notes: exercise.notes ?? '',
     },
     editingExerciseId: exercise.id,
     saveExercise,
