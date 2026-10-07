@@ -140,7 +140,7 @@ export default function HomeScreen() {
           />
           {shouldShowHint ? (
             <EmptyState
-              nuggie="tired"
+              nuggie="analytics"
               title="No data yet — check Health access"
               message="A new watch that has not synced looks the same as no access."
               actionLabel="Connect Apple Health"
