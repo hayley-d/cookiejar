@@ -13,6 +13,7 @@ const initialValues: ExerciseFormValues = {
   bodyPart: null,
   defaultTrackingType: 'repetitions_and_weight',
   imageUrl: '',
+  notes: '',
 };
 
 export default function NewExerciseScreen() {

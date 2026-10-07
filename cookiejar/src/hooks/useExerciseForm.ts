@@ -8,6 +8,7 @@ import {
   type ExerciseFormValues,
 } from '@/exercises/validateExerciseForm';
 import { useExercises } from '@/hooks/useExercises';
+import { notesToStore } from '@/exercises/notesToStore';
 import { imageUrlToStore } from '@/images/imageUrls';
 
 type ExerciseFormOptions = {
@@ -47,6 +48,7 @@ export function useExerciseForm({ initialValues, editingExerciseId, saveExercise
         bodyPart: values.bodyPart,
         defaultTrackingType: values.defaultTrackingType,
         imageUrl: imageUrlToStore(values.imageUrl),
+        notes: notesToStore(values.notes),
       });
     } catch (error) {
       if (error instanceof DuplicateExerciseNameError) {

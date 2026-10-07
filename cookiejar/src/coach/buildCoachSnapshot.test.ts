@@ -43,6 +43,7 @@ const benchPress: Exercise = {
   name: 'Bench Press',
   bodyPart: 'chest',
   imageUrl: null,
+  notes: null,
   defaultTrackingType: 'repetitions_and_weight',
   createdAt: '',
 };
@@ -54,6 +55,7 @@ const workoutSummary = {
   classType: null,
   durationMinutes: null,
   imageUrl: null,
+  notes: null,
   exerciseCount: 1,
   targetSetCount: 3,
   targetRestSeconds: 90,

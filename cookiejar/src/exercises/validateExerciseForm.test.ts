@@ -7,6 +7,7 @@ const validValues: ExerciseFormValues = {
   bodyPart: 'quadriceps',
   defaultTrackingType: 'repetitions_and_weight',
   imageUrl: '',
+  notes: '',
 };
 
 const existingExercises = [
@@ -67,7 +68,7 @@ describe('validateExerciseForm', () => {
 
   test('every missing field reports its own error', () => {
     const errors = validateExerciseForm(
-      { name: '', bodyPart: null, defaultTrackingType: null, imageUrl: 'http://example.com' },
+      { name: '', bodyPart: null, defaultTrackingType: null, imageUrl: 'http://example.com', notes: '' },
       { existingExercises },
     );
     expect(Object.keys(errors).sort()).toEqual(['bodyPart', 'defaultTrackingType', 'imageUrl', 'name']);

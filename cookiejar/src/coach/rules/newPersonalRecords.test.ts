@@ -11,6 +11,7 @@ function createExercise(id: number, name: string): Exercise {
     name,
     bodyPart: 'chest',
     imageUrl: null,
+    notes: null,
     defaultTrackingType: 'repetitions_and_weight',
     createdAt: '',
   };

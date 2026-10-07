@@ -56,6 +56,15 @@ export function ExerciseForm({ values, errors, onChangeValues, footer }: Exercis
         error={errors.imageUrl}
         onChangeImageUrl={(imageUrl) => onChangeValues({ ...values, imageUrl })}
       />
+      <FormField label="Notes">
+        <TextField
+          value={values.notes}
+          onChangeText={(notes) => onChangeValues({ ...values, notes })}
+          placeholder="Optional"
+          multiline
+          accessibilityLabel="Notes"
+        />
+      </FormField>
       {footer}
     </ScrollBox>
   );

@@ -8,6 +8,7 @@ export type ExerciseFormValues = {
   bodyPart: BodyPart | null;
   defaultTrackingType: TrackingType | null;
   imageUrl: string;
+  notes: string;
 };
 
 export type ExerciseFormErrors = Partial<Record<keyof ExerciseFormValues, string>>;

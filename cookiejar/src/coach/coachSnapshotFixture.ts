@@ -68,6 +68,7 @@ export const seededSquat: Exercise = {
   name: 'Squat',
   bodyPart: 'quadriceps',
   imageUrl: null,
+  notes: null,
   defaultTrackingType: 'repetitions_and_weight',
   createdAt: '',
 };
@@ -77,6 +78,7 @@ export const seededBenchPress: Exercise = {
   name: 'Bench Press',
   bodyPart: 'chest',
   imageUrl: null,
+  notes: null,
   defaultTrackingType: 'repetitions_and_weight',
   createdAt: '',
 };
@@ -86,6 +88,7 @@ export const seededDeadlift: Exercise = {
   name: 'Deadlift',
   bodyPart: 'back',
   imageUrl: null,
+  notes: null,
   defaultTrackingType: 'repetitions_and_weight',
   createdAt: '',
 };
