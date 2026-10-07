@@ -1,5 +1,6 @@
 import { formatDuration } from '@/dates/formatDuration';
 import { estimateOneRepMax, type CompletedSet } from '@/progress/detectPersonalRecords';
+import { roundDownToIncrement } from '@/progress/loadIncrement';
 import type { FitnessGoal } from '@/types/Profile';
 import { formatDistance } from '@/workouts/describeTargetSets';
 
@@ -14,9 +15,6 @@ export type PlateauSituation = {
 const epleyRepetitionsDivisor = 30;
 const repetitionsInReserve = 2;
 const highRepetitionEstimateThreshold = 10;
-const lightLoadKilograms = 20;
-const lightLoadIncrementKilograms = 1;
-const loadIncrementKilograms = 2.5;
 const bodyweightOutgrownRepetitions = 15;
 const holdFraction = 0.6;
 const holdIncrementSeconds = 5;
@@ -43,8 +41,7 @@ export function loadForRepetitions(bestSet: CompletedSet, targetRepetitions: num
     bestRepetitions > highRepetitionEstimateThreshold ? repetitionsInReserve + 1 : repetitionsInReserve;
   const load =
     estimateOneRepMax(weightKilograms, bestRepetitions) / (1 + (targetRepetitions + reserve) / epleyRepetitionsDivisor);
-  const increment = load < lightLoadKilograms ? lightLoadIncrementKilograms : loadIncrementKilograms;
-  return Math.floor(load / increment) * increment;
+  return roundDownToIncrement(load);
 }
 
 function atLoad(bestSet: CompletedSet, targetRepetitions: number): string {
