@@ -97,6 +97,14 @@ export async function createExercise(database: SQLiteDatabase, newExercise: NewE
   }
 }
 
+export async function updateExerciseNotes(
+  database: SQLiteDatabase,
+  exerciseId: number,
+  notes: string | null,
+): Promise<void> {
+  await database.runAsync('UPDATE exercises SET notes = ? WHERE id = ?', notes, exerciseId);
+}
+
 export async function updateExercise(
   database: SQLiteDatabase,
   exerciseId: number,

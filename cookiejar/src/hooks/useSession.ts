@@ -2,6 +2,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, AppState } from 'react-native';
 
+import { updateExerciseNotes } from '@/database/repositories/exerciseRepository';
 import {
   addSessionExercises,
   addSessionSet,
@@ -18,9 +19,11 @@ import {
   updateSessionNotes,
   updateSessionSet,
 } from '@/database/repositories/sessionRepository';
+import { notesToStore } from '@/exercises/notesToStore';
 import type { PreviousSessionSet } from '@/sessions/describePreviousSet';
 import { actualValuesOf, fillSetForTick, type SetCompletionOutcome, type SetValues } from '@/sessions/fillSetForTick';
 import { mergeReloadedSession } from '@/sessions/mergeReloadedSession';
+import { withExerciseNotes } from '@/sessions/withExerciseNotes';
 import { valuesForAddedSet } from '@/sessions/valuesForAddedSet';
 import { resolveRestTimerStart } from '@/sessions/resolveRestTimerStart';
 import { findSessionSet, withSessionSetChanges } from '@/sessions/sessionSetChanges';
@@ -336,6 +339,15 @@ export function useSession(sessionId: number) {
     [applySessionChange, database, enqueueWrite, sessionId],
   );
 
+  const changeExerciseNote = useCallback(
+    (exerciseId: number, notes: string) => {
+      const notesToSave = notesToStore(notes);
+      applySessionChange((session) => withExerciseNotes(session, exerciseId, notesToSave));
+      enqueueWrite(() => updateExerciseNotes(database, exerciseId, notesToSave));
+    },
+    [applySessionChange, database, enqueueWrite],
+  );
+
   const toggleSetCompletion = useCallback(
     (sessionSetId: number): SetCompletionOutcome => {
       const session = sessionReference.current;
@@ -421,6 +433,7 @@ export function useSession(sessionId: number) {
     replaceExercise,
     removeExercise,
     changeExerciseRest,
+    changeExerciseNote,
     changeNotes,
     finish,
     discard,

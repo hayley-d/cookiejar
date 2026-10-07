@@ -26,6 +26,7 @@ type SessionLoggerProperties = {
   onAddSet: (sessionExerciseId: number) => void;
   onRemoveSet: (sessionExerciseId: number, sessionSetId: number) => void;
   onChangeRest: (sessionExerciseId: number, restSeconds: number | null) => void;
+  onChangeExerciseNote: (exerciseId: number, notes: string) => void;
   onReplaceExercise: (sessionExerciseId: number) => void;
   onRemoveExercise: (sessionExerciseId: number) => void;
   onAddExercises: () => void;
@@ -57,6 +58,7 @@ export function SessionLogger({
   onAddSet,
   onRemoveSet,
   onChangeRest,
+  onChangeExerciseNote,
   onReplaceExercise,
   onRemoveExercise,
   onAddExercises,
@@ -96,6 +98,7 @@ export function SessionLogger({
               onAddSet={() => onAddSet(sessionExercise.id)}
               onRemoveSet={(sessionSetId) => onRemoveSet(sessionExercise.id, sessionSetId)}
               onChangeRest={(restSeconds) => onChangeRest(sessionExercise.id, restSeconds)}
+              onChangeNote={(notes) => onChangeExerciseNote(sessionExercise.exerciseId, notes)}
               onReplace={() => onReplaceExercise(sessionExercise.id)}
               onRemove={() => onRemoveExercise(sessionExercise.id)}
             />
