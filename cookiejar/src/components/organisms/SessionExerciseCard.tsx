@@ -137,6 +137,11 @@ export function SessionExerciseCard({
                   ? 'No rest'
                   : `Rest ${formatRestSeconds(sessionExercise.restSeconds)}`}
               </Typography>
+              {exercise.notes === null ? null : (
+                <Typography variant="caption" color="textSecondary">
+                  {exercise.notes}
+                </Typography>
+              )}
             </Box>
             <IconButton icon="ellipsis" accessibilityLabel={`More options for ${exercise.name}`} onPress={openMenu} />
           </Box>

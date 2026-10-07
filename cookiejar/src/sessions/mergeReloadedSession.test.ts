@@ -31,7 +31,7 @@ function makeSession(overrides: { completedAt: string | null; repetitions: numbe
         supersetGroup: null,
         trackingType: 'repetitions',
         restSeconds: overrides.restSeconds,
-        exercise: { id: 5, name: 'Squat', imageUrl: null },
+        exercise: { id: 5, name: 'Squat', imageUrl: null, notes: null },
         replacedExerciseName: null,
         sets: [
           {
