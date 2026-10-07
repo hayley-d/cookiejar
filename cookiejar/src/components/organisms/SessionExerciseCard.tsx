@@ -7,6 +7,7 @@ import { IconButton } from '@/components/atoms/IconButton';
 import { SupersetBracket } from '@/components/atoms/SupersetBracket';
 import { TextButton } from '@/components/atoms/TextButton';
 import { SessionSetRow } from '@/components/molecules/SessionSetRow';
+import { SuggestedIncreaseChip } from '@/components/molecules/SuggestedIncreaseChip';
 import { Box } from '@/components/primitives/Box';
 import { Image } from '@/components/primitives/Image';
 import { SwipeableBox } from '@/components/primitives/SwipeableBox';
@@ -162,6 +163,9 @@ export function SessionExerciseCard({
                   ? 'No rest'
                   : `Rest ${formatRestSeconds(sessionExercise.restSeconds)}`}
               </Typography>
+              {suggestion?.increasedByKilograms == null ? null : (
+                <SuggestedIncreaseChip increasedByKilograms={suggestion.increasedByKilograms} />
+              )}
               {exercise.notes === null ? null : (
                 <Typography variant="caption" color="textSecondary">
                   {exercise.notes}
