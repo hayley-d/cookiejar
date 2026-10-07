@@ -140,4 +140,33 @@ describe('mergeReloadedSession', () => {
     const merged = mergeReloadedSession(reloaded, local, { ...noPending, unsavedValueSetIds: new Set([100]) });
     expect(merged.exercises[0]?.sets[0]?.repetitions).toBe(12);
   });
+
+  test('a note saved in the window survives the reload when the exercise is the same', () => {
+    const reloaded = makeSession({ completedAt: null, repetitions: null, restSeconds: 90 });
+    const local = makeSession({ completedAt: null, repetitions: null, restSeconds: 90 });
+    const localExercise = local.exercises[0]!;
+    const localWithNote = {
+      ...local,
+      exercises: [{ ...localExercise, exercise: { ...localExercise.exercise, notes: 'Brace first' } }],
+    };
+    expect(mergeReloadedSession(reloaded, localWithNote, noPending).exercises[0]?.exercise.notes).toBe('Brace first');
+  });
+
+  test('the reloaded note is used when the exercise was replaced', () => {
+    const reloaded = makeSession({ completedAt: null, repetitions: null, restSeconds: 90 });
+    const reloadedExercise = reloaded.exercises[0]!;
+    const reloadedReplaced = {
+      ...reloaded,
+      exercises: [{ ...reloadedExercise, exercise: { id: 6, name: 'Lunge', imageUrl: null, notes: 'Long stride' } }],
+    };
+    const local = makeSession({ completedAt: null, repetitions: null, restSeconds: 90 });
+    const localExercise = local.exercises[0]!;
+    const localWithNote = {
+      ...local,
+      exercises: [{ ...localExercise, exercise: { ...localExercise.exercise, notes: 'Brace first' } }],
+    };
+    expect(mergeReloadedSession(reloadedReplaced, localWithNote, noPending).exercises[0]?.exercise.notes).toBe(
+      'Long stride',
+    );
+  });
 });

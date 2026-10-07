@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { DuplicateExerciseNameError, type NewExercise } from '@/database/repositories/exerciseRepository';
+import { notesToStore } from '@/exercises/notesToStore';
 import {
   duplicateExerciseNameMessage,
   validateExerciseForm,
@@ -8,7 +9,6 @@ import {
   type ExerciseFormValues,
 } from '@/exercises/validateExerciseForm';
 import { useExercises } from '@/hooks/useExercises';
-import { notesToStore } from '@/exercises/notesToStore';
 import { imageUrlToStore } from '@/images/imageUrls';
 
 type ExerciseFormOptions = {
