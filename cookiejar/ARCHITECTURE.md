@@ -64,9 +64,12 @@ Read the versioned docs at https://docs.expo.dev/versions/v57.0.0/ before using 
 | `listRecentlyUsedExercises(database, limit?)` | Every exercise, in one `LEFT JOIN` on `session_exercises.exercise_id` and `sessions`. Used exercises come first by their latest `started_at`, then the rest by `created_at` descending |
 | `getExercise(database, exerciseId)` | One exercise, or `null` |
 | `createExercise(database, newExercise)` | Inserts and returns the new id |
-| `updateExercise(database, exerciseId, changes)` | Saves the edited fields |
+| `updateExercise(database, exerciseId, changes)` | Saves the edited fields, including `notes` |
+| `updateExerciseNotes(database, exerciseId, notes)` | Phase 10. Sets only `exercises.notes` (`string \| null`). The session logger uses it to save a note without touching the other fields |
 | `countExerciseUsages(database, exerciseId)` | `workout_items` rows plus `session_exercises` rows that reference the exercise as `exercise_id` or `replaced_exercise_id` |
 | `deleteExercise(database, exerciseId)` | Deletes the exercise. Screens only offer it when the usage count is 0 |
+
+Every read maps `exercises.notes` to `Exercise.notes` (`string | null`), and `createExercise` and `updateExercise` write it (Phase 10).
 
 `createExercise` and `updateExercise` turn a `UNIQUE` violation on `name` into `DuplicateExerciseNameError`. The form also checks uniqueness (ignoring case) before saving, so the error is a safety net that shows the same message.
 
@@ -158,18 +161,19 @@ The profile form (see Profile and Progress) is the only writer.
 
 ### Migrations
 
-Migrations run in order through `src/database/migrations/migrations.ts` array: `[createInitialSchema, createTrainingSchema, addSessionExerciseRestSeconds, addNotificationIdentifier]`. The `user_version` PRAGMA tracks which migrations have run.
+Migrations run in order through `src/database/migrations/migrations.ts` array: `[createInitialSchema, createTrainingSchema, addSessionExerciseRestSeconds, addNotificationIdentifier, addExerciseNotes]`. The `user_version` PRAGMA tracks which migrations have run.
 
 - **v1 (createInitialSchema)**: Draft schema with exercises, workouts, workout_exercises and sets tables. Never edited. Kept so the migration order stays the same on every device.
 - **v2 (createTrainingSchema)**: Drops draft tables and creates the full training schema for production use.
 - **v3 (addSessionExerciseRestSeconds)**: Adds `rest_seconds` column to `session_exercises` table to allow per-session rest customization.
 - **v4 (addNotificationIdentifier)**: Adds a nullable `identifier` column to `notifications` and the unique index `notifications_by_identifier` on it. SQLite can't add a `UNIQUE` column with `ALTER TABLE`, so the uniqueness comes from the index.
+- **v5 (addExerciseNotes)**: Adds a nullable `notes` column to `exercises` (`ALTER TABLE exercises ADD COLUMN notes TEXT`). Existing exercises get `NULL`.
 
 ### Schema v2
 
 | Table | Purpose | Key Columns |
 | --- | --- | --- |
-| **exercises** | Exercise definitions | `id`, `name` (unique), `body_part`, `default_tracking_type`, `image_url`, `created_at` |
+| **exercises** | Exercise definitions | `id`, `name` (unique), `body_part`, `default_tracking_type`, `image_url`, `created_at`, `notes` (nullable, added by v5) |
 | **workouts** | Workout templates | `id`, `name`, `kind` (individual\|class), `class_type` (yoga\|pilates\|spin\|hiking\|barre\|other), `duration_minutes`, `created_at`, `updated_at` |
 | **workout_items** | Exercises in a workout template | `id`, `workout_id`, `exercise_id`, `position`, `superset_group`, `tracking_type`, `rest_seconds`, `notes` |
 | **target_sets** | Target reps/weight/duration for a workout_item | `id`, `workout_item_id`, `position`, `repetitions`, `weight_kilograms`, `duration_seconds`, `distance_meters` |
@@ -242,6 +246,7 @@ These hold the library's logic, import no React Native, and are covered by `bun 
 - `src/exercises/filterExercises.ts`: search text and body part
 - `src/exercises/toggleExerciseSelection.ts`: ticks and unticks while keeping tick order
 - `src/exercises/parseBodyPartParameter.ts`: the `bodyPart` route param to a `BodyPart` or `null`
+- `src/exercises/notesToStore.ts`: trims exercise notes and turns blank text into `null`, so an empty note is never stored. Used by `useExerciseForm` and by the logger's note edit
 
 ### Pick Store Pattern
 
@@ -560,6 +565,14 @@ Structural changes (adding or removing sets, adding, replacing or removing exerc
 
 `resolveRestTimerStart(exercises, tickedSessionSetId)` decides when ticking a set should start rest. For non-superset exercises, rest starts immediately after the ticked set completes. For superset members, rest starts when the ticked set completes its round: every member has its set at that position ticked, and members without a set at that position count as done. This applies whichever member is ticked last. The rest time used is the group's last member's `rest_seconds`. A `rest_seconds` of null means rest is off, so no rest timer starts (for a superset, when the last member's rest is null).
 
+### Exercise Notes
+
+Phase 10 adds one optional free-text note per exercise, stored on `exercises.notes` (migration v5). The note belongs to the exercise, not the session. It is set on the exercise form (a multiline "Notes" field, saved through `notesToStore`) or from the logger.
+
+`getSessionWithExercises` reads the note live through its existing join to `exercises` (`exercises.notes AS exercise_notes`), so `SessionExerciseWithSets.exercise` is `Pick<Exercise, 'id' | 'name' | 'imageUrl' | 'notes'>`. It is never copied onto `session_exercises`. A replaced exercise therefore shows the replacement's note, and an edit shows on every session that uses the exercise, past ones included. `SessionExerciseCard` shows the note as a `textSecondary` caption under the rest line when it is not `null`.
+
+The card's ⋯ menu is Rest time, Add note or Edit note (Edit when `exercise.notes` is not `null`), Replace exercise, Remove exercise, Cancel. The note option opens `Alert.prompt` (plain text, pre-filled with the current note) and Save calls `onChangeNote`. `SessionLogger` passes the exercise's `exerciseId` to `changeExerciseNote(exerciseId, notes)` on `useSession`, which runs the text through `notesToStore`, updates the loaded session with `withExerciseNotes` and enqueues `updateExerciseNotes` on the write queue. It does not reload the session and does not bump `dataVersion`. Saving a blank note clears it.
+
 ### Session Exercise Rest Seconds
 
 Starting a session copies `rest_seconds` from the workout item, including null for rest that is off. Exercises added mid-session get an explicit 90 seconds. The card's ⋯ menu offers a "Rest time" picker to edit `rest_seconds` for that session's exercise. The edit calls `updateSessionExerciseRest` and the hook bumps `dataVersion` afterward so the calendar markers recompute.
@@ -601,6 +614,7 @@ These hold the session logic, import no React Native, and are covered by `bun te
 - `src/sessions/replaceExercise.ts`: which actual values are cleared when changing an exercise
 - `src/sessions/describePreviousSet.ts`: format text for the previous set row in each exercise, plus `matchPreviousSets` which matches sets by position
 - `src/sessions/describeExerciseBestSet.ts`: best set text for an exercise in a finished session
+- `src/sessions/withExerciseNotes.ts`: returns the session with one exercise's `notes` replaced on every session exercise that uses it (the same session when no exercise matches)
 - `src/sessions/mergeReloadedSession.ts`: merge reloaded structure and values with pending writes
 - `src/sessions/normaliseSessionExercises.ts`: clear superset groups for single exercises on reload
 - `src/sessions/sessionSetChanges.ts`: editing operations (change, find, toggle completion)
@@ -622,7 +636,7 @@ Session-specific hooks manage the logger state and rest timer:
 
 | Hook | Behaviour |
 | --- | --- |
-| `useSession(sessionId)` | Returns `{ sessionLookup, previousSetsByExerciseId, changeSetValues, toggleSetCompletion, addSet, removeSet, changeExerciseRest, changeNotes, finish, discard, addExercises, replaceExercise, removeExercise }`. Loads the session on mount, debounces set value and notes writes with a 400 ms delay, flushes pending writes on unmount, when the app goes to the background or inactive, and before finish, cancels them before discard, and queues structural changes (after enqueueing pending writes) through `getSessionWithExercises` and merge. Finish and discard clear the rest timer and bump `dataVersion`. If a write fails it shows an alert |
+| `useSession(sessionId)` | Returns `{ sessionLookup, previousSetsByExerciseId, changeSetValues, toggleSetCompletion, addSet, removeSet, changeExerciseRest, changeExerciseNote, changeNotes, finish, discard, addExercises, replaceExercise, removeExercise }`. Loads the session on mount, debounces set value and notes writes with a 400 ms delay, flushes pending writes on unmount, when the app goes to the background or inactive, and before finish, cancels them before discard, and queues structural changes (after enqueueing pending writes) through `getSessionWithExercises` and merge. Finish and discard clear the rest timer and bump `dataVersion`. If a write fails it shows an alert |
 | `useRestTimer()` | Returns `{ remainingSeconds: number | null, isPaused: boolean, pause, resume }`. Reads the module-level rest timer store with `useSyncExternalStore`. The hook's effect checks for timer end every 250 ms (`fastTimerTick`), gives a haptic at zero, and clears the timer |
 | `useActiveSession()` | Returns `{ status: 'loading' } \| { status: 'failed' } \| { status: 'active', activeSession } \| { status: 'none' }`. Loads on mount with `getActiveSession` and reloads on focus and on `dataVersion` change. Used by the resume banner |
 | `useFinishedSession(sessionId)` | Returns `{ status: 'loading' } \| { status: 'missing' } \| { status: 'failed' } \| { status: 'found', session, personalRecords }`. Loads once per sessionId with `getSessionWithExercises`, calls `listCompletedSetsForExercises` to load earlier sets, then detects records with `detectPersonalRecords`. Reloads when `dataVersion` changes (after link or unlink) |
@@ -1262,9 +1276,9 @@ src/
     molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField, PlanEntryRow, DaySectionHeader, PlanRow, RestDay, ActivePlanBanner, DayChip, ScheduledWorkoutCard, HeaderImageCard, WorkoutDetailExerciseRow, ActiveSessionBanner, PersonalRecordRow, RestTimerBar, SessionSetRow, SessionTopBar, StatTile, HealthPermissionCard, HealthWorkoutRow, LinkedHealthWorkoutRow, HealthSuggestionBanner, GreetingHeader, TodayWorkoutCard, NuggieActionCard, RestDayCard, NoPlanCard, WeeklyStreakTile, StatBarRow, ProfileSummaryHeader, SettingsRow, MeasurementRow, RangeSwitcher, ClassCountTile, StatisticLine, CoachMessageBubble, UserMessageBubble, PromptChip, NotificationBell, NotificationRow, ToggleRow, ChoiceRow
     organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter, PlanWeekEditor, AddPlanEntrySheet, ActivatePlanSheet, EntryTimeSheet, CopyDaySheet, WeekStrip, DayWorkoutList, IndividualWorkoutDetail, ClassWorkoutDetail, SessionLogger, ClassSessionView, SessionExerciseCard, SessionSummary, LinkHealthWorkoutSheet, TodayCarousel, StatTileGrid, StatBarList, HealthMetricBarList, StreakBarList, ProfileForm, MeasurementForm, ProgressOverview, RecentRecordsSection, PersonalRecordItemRow, ClassCountSection, ClassStatisticsCard, ExerciseProgressSection, ExerciseHistoryList, ProgressChartFrame, ProgressLineChart, ProgressBarChart, CoachConversation, PromptChipBar, NotificationList
   database/
-    migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2), addSessionExerciseRestSeconds (v3), addNotificationIdentifier (v4)
+    migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2), addSessionExerciseRestSeconds (v3), addNotificationIdentifier (v4), addExerciseNotes (v5)
     repositories/           one file per entity: exerciseRepository, workoutRepository, planRepository, scheduleRepository, sessionRepository, appSettingsRepository, healthSnapshotRepository, profileRepository, bodyMeasurementRepository, progressRepository, notificationRepository
-  exercises/                pure exercise logic with tests: validation, A–Z grouping, filtering, selection, body part param parsing
+  exercises/                pure exercise logic with tests: validation, A–Z grouping, filtering, selection, body part param parsing, notes trimming
   hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan, usePlanActions, useScheduledWorkouts, useWeekPages, useSelectedDate, useScheduledWeeks, useSession, useStartSession, useActiveSession, useFinishedSession, useRestTimer, useSessionExercisePicks, useHealthAuthorization, useDailyHealth, useOverlappingHealthWorkouts, useUnlinkHealthWorkout, useProfile, useWeeklyStreak, useHealthRange, useFocusReloadKey, useProfileForm, useBodyMeasurements, useMeasurementForm, useTrainingTotals, usePersonalRecords, useNewRecordCount, useExercisesWithHistory, useExerciseHistory, useClassStatistics, useCoachSnapshot, useCoachConversation, useTipOfTheDay, useNotifications, useUnreadNotificationCount, useNotificationSettings, useNotificationPermissionStatus, useNotificationReconciler, useNotificationTapRouting, useNotificationReceivedRefresh, useRestAlertScheduling, useNotificationPermissionSheet, plus the plain loaders `reconcileNotifications` and `loadNotificationSettings`
   stores/                   exercisePickerStore, workoutSavedStore for returning values between screens; dataVersionStore, restTimerStore for module-level state; with tests
   plans/                    pure plan logic with tests: build scheduled workouts, time of day, summaries, copy day, weekday grouping, day marker state, week cache
