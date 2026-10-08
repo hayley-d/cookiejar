@@ -96,3 +96,20 @@ describe('buildExerciseSeries', () => {
     expect(buildExerciseSeries(sets, 'longestDuration')).toEqual([]);
   });
 });
+
+describe('buildExerciseSeries lowest assistance', () => {
+  test('keeps the least assistance of each session', () => {
+    const assisted = (sessionId: number, date: string, weightKilograms: number) =>
+      other(sessionId, date, { trackingType: 'repetitions_and_assistance', weightKilograms, repetitions: 6 });
+    const sets = [
+      assisted(1, '2026-09-10', 30),
+      assisted(1, '2026-09-10', 25),
+      assisted(2, '2026-09-17', 20),
+      weighted(3, '2026-09-24', 5, 5),
+    ];
+    expect(buildExerciseSeries(sets, 'lowestAssistance')).toEqual([
+      { date: '2026-09-10', value: 25 },
+      { date: '2026-09-17', value: 20 },
+    ]);
+  });
+});

@@ -1,10 +1,11 @@
 import {
   estimateOneRepMax,
+  isAssistedSet,
   isWeightedSet,
   maximumRepetitionsForOneRepMaxEstimate,
   type CompletedSet,
 } from '@/progress/detectPersonalRecords';
-import { exerciseMetricTrackingTypes, type ExerciseMetric } from '@/progress/exerciseMetrics';
+import { exerciseMetricTrackingTypes, isLowerBetterMetric, type ExerciseMetric } from '@/progress/exerciseMetrics';
 import type { ChartPoint } from '@/types/ChartPoint';
 
 export type ExerciseSeriesSet = {
@@ -38,6 +39,8 @@ function setValues(metric: ExerciseMetric, sets: readonly CompletedSet[]): numbe
             ),
           ];
     }
+    case 'lowestAssistance':
+      return sets.filter(isAssistedSet).map((set) => set.weightKilograms);
     case 'mostRepetitions':
       return sets.flatMap((set) => (set.repetitions === null ? [] : [set.repetitions]));
     case 'longestDuration':
@@ -49,6 +52,7 @@ function setValues(metric: ExerciseMetric, sets: readonly CompletedSet[]): numbe
 
 export function buildExerciseSeries(sets: readonly ExerciseSeriesSet[], metric: ExerciseMetric): ChartPoint[] {
   const metricTrackingType = exerciseMetricTrackingTypes[metric];
+  const isLowerBetter = isLowerBetterMetric(metric);
   const setsBySession = new Map<number, { date: string; sets: CompletedSet[] }>();
   for (const { sessionId, date, set } of sets) {
     if (set.trackingType !== metricTrackingType) {
@@ -68,9 +72,9 @@ export function buildExerciseSeries(sets: readonly ExerciseSeriesSet[], metric: 
     if (values.length === 0) {
       continue;
     }
-    const sessionValue = Math.max(...values);
+    const sessionValue = isLowerBetter ? Math.min(...values) : Math.max(...values);
     const bestSoFar = bestValueByDate.get(session.date);
-    if (bestSoFar === undefined || sessionValue > bestSoFar) {
+    if (bestSoFar === undefined || (isLowerBetter ? sessionValue < bestSoFar : sessionValue > bestSoFar)) {
       bestValueByDate.set(session.date, sessionValue);
     }
   }

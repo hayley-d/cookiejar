@@ -2,11 +2,11 @@
 
 ## Goal
 
-Nuggie's Gym is a personal exercise tracker that runs on one iPhone. It is fully offline except for downloading image URLs. No accounts, no server, no network calls except for images. All data lives in a SQLite database on the device.
+Nuggie's Gym is a personal exercise tracker that runs on one iPhone. It is fully offline except for downloading image and exercise video URLs. No accounts, no server, no network calls except for images and videos. All data lives in a SQLite database on the device.
 
 Core capabilities:
 
-- Define exercises (name, body part, how it is tracked: repetitions, repetitions and weight, duration, or distance).
+- Define exercises (name, body part, how it is tracked: repetitions, repetitions and weight, repetitions and assistance, duration, or distance). A built-in library of exercises is seeded from `assets/workouts.csv`.
 - Build workouts and classes, and schedule them in a weekly plan.
 - Log sessions as an ordered list of exercises, each with one or more sets.
 - Browse session history and see progress for an exercise over time (best set, volume, personal records).
@@ -31,6 +31,7 @@ This app is built in phases. See [docs/README.md](docs/README.md) for the full p
 | Navigation | Expo Router (file-based routes in `src/app`); tabs from `expo-router/js-tabs` |
 | Storage | `expo-sqlite`, one database file in the app sandbox |
 | Images | `expo-image` with disk caching (used only in the `Image` primitive component) |
+| Video | `expo-video` (`~57.0.5`) for exercise demonstration videos (used only in the `Video` primitive component). It is a native module, so adding it needs a fresh `npx expo run:ios` build |
 | Animations & gestures | `react-native-gesture-handler`, `react-native-reanimated`, `react-native-worklets` |
 | Haptics | `expo-haptics` for button feedback |
 | Icons | `expo-symbols` for SF Symbols in tabs and buttons |
@@ -49,8 +50,8 @@ Read the versioned docs at https://docs.expo.dev/versions/v57.0.0/ before using 
 ## Data Layer
 
 - The database is opened once through `SQLiteProvider` at the root layout. Components reach it with `useSQLiteContext`.
-- `PRAGMA journal_mode = WAL` and `PRAGMA foreign_keys = ON` are set on open.
-- Schema changes are versioned migrations driven by `PRAGMA user_version`. Migrations run in the provider's `onInit` before any screen renders. A migration is never edited after it has shipped to the phone; new changes go in a new migration.
+- `PRAGMA journal_mode = WAL` is set on open. `PRAGMA foreign_keys` is `OFF` while migrations run, so a migration can rebuild a referenced table, and `ON` afterwards. Each migration runs `PRAGMA foreign_key_check` inside its transaction and throws (rolling back) if it left any violation.
+- Schema changes are versioned migrations driven by `PRAGMA user_version`. `prepareDatabase` (`src/database/prepareDatabase.ts`) is the provider's `onInit`: it runs the migrations, then seeds the default exercise library, before any screen renders. A migration is never edited after it has shipped to the phone; new changes go in a new migration.
 - Each entity has a repository module in `src/database/repositories` that holds all of its SQL. Screens and components call repository functions and never write SQL themselves.
 - Every query uses bound parameters, never string interpolation.
 
@@ -70,6 +71,8 @@ Read the versioned docs at https://docs.expo.dev/versions/v57.0.0/ before using 
 | `deleteExercise(database, exerciseId)` | Deletes the exercise. Screens only offer it when the usage count is 0 |
 
 Every read maps `exercises.notes` to `Exercise.notes` (`string | null`), and `createExercise` and `updateExercise` write it (Phase 10).
+
+Every read also maps `exercises.video_url` to `Exercise.videoUrl` (`string | null`). Only the default library seed writes it; `NewExercise` leaves it out, so the form never changes a video. The session and workout detail queries, and `listExercisesWithHistory`, join it alongside `image_url`.
 
 `createExercise` and `updateExercise` turn a `UNIQUE` violation on `name` into `DuplicateExerciseNameError`. The form also checks uniqueness (ignoring case) before saving, so the error is a safety net that shows the same message.
 
@@ -161,19 +164,20 @@ The profile form (see Profile and Progress) is the only writer.
 
 ### Migrations
 
-Migrations run in order through `src/database/migrations/migrations.ts` array: `[createInitialSchema, createTrainingSchema, addSessionExerciseRestSeconds, addNotificationIdentifier, addExerciseNotes]`. The `user_version` PRAGMA tracks which migrations have run.
+Migrations run in order through `src/database/migrations/migrations.ts` array: `[createInitialSchema, createTrainingSchema, addSessionExerciseRestSeconds, addNotificationIdentifier, addExerciseNotes, addAssistedTrackingAndExerciseVideo]`. The `user_version` PRAGMA tracks which migrations have run.
 
 - **v1 (createInitialSchema)**: Draft schema with exercises, workouts, workout_exercises and sets tables. Never edited. Kept so the migration order stays the same on every device.
 - **v2 (createTrainingSchema)**: Drops draft tables and creates the full training schema for production use.
 - **v3 (addSessionExerciseRestSeconds)**: Adds `rest_seconds` column to `session_exercises` table to allow per-session rest customization.
 - **v4 (addNotificationIdentifier)**: Adds a nullable `identifier` column to `notifications` and the unique index `notifications_by_identifier` on it. SQLite can't add a `UNIQUE` column with `ALTER TABLE`, so the uniqueness comes from the index.
 - **v5 (addExerciseNotes)**: Adds a nullable `notes` column to `exercises` (`ALTER TABLE exercises ADD COLUMN notes TEXT`). Existing exercises get `NULL`.
+- **v6 (addAssistedTrackingAndExerciseVideo)**: Rebuilds `exercises` (adding a nullable `video_url`) and `workout_items` so their tracking type `CHECK` constraints accept `repetitions_and_assistance`. SQLite can't alter a `CHECK`, so each table is created as `*_rebuilt`, its rows copied with their ids, the old table dropped and the new one renamed. The `workout_items` indexes are recreated. This relies on `foreign_keys` being `OFF` during migrations; otherwise dropping `workout_items` would cascade-delete `target_sets`.
 
 ### Schema v2
 
 | Table | Purpose | Key Columns |
 | --- | --- | --- |
-| **exercises** | Exercise definitions | `id`, `name` (unique), `body_part`, `default_tracking_type`, `image_url`, `created_at`, `notes` (nullable, added by v5) |
+| **exercises** | Exercise definitions | `id`, `name` (unique), `body_part`, `default_tracking_type`, `image_url`, `video_url` (nullable, added by v6), `created_at`, `notes` (nullable, added by v5) |
 | **workouts** | Workout templates | `id`, `name`, `kind` (individual\|class), `class_type` (yoga\|pilates\|spin\|hiking\|barre\|other), `duration_minutes`, `created_at`, `updated_at` |
 | **workout_items** | Exercises in a workout template | `id`, `workout_id`, `exercise_id`, `position`, `superset_group`, `tracking_type`, `rest_seconds`, `notes` |
 | **target_sets** | Target reps/weight/duration for a workout_item | `id`, `workout_item_id`, `position`, `repetitions`, `weight_kilograms`, `duration_seconds`, `distance_meters` |
@@ -186,7 +190,7 @@ Migrations run in order through `src/database/migrations/migrations.ts` array: `
 | **body_measurements** | Weight and body composition history | `id`, `measured_on`, `weight_kilograms`, `body_fat_percent`, waist/hip/chest measurements, `notes` |
 | **health_snapshots** | Apple Health data by date | `date`, `steps`, `sleep_minutes`, `resting_heart_rate`, `fetched_at` |
 | **notifications** | App notifications | `id`, `identifier` (unique, added by v4), `title`, `body`, `nuggie`, `route`, `created_at`, `read_at` |
-| **app_settings** | Key-value settings | `key`, `value` |
+| **app_settings** | Key-value settings, including `default_exercise_library_version` | `key`, `value` |
 
 ### Storage Conventions
 
@@ -206,10 +210,10 @@ routes (src/app)  →  organisms  →  molecules  →  atoms  →  primitives  �
 
 | Layer | Responsibility | Examples |
 | --- | --- | --- |
-| **primitives** | Thin themed wrappers over React Native elements. The only layer that touches raw `View`, `Text`, `Pressable`, `TextInput`, `ScrollView`, `FlatList`, `SectionList`, `expo-image`, `expo-symbols`, `react-native-svg`, `@react-native-community/datetimepicker` and the native `Switch`. They apply theme tokens and nothing else. | `Box`, `Typography`, `Touchable`, `TextField`, `Stack`, `Image`, `Icon`, `List`, `SectionedList`, `ScrollBox`, `AnimatedBox`, `SwipeableBox`, `LongPressDragBox`, `WindowMeasuredBox`, `TimePickerBox`, `ProgressRingBox`, `ShakeBox`, `SnapList`, `PulseBox`, `Switch` |
-| **atoms** | The smallest pieces of UI with meaning, built from primitives. No data access. | `Button`, `TextButton`, `IconButton`, `Badge`, `Chip`, `Checkbox`, `NuggieImage`, `Card`, `NumberInput`, `DurationInput`, `DragHandle`, `SupersetBracket`, `Toast`, `TimeLabel`, `StatusChip`, `DayMarker`, `CountdownButton`, `ElapsedTimer`, `PageDots`, `StreakDots`, `TrendArrow`, `DatePickerField`, `TypingIndicator`, `UnreadDot` |
+| **primitives** | Thin themed wrappers over React Native elements. The only layer that touches raw `View`, `Text`, `Pressable`, `TextInput`, `ScrollView`, `FlatList`, `SectionList`, `expo-image`, `expo-video`, `expo-symbols`, `react-native-svg`, `@react-native-community/datetimepicker` and the native `Switch`. They apply theme tokens and nothing else. | `Box`, `Typography`, `Touchable`, `TextField`, `Stack`, `Image`, `Video`, `Icon`, `List`, `SectionedList`, `ScrollBox`, `AnimatedBox`, `SwipeableBox`, `LongPressDragBox`, `WindowMeasuredBox`, `TimePickerBox`, `ProgressRingBox`, `ShakeBox`, `SnapList`, `PulseBox`, `Switch` |
+| **atoms** | The smallest pieces of UI with meaning, built from primitives. No data access. | `Button`, `TextButton`, `IconButton`, `Badge`, `Chip`, `Checkbox`, `NuggieImage`, `ExerciseThumbnail`, `Card`, `NumberInput`, `DurationInput`, `DragHandle`, `SupersetBracket`, `Toast`, `TimeLabel`, `StatusChip`, `DayMarker`, `CountdownButton`, `ElapsedTimer`, `PageDots`, `StreakDots`, `TrendArrow`, `DatePickerField`, `TypingIndicator`, `UnreadDot` |
 | **molecules** | Small groups of atoms that work as a unit. Hold local UI state at most. | `CoachFloatingButton`, `ScreenHeader`, `EmptyState`, `ChipGroup`, `SegmentedControl`, `SearchBar`, `AlphabetIndex`, `ExerciseRow`, `FormField`, `ImageUrlField`, `Stepper`, `KindChoiceCard`, `ActionCard`, `TargetSetRow`, `TargetSetTable`, `WorkoutRow`, `WorkoutNameField`, `PlanEntryRow`, `DaySectionHeader`, `PlanRow`, `RestDay`, `ActivePlanBanner`, `DayChip`, `ScheduledWorkoutCard`, `HeaderImageCard`, `WorkoutDetailExerciseRow`, `ActiveSessionBanner`, `PersonalRecordRow`, `RestTimerBar`, `SessionSetRow`, `SessionTopBar`, `StatTile`, `GreetingHeader`, `TodayWorkoutCard`, `NuggieActionCard`, `RestDayCard`, `NoPlanCard`, `WeeklyStreakTile`, `StatBarRow`, `ProfileSummaryHeader`, `SettingsRow`, `MeasurementRow`, `RangeSwitcher`, `ClassCountTile`, `StatisticLine`, `CoachMessageBubble`, `UserMessageBubble`, `PromptChip`, `NotificationBell`, `NotificationRow`, `ToggleRow`, `ChoiceRow` |
-| **organisms** | Self-contained sections of a screen. Receive data and callbacks through props. | `NuggieLoadingScreen`, `ExerciseForm`, `ExercisePicker`, `ExerciseEditorCard`, `ReorderableExerciseList`, `ClassDetailsForm`, `CreateHub`, `WorkoutEditorFooter`, `PlanWeekEditor`, `AddPlanEntrySheet`, `ActivatePlanSheet`, `EntryTimeSheet`, `CopyDaySheet`, `WeekStrip`, `DayWorkoutList`, `IndividualWorkoutDetail`, `ClassWorkoutDetail`, `SessionLogger`, `ClassSessionView`, `SessionExerciseCard`, `SessionSummary`, `TodayCarousel`, `StatTileGrid`, `StatBarList`, `HealthMetricBarList`, `StreakBarList`, `ProfileForm`, `MeasurementForm`, `ProgressOverview`, `RecentRecordsSection`, `PersonalRecordItemRow`, `ClassCountSection`, `ClassStatisticsCard`, `ExerciseProgressSection`, `ExerciseHistoryList`, `ProgressChartFrame`, `ProgressLineChart`, `ProgressBarChart`, `CoachConversation`, `PromptChipBar`, `NotificationList` |
+| **organisms** | Self-contained sections of a screen. Receive data and callbacks through props. | `NuggieLoadingScreen`, `ExerciseForm`, `ExercisePicker`, `ExerciseEditorCard`, `ReorderableExerciseList`, `ClassDetailsForm`, `CreateHub`, `WorkoutEditorFooter`, `PlanWeekEditor`, `AddPlanEntrySheet`, `ActivatePlanSheet`, `EntryTimeSheet`, `CopyDaySheet`, `ExerciseVideoSheet`, `WeekStrip`, `DayWorkoutList`, `IndividualWorkoutDetail`, `ClassWorkoutDetail`, `SessionLogger`, `ClassSessionView`, `SessionExerciseCard`, `SessionSummary`, `TodayCarousel`, `StatTileGrid`, `StatBarList`, `HealthMetricBarList`, `StreakBarList`, `ProfileForm`, `MeasurementForm`, `ProgressOverview`, `RecentRecordsSection`, `PersonalRecordItemRow`, `ClassCountSection`, `ClassStatisticsCard`, `ExerciseProgressSection`, `ExerciseHistoryList`, `ProgressChartFrame`, `ProgressLineChart`, `ProgressBarChart`, `CoachConversation`, `PromptChipBar`, `NotificationList` |
 | **routes** | Expo Router screens. Load data through repositories and hooks, then compose organisms. | `src/app/(tabs)/index.tsx`, `src/app/(tabs)/_layout.tsx`, `src/app/coach.tsx`, `src/app/exercises/*`, `src/app/workouts/*`, `src/app/plans/*`, `src/app/workout/[workoutId].tsx`, `src/app/sessions/[sessionId]/index.tsx`, `src/app/sessions/[sessionId]/finishing.tsx`, `src/app/sessions/[sessionId]/summary.tsx`, `src/app/stats/[metric].tsx`, `src/app/(tabs)/profile.tsx`, `src/app/profile/*`, `src/app/progress/*`, `src/app/notifications/*` |
 
 Rules:
@@ -222,7 +226,7 @@ Rules:
 
 ### Routes
 
-All four routes are registered flat in the root `Stack`. There is no `exercises/_layout.tsx`.
+All five routes are registered flat in the root `Stack`. There is no `exercises/_layout.tsx`.
 
 | Route | Presentation | Purpose |
 | --- | --- | --- |
@@ -230,6 +234,7 @@ All four routes are registered flat in the root `Stack`. There is no `exercises/
 | `/exercises/new` | Modal | `ExerciseForm` with Save in the header. Takes an optional `requestIdentifier` (see below) |
 | `/exercises/[exerciseId]` | Stack push | `ExerciseForm` for editing, plus a red Delete that asks for confirmation and is disabled with a reason when the exercise is in use |
 | `/exercises/picker` | Full-screen modal, no Stack header | `ExercisePicker` in `multiple` or `single` mode. Params: `requestIdentifier`, `mode`, `excludeExerciseIds` (comma-separated) |
+| `/exercises/video` | Form sheet (0.75 detent), no Stack header | `ExerciseVideoSheet`: the exercise name, its looping muted video with native controls, and Done. Params: `name`, `videoUrl` (built by `exerciseVideoHref`) |
 
 `ExercisePicker` is one organism for both the library and the picker, so they share one list. It has Alphabetical, Body part and Recent tabs (`SegmentedControl`), a `SearchBar` that narrows whichever tab is active, and an `AlphabetIndex` on the alphabetical lists. In `multiple` mode, the footer holds "Add exercises (n)" (needs at least 1) and "Create superset" (needs at least 2). In `single` mode there is no footer, and tapping a row returns it. Excluded exercises are disabled and show a tick.
 
@@ -247,6 +252,34 @@ These hold the library's logic, import no React Native, and are covered by `bun 
 - `src/exercises/toggleExerciseSelection.ts`: ticks and unticks while keeping tick order
 - `src/exercises/parseBodyPartParameter.ts`: the `bodyPart` route param to a `BodyPart` or `null`
 - `src/exercises/notesToStore.ts`: trims exercise notes and turns blank text into `null`, so an empty note is never stored. Used by `useExerciseForm` and by the logger's note edit
+- `src/exercises/parseExerciseLibraryCsv.ts`: parses `assets/workouts.csv` into `DefaultExercise`s (see Default Exercise Library)
+- `src/exercises/renderDefaultExercisesModule.ts`: renders the generated `defaultExercises.ts` source and its content hash
+- `src/exercises/exerciseVideo.ts`: `exerciseVideoOf`, `exerciseVideoHref` and `videoPlayHandler` for the video sheet
+
+### Default Exercise Library
+
+`assets/workouts.csv` is the source of truth for the built-in exercises. Its columns are `Name,Body Part,Image URL,Tracking,Video URL`.
+
+1. `bun run generate:exercises` runs `scripts/generateDefaultExercises.ts`. It parses the CSV with `parseExerciseLibraryCsv` and writes `src/exercises/defaultExercises.ts`: the typed `defaultExercises` array and `defaultExerciseLibraryVersion`, an FNV-1a hash of the array. Metro can't import a CSV, which is why the data is generated ahead of time. A `bun test` check fails when the generated file is out of date with the CSV.
+2. The parser maps the CSV's body parts to `BodyPart` (`quads` and `knees` → `quadriceps`, `bicep` → `biceps`, `tricep` → `triceps`, `shoulder` → `shoulders`, `abs` → `core`, `grip` → `forearms`), and its tracking text to `TrackingType` (`reps and sets` → `repetitions`, `weighted reps and sets` → `repetitions_and_weight`, `assisted reps and sets` → `repetitions_and_assistance`). Rows without a name are skipped. An unknown body part or tracking, a duplicate name (ignoring case) or a non-`https` URL throws an error naming the row.
+3. On every launch, `seedDefaultExercises` (`src/database/seedDefaultExercises.ts`) compares `app_settings.default_exercise_library_version` with `defaultExerciseLibraryVersion`. When they match it does nothing. Otherwise, in one transaction, it upserts every default exercise by name (`ON CONFLICT(name) DO UPDATE`) and stores the new version.
+
+The upsert keeps the row's `id`, `notes` and `created_at`, so workouts, sessions, records and charts that reference an exercise survive. It overwrites `name` (to the CSV's casing), `body_part`, `image_url`, `video_url` and `default_tracking_type`. Exercises the user made that aren't in the CSV are left alone. Changing the CSV and regenerating reseeds every install on its next launch.
+
+### Exercise Videos
+
+Exercises with a `videoUrl` show a play badge on their thumbnail. `ExerciseThumbnail` (atom) draws the image, or the workout Nuggie when there is no image or it fails to load, and becomes a button with the badge when given `onPlayVideo`. `ExerciseRow`, `WorkoutDetailExerciseRow` and `SessionExerciseCard` take an optional `onPlayVideo`. `ExercisePicker`, `ExerciseProgressSection`, `IndividualWorkoutDetail` and `SessionLogger` take `onPlayVideo(video: ExerciseVideo)` and use `videoPlayHandler`, so only exercises with a video become tappable. The routes (`/exercises`, `/exercises/picker`, `/progress`, `/workout/[workoutId]`, `/sessions/[sessionId]`) push `exerciseVideoHref(video)`.
+
+### Assisted Tracking
+
+`repetitions_and_assistance` ("Assist kg × Reps") is for machine- or band-assisted movements, where a lower assistance weight is harder. It stores the assistance in `weight_kilograms`.
+
+- `targetSetColumns` gives an "Assist kg" column and a Reps column.
+- `describeTargetSets` writes "3 × 6 @ 20 kg assist", and `describePreviousSet` writes "−20 × 8".
+- `describeExerciseBestSet` ranks the least assistance first, then the most reps.
+- Progress has one metric, `lowestAssistance`. `buildExerciseSeries` keeps each session's lowest value (`isLowerBetterMetric`).
+- `detectPersonalRecords` adds `leastAssistance` (less assistance than any earlier set) and `mostRepetitionsAtAssistance` (more reps than any earlier set at the same or less assistance).
+- Weight-based features leave it out, because they check for `repetitions_and_weight` or `isWeightedSet`: volume totals, estimated 1RM, suggested loads, the coach's strength trend and training load spike. The coach's plateau rule gives it no metric.
 
 ### Pick Store Pattern
 

@@ -9,6 +9,7 @@ export type ExerciseWithHistory = {
   exerciseId: number;
   name: string;
   imageUrl: string | null;
+  videoUrl: string | null;
   defaultTrackingType: TrackingType;
   lastPerformedAt: string;
 };

@@ -97,6 +97,7 @@ type SessionExerciseRow = {
   rest_seconds: number | null;
   exercise_name: string;
   exercise_image_url: string | null;
+  exercise_video_url: string | null;
   exercise_notes: string | null;
   replaced_exercise_name: string | null;
 };
@@ -248,7 +249,7 @@ export async function getSessionWithExercises(
       session_exercises.replaced_exercise_id, session_exercises.position, session_exercises.superset_group,
       session_exercises.tracking_type, session_exercises.rest_seconds,
       exercises.name AS exercise_name, exercises.image_url AS exercise_image_url,
-      exercises.notes AS exercise_notes,
+      exercises.video_url AS exercise_video_url, exercises.notes AS exercise_notes,
       replaced_exercises.name AS replaced_exercise_name
     FROM session_exercises
     JOIN exercises ON exercises.id = session_exercises.exercise_id
@@ -283,6 +284,7 @@ export async function getSessionWithExercises(
       id: exerciseRow.exercise_id,
       name: exerciseRow.exercise_name,
       imageUrl: exerciseRow.exercise_image_url,
+      videoUrl: exerciseRow.exercise_video_url,
       notes: exerciseRow.exercise_notes,
     },
     replacedExerciseName: exerciseRow.replaced_exercise_name,

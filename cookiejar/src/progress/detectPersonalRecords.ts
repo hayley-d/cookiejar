@@ -13,6 +13,8 @@ export type PersonalRecordType =
   | 'heaviestWeight'
   | 'bestEstimatedOneRepMax'
   | 'mostRepetitionsAtWeight'
+  | 'leastAssistance'
+  | 'mostRepetitionsAtAssistance'
   | 'mostRepetitions'
   | 'longestDuration'
   | 'longestDistance';
@@ -27,6 +29,8 @@ export const personalRecordPriority: readonly PersonalRecordType[] = [
   'heaviestWeight',
   'bestEstimatedOneRepMax',
   'mostRepetitionsAtWeight',
+  'leastAssistance',
+  'mostRepetitionsAtAssistance',
   'mostRepetitions',
   'longestDuration',
   'longestDistance',
@@ -44,6 +48,17 @@ export type WeightedSet = CompletedSet & { repetitions: number; weightKilograms:
 export function isWeightedSet(set: CompletedSet): set is WeightedSet {
   return (
     set.trackingType === 'repetitions_and_weight' &&
+    set.repetitions !== null &&
+    set.repetitions >= 1 &&
+    set.weightKilograms !== null
+  );
+}
+
+export type AssistedSet = CompletedSet & { repetitions: number; weightKilograms: number };
+
+export function isAssistedSet(set: CompletedSet): set is AssistedSet {
+  return (
+    set.trackingType === 'repetitions_and_assistance' &&
     set.repetitions !== null &&
     set.repetitions >= 1 &&
     set.weightKilograms !== null
@@ -131,6 +146,48 @@ function detectWeightedRecords(currentSets: readonly CompletedSet[], earlierSets
   return records;
 }
 
+function minimumOf(values: readonly number[]): number | null {
+  return values.length === 0 ? null : Math.min(...values);
+}
+
+function detectAssistedRecords(currentSets: readonly CompletedSet[], earlierSets: readonly CompletedSet[]) {
+  const records: { recordType: PersonalRecordType; set: CompletedSet }[] = [];
+  const currentAssisted = currentSets.filter(isAssistedSet);
+  const earlierAssisted = earlierSets.filter(isAssistedSet);
+
+  const leastAssistedCurrent = bestBy(currentAssisted, (candidate, current) =>
+    candidate.weightKilograms !== current.weightKilograms
+      ? candidate.weightKilograms < current.weightKilograms
+      : candidate.repetitions > current.repetitions,
+  );
+  const leastAssistanceEarlier = minimumOf(earlierAssisted.map((set) => set.weightKilograms));
+  if (
+    leastAssistedCurrent !== null &&
+    leastAssistanceEarlier !== null &&
+    leastAssistedCurrent.weightKilograms < leastAssistanceEarlier
+  ) {
+    records.push({ recordType: 'leastAssistance', set: leastAssistedCurrent });
+  }
+
+  const repetitionRecordSets = currentAssisted.filter((set) => {
+    const earlierAtOrBelowAssistance = earlierAssisted.filter(
+      (earlierSet) => earlierSet.weightKilograms <= set.weightKilograms,
+    );
+    const mostEarlierRepetitions = maximumOf(earlierAtOrBelowAssistance.map((earlierSet) => earlierSet.repetitions));
+    return mostEarlierRepetitions !== null && set.repetitions > mostEarlierRepetitions;
+  });
+  const bestRepetitionRecord = bestBy(repetitionRecordSets, (candidate, current) =>
+    candidate.repetitions !== current.repetitions
+      ? candidate.repetitions > current.repetitions
+      : candidate.weightKilograms < current.weightKilograms,
+  );
+  if (bestRepetitionRecord !== null) {
+    records.push({ recordType: 'mostRepetitionsAtAssistance', set: bestRepetitionRecord });
+  }
+
+  return records;
+}
+
 function detectSingleValueRecord(
   recordType: PersonalRecordType,
   trackingType: TrackingType,
@@ -162,6 +219,7 @@ export function detectPersonalRecords(
     }
     return [
       ...detectWeightedRecords(currentForExercise, earlierForExercise),
+      ...detectAssistedRecords(currentForExercise, earlierForExercise),
       ...detectSingleValueRecord(
         'mostRepetitions',
         'repetitions',

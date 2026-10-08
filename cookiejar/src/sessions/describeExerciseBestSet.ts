@@ -13,6 +13,8 @@ function rankOf(trackingType: TrackingType, set: BestSetCandidate): [number, num
   switch (trackingType) {
     case 'repetitions_and_weight':
       return [set.weightKilograms ?? 0, set.repetitions ?? 0];
+    case 'repetitions_and_assistance':
+      return [-(set.weightKilograms ?? 0), set.repetitions ?? 0];
     case 'repetitions':
       return [set.repetitions ?? 0, 0];
     case 'duration':

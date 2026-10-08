@@ -36,15 +36,21 @@ export function formatTargetSetValue(field: TargetSetField, targetSet: TargetSet
 const primaryFieldByTrackingType: Record<TrackingType, TargetSetField> = {
   repetitions: 'repetitions',
   repetitions_and_weight: 'repetitions',
+  repetitions_and_assistance: 'repetitions',
   duration: 'durationSeconds',
   distance: 'distanceMeters',
+};
+
+const weightUnitTextByTrackingType: Partial<Record<TrackingType, string>> = {
+  repetitions_and_weight: 'kg',
+  repetitions_and_assistance: 'kg assist',
 };
 
 function countSets(setCount: number): string {
   return `${setCount} ${setCount === 1 ? 'set' : 'sets'}`;
 }
 
-function describeWeight(targetSets: TargetSetValues[]): string {
+function describeWeight(targetSets: TargetSetValues[], weightUnitText: string): string {
   const weights = targetSets.flatMap((targetSet) =>
     targetSet.weightKilograms === null ? [] : [targetSet.weightKilograms],
   );
@@ -54,7 +60,7 @@ function describeWeight(targetSets: TargetSetValues[]): string {
   const lightest = Math.min(...weights);
   const heaviest = Math.max(...weights);
   const weightText = lightest === heaviest ? formatWeight(lightest) : `${formatWeight(lightest)}–${formatWeight(heaviest)}`;
-  return ` @ ${weightText} kg`;
+  return ` @ ${weightText} ${weightUnitText}`;
 }
 
 export function describeTargetSets(trackingType: TrackingType, targetSets: TargetSetValues[]): string {
@@ -66,8 +72,9 @@ export function describeTargetSets(trackingType: TrackingType, targetSets: Targe
     return countSets(targetSets.length);
   }
 
-  const hasWeight = trackingType === 'repetitions_and_weight';
-  const weightSuffix = hasWeight ? describeWeight(targetSets) : '';
+  const weightUnitText = weightUnitTextByTrackingType[trackingType];
+  const hasWeight = weightUnitText !== undefined;
+  const weightSuffix = hasWeight ? describeWeight(targetSets, weightUnitText) : '';
   const firstTargetSet = targetSets[0] as TargetSetValues;
   const isUniform = targetSets.every(
     (targetSet) =>

@@ -8,6 +8,7 @@ import { ClassSessionView } from '@/components/organisms/ClassSessionView';
 import { NuggieLoadingScreen } from '@/components/organisms/NuggieLoadingScreen';
 import { SessionLogger } from '@/components/organisms/SessionLogger';
 import { Box } from '@/components/primitives/Box';
+import { exerciseVideoHref } from '@/exercises/exerciseVideo';
 import { useSession } from '@/hooks/useSession';
 import { useSessionExercisePicks } from '@/hooks/useSessionExercisePicks';
 import { chooseNuggie } from '@/nuggies/chooseNuggie';
@@ -174,6 +175,7 @@ export default function SessionLoggerScreen() {
           )
         }
         onRemoveExercise={removeExercise}
+        onPlayVideo={(video) => router.push(exerciseVideoHref(video))}
         onAddExercises={() =>
           exercisePicks.addExercises(
             sessionLookup.session.exercises.map((sessionExercise) => sessionExercise.exerciseId),

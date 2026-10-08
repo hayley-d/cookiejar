@@ -142,3 +142,15 @@ describe('formatTargetSetValue', () => {
     expect(formatTargetSetValue('repetitions', targetSet({}))).toBe('—');
   });
 });
+
+describe('describeTargetSets assisted sets', () => {
+  test('uniform assisted sets name the assistance', () => {
+    const sets = Array.from({ length: 3 }, () => targetSet({ repetitions: 6, weightKilograms: 20 }));
+    expect(describeTargetSets('repetitions_and_assistance', sets)).toBe('3 × 6 @ 20 kg assist');
+  });
+
+  test('varied assisted sets show the assistance range', () => {
+    const sets = [targetSet({ repetitions: 6, weightKilograms: 25 }), targetSet({ repetitions: 5, weightKilograms: 20 })];
+    expect(describeTargetSets('repetitions_and_assistance', sets)).toBe('6 / 5 @ 20–25 kg assist');
+  });
+});

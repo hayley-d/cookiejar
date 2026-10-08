@@ -8,7 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { NuggieLoadingScreen } from '@/components/organisms/NuggieLoadingScreen';
 import { databaseName } from '@/database/databaseName';
-import { migrateDatabase } from '@/database/migrateDatabase';
+import { prepareDatabase } from '@/database/prepareDatabase';
 import { useNotificationReconciler } from '@/hooks/useNotificationReconciler';
 import { useNotificationReceivedRefresh } from '@/hooks/useNotificationReceivedRefresh';
 import { useNotificationTapRouting } from '@/hooks/useNotificationTapRouting';
@@ -161,6 +161,15 @@ function ThemedNavigation() {
         />
         <Stack.Screen name="exercises/picker" options={{ presentation: 'fullScreenModal', headerShown: false }} />
         <Stack.Screen
+          name="exercises/video"
+          options={{
+            presentation: 'formSheet',
+            headerShown: false,
+            sheetAllowedDetents: [0.75],
+            sheetGrabberVisible: true,
+          }}
+        />
+        <Stack.Screen
           name="plans/new"
           options={{ presentation: 'modal', title: 'New plan', headerLargeTitleEnabled: false }}
         />
@@ -218,7 +227,7 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <Suspense fallback={null}>
-        <SQLiteProvider databaseName={databaseName} onInit={migrateDatabase} useSuspense>
+        <SQLiteProvider databaseName={databaseName} onInit={prepareDatabase} useSuspense>
           <AppearancePreferenceProvider onLoaded={handleDatabaseReady}>
             <ThemeProvider>
               <ThemedNavigation />

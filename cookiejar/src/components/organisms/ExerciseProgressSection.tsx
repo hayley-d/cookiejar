@@ -7,15 +7,17 @@ import { Box } from '@/components/primitives/Box';
 import { Typography } from '@/components/primitives/Typography';
 import { toLocalDateString } from '@/dates/toLocalDateString';
 import { formatShortDate } from '@/dates/formatShortDate';
+import { videoPlayHandler, type ExerciseVideo } from '@/exercises/exerciseVideo';
 import { filterExercisesByName } from '@/progress/filterExercisesByName';
 import type { ExerciseWithHistory } from '@/types/ExerciseHistory';
 
 type ExerciseProgressSectionProperties = {
   exercises: readonly ExerciseWithHistory[];
   onPressExercise: (exerciseId: number) => void;
+  onPlayVideo?: (video: ExerciseVideo) => void;
 };
 
-export function ExerciseProgressSection({ exercises, onPressExercise }: ExerciseProgressSectionProperties) {
+export function ExerciseProgressSection({ exercises, onPressExercise, onPlayVideo }: ExerciseProgressSectionProperties) {
   const [searchText, setSearchText] = useState('');
 
   if (exercises.length === 0) {
@@ -38,6 +40,7 @@ export function ExerciseProgressSection({ exercises, onPressExercise }: Exercise
             caption={`Last performed ${formatShortDate(toLocalDateString(new Date(exercise.lastPerformedAt)))}`}
             imageUrl={exercise.imageUrl}
             onPress={() => onPressExercise(exercise.exerciseId)}
+            onPlayVideo={videoPlayHandler(exercise, onPlayVideo)}
           />
         ))
       )}
