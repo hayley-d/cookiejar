@@ -10,6 +10,7 @@ import { Box } from '@/components/primitives/Box';
 import { ScrollBox } from '@/components/primitives/ScrollBox';
 import { TextField } from '@/components/primitives/TextField';
 import { Typography } from '@/components/primitives/Typography';
+import { videoPlayHandler, type ExerciseVideo } from '@/exercises/exerciseVideo';
 import { useRestTimer } from '@/hooks/useRestTimer';
 import type { LoadSuggestion } from '@/progress/suggestNextLoad';
 import type { PreviousSessionSet } from '@/sessions/describePreviousSet';
@@ -31,6 +32,7 @@ type SessionLoggerProperties = {
   onChangeExerciseNote: (exerciseId: number, notes: string) => void;
   onReplaceExercise: (sessionExerciseId: number) => void;
   onRemoveExercise: (sessionExerciseId: number) => void;
+  onPlayVideo?: (video: ExerciseVideo) => void;
   onAddExercises: () => void;
   onChangeNotes: (notes: string) => void;
   onFinish: () => void;
@@ -64,6 +66,7 @@ export function SessionLogger({
   onChangeExerciseNote,
   onReplaceExercise,
   onRemoveExercise,
+  onPlayVideo,
   onAddExercises,
   onChangeNotes,
   onFinish,
@@ -105,6 +108,7 @@ export function SessionLogger({
               onChangeNote={(notes) => onChangeExerciseNote(sessionExercise.exerciseId, notes)}
               onReplace={() => onReplaceExercise(sessionExercise.id)}
               onRemove={() => onRemoveExercise(sessionExercise.id)}
+              onPlayVideo={videoPlayHandler(sessionExercise.exercise, onPlayVideo)}
             />
           ))
         )}

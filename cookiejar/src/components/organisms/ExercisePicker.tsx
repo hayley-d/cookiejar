@@ -22,6 +22,7 @@ import {
 } from '@/exercises/groupExercisesAlphabetically';
 import { useTheme } from '@/theme/useTheme';
 import { bodyPartLabels, bodyParts, type BodyPart } from '@/types/BodyPart';
+import { videoPlayHandler, type ExerciseVideo } from '@/exercises/exerciseVideo';
 import type { Exercise } from '@/types/Exercise';
 
 export type ExercisePickerVariant = 'browse' | 'multiple' | 'single';
@@ -39,6 +40,7 @@ type ExercisePickerProperties = {
   onCreateExercise?: () => void;
   onAddExercises?: () => void;
   onCreateSuperset?: () => void;
+  onPlayVideo?: (video: ExerciseVideo) => void;
 };
 
 type ExercisePickerTab = 'alphabetical' | 'bodyPart' | 'recent';
@@ -65,6 +67,7 @@ export function ExercisePicker({
   onCreateExercise,
   onAddExercises,
   onCreateSuperset,
+  onPlayVideo,
 }: ExercisePickerProperties) {
   const theme = useTheme();
   const safeAreaInsets = useSafeAreaInsets();
@@ -118,6 +121,7 @@ export function ExercisePicker({
       name={exercise.name}
       imageUrl={exercise.imageUrl}
       onPress={() => onPressExercise(exercise.id)}
+      onPlayVideo={videoPlayHandler(exercise, onPlayVideo)}
       {...rowSelectionFor(exercise.id)}
     />
   );

@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 
 import { ExercisePicker } from '@/components/organisms/ExercisePicker';
+import { exerciseVideoHref } from '@/exercises/exerciseVideo';
 import { toggleExerciseSelection } from '@/exercises/toggleExerciseSelection';
 import { useExercises } from '@/hooks/useExercises';
 import { useRecentlyUsedExercises } from '@/hooks/useRecentlyUsedExercises';
@@ -85,6 +86,7 @@ export default function ExercisePickerScreen() {
       searchText={searchText}
       onChangeSearchText={setSearchText}
       onPressExercise={pressExercise}
+      onPlayVideo={(video) => router.push(exerciseVideoHref(video))}
       selectedExerciseIds={selectedExerciseIds}
       excludedExerciseIds={excludedExerciseIds}
       onClose={() => router.back()}

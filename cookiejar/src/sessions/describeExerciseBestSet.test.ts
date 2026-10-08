@@ -41,3 +41,15 @@ describe('describeExerciseBestSet', () => {
     expect(describeExerciseBestSet('repetitions', [])).toBeNull();
   });
 });
+
+describe('describeExerciseBestSet for assisted sets', () => {
+  test('least assistance, then most reps', () => {
+    expect(
+      describeExerciseBestSet('repetitions_and_assistance', [
+        setOf({ weightKilograms: 30, repetitions: 10 }),
+        setOf({ weightKilograms: 20, repetitions: 5 }),
+        setOf({ weightKilograms: 20, repetitions: 7 }),
+      ]),
+    ).toBe('−20 × 7');
+  });
+});

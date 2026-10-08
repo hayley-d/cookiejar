@@ -8,6 +8,7 @@ import { ExerciseProgressSection } from '@/components/organisms/ExerciseProgress
 import { RecentRecordsSection } from '@/components/organisms/RecentRecordsSection';
 import { ProgressOverview } from '@/components/organisms/ProgressOverview';
 import { ScrollBox } from '@/components/primitives/ScrollBox';
+import { exerciseVideoHref } from '@/exercises/exerciseVideo';
 import { useClassStatistics } from '@/hooks/useClassStatistics';
 import { useExercisesWithHistory } from '@/hooks/useExercisesWithHistory';
 import { usePersonalRecords } from '@/hooks/usePersonalRecords';
@@ -78,7 +79,11 @@ export default function ProgressScreen() {
           onSeeAll={openRecords}
         />
         <ClassCountSection statistics={classStatistics ?? []} onOpenStatistics={openClassStatistics} />
-        <ExerciseProgressSection exercises={exercises ?? []} onPressExercise={openExerciseHistory} />
+        <ExerciseProgressSection
+          exercises={exercises ?? []}
+          onPressExercise={openExerciseHistory}
+          onPlayVideo={(video) => router.push(exerciseVideoHref(video))}
+        />
       </ProgressOverview>
     </ScrollBox>
   );

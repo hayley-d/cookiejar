@@ -25,6 +25,8 @@ export function describeBestSet(set: CompletedSet): string {
   switch (set.trackingType) {
     case 'repetitions_and_weight':
       return `${set.weightKilograms ?? 0} kg × ${set.repetitions ?? 0}`;
+    case 'repetitions_and_assistance':
+      return `${set.weightKilograms ?? 0} kg assist × ${set.repetitions ?? 0}`;
     case 'repetitions':
       return `${set.repetitions ?? 0} reps`;
     case 'duration':
@@ -128,6 +130,7 @@ export function describePlateauAdvice(situation: PlateauSituation): string {
     case 'repetitions_and_weight':
       return weightedAdvice(situation);
     case 'repetitions':
+    case 'repetitions_and_assistance':
       return bodyweightAdvice(situation);
     case 'duration':
       return holdAdvice(situation.bestSet);

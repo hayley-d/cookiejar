@@ -7,6 +7,7 @@ export const noPreviousSetText = '—';
 const primaryFieldByTrackingType: Record<TrackingType, TargetSetField> = {
   repetitions: 'repetitions',
   repetitions_and_weight: 'repetitions',
+  repetitions_and_assistance: 'repetitions',
   duration: 'durationSeconds',
   distance: 'distanceMeters',
 };
@@ -34,6 +35,10 @@ export function describePreviousSet(trackingType: TrackingType, previousSet: Tar
   if (trackingType === 'repetitions_and_weight') {
     const weightText = formatTargetSetValue('weightKilograms', previousSet);
     return previousSet.weightKilograms === null ? primaryText : `${weightText} × ${primaryText}`;
+  }
+  if (trackingType === 'repetitions_and_assistance') {
+    const assistanceText = formatTargetSetValue('weightKilograms', previousSet);
+    return previousSet.weightKilograms === null ? primaryText : `−${assistanceText} × ${primaryText}`;
   }
   return primaryText;
 }

@@ -113,3 +113,12 @@ describe('changing the tracking type', () => {
     expect(trackingTypeChangeClearsValues([], 'distance')).toBe(false);
   });
 });
+
+describe('targetSetColumns for assisted sets', () => {
+  test('tracks assistance kilograms then reps', () => {
+    expect(targetSetColumns('repetitions_and_assistance').map((column) => [column.field, column.label])).toEqual([
+      ['weightKilograms', 'Assist kg'],
+      ['repetitions', 'Reps'],
+    ]);
+  });
+});

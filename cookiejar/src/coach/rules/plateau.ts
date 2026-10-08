@@ -49,6 +49,8 @@ function metricOf(set: CompletedSet): { metricKind: MetricKind; value: number } 
         : { metricKind: 'estimatedOneRepMax', value: estimateOneRepMax(set.weightKilograms, set.repetitions) };
     case 'repetitions':
       return set.repetitions === null ? null : { metricKind: 'repetitions', value: set.repetitions };
+    case 'repetitions_and_assistance':
+      return null;
     case 'duration':
       return set.durationSeconds === null ? null : { metricKind: 'duration', value: set.durationSeconds };
     case 'distance':

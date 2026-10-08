@@ -4,6 +4,7 @@ import { WorkoutDetailExerciseRow } from '@/components/molecules/WorkoutDetailEx
 import { Box } from '@/components/primitives/Box';
 import { ScrollBox } from '@/components/primitives/ScrollBox';
 import { Typography } from '@/components/primitives/Typography';
+import { videoPlayHandler, type ExerciseVideo } from '@/exercises/exerciseVideo';
 import { useTheme } from '@/theme/useTheme';
 import { bodyPartLabels } from '@/types/BodyPart';
 import type { WorkoutWithItems } from '@/types/WorkoutWithItems';
@@ -14,6 +15,7 @@ import { workoutNuggie } from '@/workouts/workoutNuggie';
 type IndividualWorkoutDetailProperties = {
   workout: WorkoutWithItems;
   onStart: () => void;
+  onPlayVideo?: (video: ExerciseVideo) => void;
 };
 
 function describeSummary(workout: WorkoutWithItems): string {
@@ -32,7 +34,7 @@ function describeSummary(workout: WorkoutWithItems): string {
   return parts.join(' · ');
 }
 
-export function IndividualWorkoutDetail({ workout, onStart }: IndividualWorkoutDetailProperties) {
+export function IndividualWorkoutDetail({ workout, onStart, onPlayVideo }: IndividualWorkoutDetailProperties) {
   const theme = useTheme();
   const positions = toSupersetCardPositions(workout.items);
 
@@ -53,6 +55,7 @@ export function IndividualWorkoutDetail({ workout, onStart }: IndividualWorkoutD
             bracket={positions[index]?.bracket ?? null}
             trackingType={item.trackingType}
             targetSets={item.targetSets}
+            onPlayVideo={videoPlayHandler(item.exercise, onPlayVideo)}
           />
         ))}
         <Box style={{ height: theme.sizes.detailBottomBarClearance }} />

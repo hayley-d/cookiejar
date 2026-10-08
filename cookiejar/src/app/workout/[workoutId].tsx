@@ -4,6 +4,7 @@ import { IconButton } from '@/components/atoms/IconButton';
 import { EmptyState } from '@/components/molecules/EmptyState';
 import { ClassWorkoutDetail } from '@/components/organisms/ClassWorkoutDetail';
 import { IndividualWorkoutDetail } from '@/components/organisms/IndividualWorkoutDetail';
+import { exerciseVideoHref } from '@/exercises/exerciseVideo';
 import { useStartSession } from '@/hooks/useStartSession';
 import { useWorkoutWithItems } from '@/hooks/useWorkoutWithItems';
 import { toLocalDateString } from '@/dates/toLocalDateString';
@@ -74,7 +75,11 @@ export default function WorkoutDetailScreen() {
         }}
       />
       {workout.kind === 'individual' ? (
-        <IndividualWorkoutDetail workout={workout} onStart={startWorkout} />
+        <IndividualWorkoutDetail
+          workout={workout}
+          onStart={startWorkout}
+          onPlayVideo={(video) => router.push(exerciseVideoHref(video))}
+        />
       ) : (
         <ClassWorkoutDetail workout={workout} onStart={startWorkout} />
       )}

@@ -156,6 +156,9 @@ export const sizes = {
   notificationRowNuggie: 44,
   bellIcon: 24,
   rowDividerWidth: 1,
+  playBadge: 24,
+  playBadgeIcon: 10,
+  exerciseVideoAspectRatio: 1,
 };
 
 export const fontWeights = {

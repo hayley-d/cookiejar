@@ -2,10 +2,9 @@ import { useState } from 'react';
 
 import { Card } from '@/components/atoms/Card';
 import { Icon } from '@/components/primitives/Icon';
-import { NuggieImage } from '@/components/atoms/NuggieImage';
+import { ExerciseThumbnail } from '@/components/atoms/ExerciseThumbnail';
 import { SupersetBracket } from '@/components/atoms/SupersetBracket';
 import { Box } from '@/components/primitives/Box';
-import { Image } from '@/components/primitives/Image';
 import { Touchable } from '@/components/primitives/Touchable';
 import { Typography } from '@/components/primitives/Typography';
 import { useTheme } from '@/theme/useTheme';
@@ -22,6 +21,7 @@ type WorkoutDetailExerciseRowProperties = {
   bracket: SupersetBracketPosition | null;
   trackingType: TrackingType;
   targetSets: TargetSet[];
+  onPlayVideo?: () => void;
 };
 
 export function WorkoutDetailExerciseRow({
@@ -31,11 +31,10 @@ export function WorkoutDetailExerciseRow({
   bracket,
   trackingType,
   targetSets,
+  onPlayVideo,
 }: WorkoutDetailExerciseRowProperties) {
   const theme = useTheme();
   const [isExpanded, setIsExpanded] = useState(false);
-  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
-  const showsImage = imageUrl !== null && imageUrl !== failedImageUrl;
   const summary = describeTargetSets(trackingType, targetSets);
   const columns = targetSetColumns(trackingType);
   const canExpand = targetSets.length > 0;
@@ -58,20 +57,12 @@ export function WorkoutDetailExerciseRow({
                 {label}
               </Typography>
             )}
-            {showsImage ? (
-              <Image
-                source={{ uri: imageUrl }}
-                contentFit="cover"
-                style={{
-                  width: theme.sizes.exerciseEditorImage,
-                  height: theme.sizes.exerciseEditorImage,
-                  borderRadius: theme.radii.medium,
-                }}
-                onError={() => setFailedImageUrl(imageUrl)}
-              />
-            ) : (
-              <NuggieImage name="workout" size={theme.sizes.exerciseEditorImage} shape="rounded" />
-            )}
+            <ExerciseThumbnail
+              name={name}
+              imageUrl={imageUrl}
+              size={theme.sizes.exerciseEditorImage}
+              onPlayVideo={onPlayVideo}
+            />
             <Box flex={1} gap="extraSmall">
               <Typography variant="label">{name}</Typography>
               <Typography variant="caption" color="textSecondary">

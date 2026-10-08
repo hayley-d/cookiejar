@@ -34,7 +34,7 @@ function makeSession(): SessionWithExercises {
       supersetGroup: null,
       trackingType: 'repetitions_and_weight' as const,
       restSeconds: 90,
-      exercise: { id: exerciseId, name: `Exercise ${exerciseId}`, imageUrl: null, notes: null },
+      exercise: { id: exerciseId, name: `Exercise ${exerciseId}`, imageUrl: null, videoUrl: null, notes: null },
       replacedExerciseName: null,
       sets: [],
     })),

@@ -21,6 +21,9 @@ export function describePersonalRecordDetail(record: PersonalRecord): string {
       }
       return `${detail} (est. 1RM ${Math.round(estimateOneRepMax(set.weightKilograms, set.repetitions))} kg)`;
     }
+    case 'leastAssistance':
+    case 'mostRepetitionsAtAssistance':
+      return `${formatTargetSetValue('weightKilograms', set)} kg assist × ${set.repetitions}`;
     case 'mostRepetitions':
       return `${formatTargetSetValue('repetitions', set)} ${set.repetitions === 1 ? 'rep' : 'reps'}`;
     case 'longestDuration':

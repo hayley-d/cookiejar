@@ -31,7 +31,7 @@ function makeSession(overrides: { completedAt: string | null; repetitions: numbe
         supersetGroup: null,
         trackingType: 'repetitions',
         restSeconds: overrides.restSeconds,
-        exercise: { id: 5, name: 'Squat', imageUrl: null, notes: null },
+        exercise: { id: 5, name: 'Squat', imageUrl: null, videoUrl: null, notes: null },
         replacedExerciseName: null,
         sets: [
           {
@@ -157,7 +157,7 @@ describe('mergeReloadedSession', () => {
     const reloadedExercise = reloaded.exercises[0]!;
     const reloadedReplaced = {
       ...reloaded,
-      exercises: [{ ...reloadedExercise, exercise: { id: 6, name: 'Lunge', imageUrl: null, notes: 'Long stride' } }],
+      exercises: [{ ...reloadedExercise, exercise: { id: 6, name: 'Lunge', imageUrl: null, videoUrl: null, notes: 'Long stride' } }],
     };
     const local = makeSession({ completedAt: null, repetitions: null, restSeconds: 90 });
     const localExercise = local.exercises[0]!;

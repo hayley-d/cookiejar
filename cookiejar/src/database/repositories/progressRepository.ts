@@ -143,13 +143,15 @@ type ExerciseWithHistoryRow = {
   exercise_id: number;
   name: string;
   image_url: string | null;
+  video_url: string | null;
   default_tracking_type: TrackingType;
   last_performed_at: string;
 };
 
 export async function listExercisesWithHistory(database: SQLiteDatabase): Promise<ExerciseWithHistory[]> {
   const rows = await database.getAllAsync<ExerciseWithHistoryRow>(
-    `SELECT exercises.id AS exercise_id, exercises.name, exercises.image_url, exercises.default_tracking_type,
+    `SELECT exercises.id AS exercise_id, exercises.name, exercises.image_url, exercises.video_url,
+      exercises.default_tracking_type,
       MAX(sessions.started_at) AS last_performed_at
     ${finishedSessionSetSource}
     GROUP BY exercises.id
@@ -159,6 +161,7 @@ export async function listExercisesWithHistory(database: SQLiteDatabase): Promis
     exerciseId: row.exercise_id,
     name: row.name,
     imageUrl: row.image_url,
+    videoUrl: row.video_url,
     defaultTrackingType: row.default_tracking_type,
     lastPerformedAt: row.last_performed_at,
   }));

@@ -4,7 +4,7 @@ import type { SessionExercise } from '@/types/SessionExercise';
 import type { SessionSet } from '@/types/SessionSet';
 
 export type SessionExerciseWithSets = SessionExercise & {
-  exercise: Pick<Exercise, 'id' | 'name' | 'imageUrl' | 'notes'>;
+  exercise: Pick<Exercise, 'id' | 'name' | 'imageUrl' | 'videoUrl' | 'notes'>;
   replacedExerciseName: string | null;
   sets: SessionSet[];
 };

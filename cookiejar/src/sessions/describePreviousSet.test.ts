@@ -66,3 +66,15 @@ describe('describePreviousSet', () => {
     expect(describePreviousSet('duration', makeValues({ repetitions: 8 }))).toBe('—');
   });
 });
+
+describe('describePreviousSet for assisted sets', () => {
+  test('shows the assistance as a negative load', () => {
+    expect(describePreviousSet('repetitions_and_assistance', makeValues({ repetitions: 8, weightKilograms: 20 }))).toBe(
+      '−20 × 8',
+    );
+  });
+
+  test('shows only the reps when no assistance was logged', () => {
+    expect(describePreviousSet('repetitions_and_assistance', makeValues({ repetitions: 8 }))).toBe('8');
+  });
+});

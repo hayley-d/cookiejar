@@ -33,7 +33,7 @@ const individualWorkout: WorkoutWithItems = {
       trackingType: 'repetitions_and_weight',
       restSeconds: 90,
       notes: null,
-      exercise: { id: 3, name: 'Bench Press', bodyPart: 'chest', imageUrl: null, defaultTrackingType: 'repetitions_and_weight' },
+      exercise: { id: 3, name: 'Bench Press', bodyPart: 'chest', imageUrl: null, videoUrl: null, defaultTrackingType: 'repetitions_and_weight' },
       targetSets: [
         {
           id: 21,
@@ -64,7 +64,7 @@ const individualWorkout: WorkoutWithItems = {
       trackingType: 'distance',
       restSeconds: null,
       notes: null,
-      exercise: { id: 4, name: 'Run', bodyPart: 'cardio', imageUrl: 'https://example.com/run.jpg', defaultTrackingType: 'distance' },
+      exercise: { id: 4, name: 'Run', bodyPart: 'cardio', imageUrl: 'https://example.com/run.jpg', videoUrl: null, defaultTrackingType: 'distance' },
       targetSets: [
         {
           id: 23,

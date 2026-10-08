@@ -212,3 +212,36 @@ describe('selectBestRecordPerExercise', () => {
     expect(selectBestRecordPerExercise([])).toEqual([]);
   });
 });
+
+function assistedSet(exerciseId: number, assistanceKilograms: number, repetitions: number): CompletedSet {
+  return {
+    exerciseId,
+    trackingType: 'repetitions_and_assistance',
+    repetitions,
+    weightKilograms: assistanceKilograms,
+    durationSeconds: null,
+    distanceMeters: null,
+  };
+}
+
+describe('detectPersonalRecords for assisted sets', () => {
+  test('less assistance than ever before is a record', () => {
+    const records = detectPersonalRecords([assistedSet(1, 15, 6)], [assistedSet(1, 20, 8)]);
+    expect(records.map((record) => record.recordType)).toEqual(['leastAssistance']);
+  });
+
+  test('more assistance is never a least assistance record', () => {
+    const records = detectPersonalRecords([assistedSet(1, 25, 5)], [assistedSet(1, 20, 8)]);
+    expect(records).toEqual([]);
+  });
+
+  test('more reps at the same or less assistance is a record', () => {
+    const records = detectPersonalRecords([assistedSet(1, 20, 10)], [assistedSet(1, 20, 8), assistedSet(1, 30, 12)]);
+    expect(records.map((record) => record.recordType)).toEqual(['mostRepetitionsAtAssistance']);
+  });
+
+  test('assisted sets are not weighted records', () => {
+    const records = detectPersonalRecords([assistedSet(1, 40, 8)], [weightedSet(1, 20, 8)]);
+    expect(records).toEqual([]);
+  });
+});

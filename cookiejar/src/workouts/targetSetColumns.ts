@@ -37,6 +37,14 @@ const weightColumn: TargetSetColumn = {
   decimalPlaces: 1,
 };
 
+const assistanceColumn: TargetSetColumn = {
+  field: 'weightKilograms',
+  label: 'Assist kg',
+  placeholder: 'kg',
+  input: 'number',
+  decimalPlaces: 1,
+};
+
 const durationColumn: TargetSetColumn = {
   field: 'durationSeconds',
   label: 'Time',
@@ -56,6 +64,7 @@ const distanceColumn: TargetSetColumn = {
 const columnsByTrackingType: Record<TrackingType, TargetSetColumn[]> = {
   repetitions: [repetitionsColumn],
   repetitions_and_weight: [weightColumn, repetitionsColumn],
+  repetitions_and_assistance: [assistanceColumn, repetitionsColumn],
   duration: [durationColumn],
   distance: [distanceColumn],
 };

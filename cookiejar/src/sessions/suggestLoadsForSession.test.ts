@@ -19,7 +19,7 @@ function makeExercise(
     supersetGroup: null,
     trackingType,
     restSeconds: 90,
-    exercise: { id: exerciseId, name: `Exercise ${exerciseId}`, imageUrl: null, notes: null },
+    exercise: { id: exerciseId, name: `Exercise ${exerciseId}`, imageUrl: null, videoUrl: null, notes: null },
     replacedExerciseName: null,
     sets: [
       {

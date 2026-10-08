@@ -6,6 +6,7 @@ import { TextButton } from '@/components/atoms/TextButton';
 import { EmptyState } from '@/components/molecules/EmptyState';
 import { ExercisePicker } from '@/components/organisms/ExercisePicker';
 import { Box } from '@/components/primitives/Box';
+import { exerciseVideoHref } from '@/exercises/exerciseVideo';
 import { filterExercises } from '@/exercises/filterExercises';
 import { parseBodyPartParameter } from '@/exercises/parseBodyPartParameter';
 import { useExercises } from '@/hooks/useExercises';
@@ -72,6 +73,7 @@ export default function ExerciseLibraryScreen() {
           searchText={searchText}
           onChangeSearchText={setSearchText}
           onPressExercise={openExercise}
+          onPlayVideo={(video) => router.push(exerciseVideoHref(video))}
         />
       )}
     </>

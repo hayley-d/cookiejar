@@ -9,6 +9,7 @@ type ExerciseRow = {
   name: string;
   body_part: BodyPart;
   image_url: string | null;
+  video_url: string | null;
   notes: string | null;
   default_tracking_type: TrackingType;
   created_at: string;
@@ -18,7 +19,7 @@ type UsageCountRow = {
   usage_count: number;
 };
 
-export type NewExercise = Omit<Exercise, 'id' | 'createdAt'>;
+export type NewExercise = Omit<Exercise, 'id' | 'createdAt' | 'videoUrl'>;
 
 export type ExerciseChanges = NewExercise;
 
@@ -29,7 +30,7 @@ export class DuplicateExerciseNameError extends Error {
   }
 }
 
-const exerciseColumns = 'id, name, body_part, image_url, notes, default_tracking_type, created_at';
+const exerciseColumns = 'id, name, body_part, image_url, video_url, notes, default_tracking_type, created_at';
 
 function toExercise(row: ExerciseRow): Exercise {
   return {
@@ -37,6 +38,7 @@ function toExercise(row: ExerciseRow): Exercise {
     name: row.name,
     bodyPart: row.body_part,
     imageUrl: row.image_url,
+    videoUrl: row.video_url,
     notes: row.notes,
     defaultTrackingType: row.default_tracking_type,
     createdAt: row.created_at,
@@ -56,7 +58,7 @@ export async function listExercises(database: SQLiteDatabase): Promise<Exercise[
 
 export async function listRecentlyUsedExercises(database: SQLiteDatabase, limit?: number): Promise<Exercise[]> {
   const rows = await database.getAllAsync<ExerciseRow>(
-    `SELECT exercises.id, exercises.name, exercises.body_part, exercises.image_url,
+    `SELECT exercises.id, exercises.name, exercises.body_part, exercises.image_url, exercises.video_url,
       exercises.notes, exercises.default_tracking_type, exercises.created_at
     FROM exercises
     LEFT JOIN session_exercises ON session_exercises.exercise_id = exercises.id
