@@ -1,6 +1,7 @@
 import type { Exercise } from '@/types/Exercise';
 import type { Session } from '@/types/Session';
 import type { SessionExercise } from '@/types/SessionExercise';
+import type { SwimSessionDetail } from '@/swimming/swimSessionTypes';
 import type { SessionSet } from '@/types/SessionSet';
 
 export type SessionExerciseWithSets = SessionExercise & {
@@ -11,5 +12,6 @@ export type SessionExerciseWithSets = SessionExercise & {
 
 export type SessionWithExercises = Session & {
   plannedDurationMinutes: number | null;
+  swim: SwimSessionDetail | null;
   exercises: SessionExerciseWithSets[];
 };

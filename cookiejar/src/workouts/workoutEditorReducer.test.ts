@@ -21,6 +21,7 @@ const loadedIndividualWorkout: LoadedWorkout = {
   kind: 'individual',
   classDetails: null,
   activityDetails: null,
+  swimDetails: null,
   items: [
     {
       exercise: { id: 3, name: 'Bench Press', imageUrl: null, defaultTrackingType: 'repetitions_and_weight' },
@@ -63,6 +64,7 @@ describe('workoutEditorReducer', () => {
       kind: 'individual',
       classDetails: null,
       activityDetails: null,
+      swimDetails: null,
       items: [],
       hasUnsavedChanges: false,
     });
@@ -151,6 +153,7 @@ describe('workoutEditorReducer', () => {
         kind: 'activity',
         classDetails: null,
         activityDetails: { activityType: 'run', description: '', imageUrl: '' },
+        swimDetails: null,
         items: [],
       },
     });
@@ -185,6 +188,7 @@ describe('workoutEditorReducer', () => {
         kind: 'class',
         classDetails: { classType: 'pilates', durationMinutes: 50, description: '', imageUrl: '' },
         activityDetails: null,
+        swimDetails: null,
         items: [],
       },
     });
@@ -194,6 +198,7 @@ describe('workoutEditorReducer', () => {
       kind: 'class',
       classDetails: { classType: 'pilates', durationMinutes: 50, description: '', imageUrl: '' },
       activityDetails: null,
+      swimDetails: null,
       items: [],
       hasUnsavedChanges: false,
     });
@@ -705,5 +710,41 @@ describe('itemsReordered', () => {
     const [firstKey, , thirdKey, fourthKey] = itemKeysOf(state);
     expect(reducer(state, { type: 'itemsReordered', blockKeys: [firstKey, thirdKey, fourthKey] })).toBe(state);
     expect(reducer(state, { type: 'itemsReordered', blockKeys: ['missing'] })).toBe(state);
+  });
+  test('choosing the swim kind seeds the three default sections in a 25 m pool', () => {
+    const state = createReducer()(initialWorkoutEditorState, { type: 'kindChosen', kind: 'swim' });
+    expect(state.kind).toBe('swim');
+    expect(state.swimDetails?.poolLengthMeters).toBe(25);
+    expect(state.swimDetails?.sections.map((section) => section.name)).toEqual(['Warm up', 'Main', 'Cool down']);
+    expect(state.classDetails).toBeNull();
+  });
+
+  test('choosing swim again keeps the sections already built', () => {
+    const reducer = createReducer();
+    const swimState = reducer(initialWorkoutEditorState, { type: 'kindChosen', kind: 'swim' });
+    const renamedState = reducer(swimState, {
+      type: 'swimChanged',
+      action: { type: 'sectionRenamed', sectionKey: swimState.swimDetails?.sections[0].key ?? '', name: 'Easy' },
+    });
+    expect(reducer(renamedState, { type: 'kindChosen', kind: 'swim' }).swimDetails?.sections[0].name).toBe('Easy');
+  });
+
+  test('swim actions mark unsaved changes and no-ops do not', () => {
+    const reducer = createReducer();
+    const swimState = reducer({ ...initialWorkoutEditorState }, { type: 'kindChosen', kind: 'swim' });
+    const savedState = { ...swimState, hasUnsavedChanges: false };
+    const changedState = reducer(savedState, { type: 'swimChanged', action: { type: 'sectionAdded' } });
+    expect(changedState.hasUnsavedChanges).toBe(true);
+    expect(changedState.swimDetails?.sections).toHaveLength(4);
+    const unchangedState = reducer(savedState, {
+      type: 'swimChanged',
+      action: { type: 'setRemoved', setKey: 'missing' },
+    });
+    expect(unchangedState).toBe(savedState);
+  });
+
+  test('swim actions without swim details change nothing', () => {
+    const state = createReducer()(initialWorkoutEditorState, { type: 'swimChanged', action: { type: 'sectionAdded' } });
+    expect(state).toBe(initialWorkoutEditorState);
   });
 });

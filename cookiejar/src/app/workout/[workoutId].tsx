@@ -4,6 +4,7 @@ import { IconButton } from '@/components/atoms/IconButton';
 import { EmptyState } from '@/components/molecules/EmptyState';
 import { ActivityWorkoutDetail } from '@/components/organisms/ActivityWorkoutDetail';
 import { ClassWorkoutDetail } from '@/components/organisms/ClassWorkoutDetail';
+import { SwimWorkoutDetail } from '@/components/organisms/SwimWorkoutDetail';
 import { IndividualWorkoutDetail } from '@/components/organisms/IndividualWorkoutDetail';
 import { exerciseVideoHref } from '@/exercises/exerciseVideo';
 import { useStartSession } from '@/hooks/useStartSession';
@@ -83,6 +84,7 @@ export default function WorkoutDetailScreen() {
         />
       ) : null}
       {workout.kind === 'class' ? <ClassWorkoutDetail workout={workout} onStart={startWorkout} /> : null}
+      {workout.kind === 'swim' ? <SwimWorkoutDetail workout={workout} onStart={startWorkout} /> : null}
       {workout.kind === 'activity' ? (
         <ActivityWorkoutDetail
           workout={workout}

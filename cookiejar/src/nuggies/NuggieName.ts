@@ -16,4 +16,5 @@ export type NuggieName =
   | 'tired'
   | 'analytics'
   | 'cooking'
-  | 'profile';
+  | 'profile'
+  | 'shark';

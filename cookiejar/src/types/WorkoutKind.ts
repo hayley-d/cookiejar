@@ -1,1 +1,1 @@
-export type WorkoutKind = 'individual' | 'class' | 'activity';
+export type WorkoutKind = 'individual' | 'class' | 'activity' | 'swim';

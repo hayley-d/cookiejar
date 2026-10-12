@@ -20,6 +20,7 @@ type EditExerciseProperties = {
 function EditExercise({ exercise, usageCount }: EditExerciseProperties) {
   const database = useSQLiteContext();
   const isInUse = usageCount > 0;
+  const isFixedExercise = exercise.bodyPart === 'swimming';
 
   async function saveExercise(changes: ExerciseChanges) {
     await updateExercise(database, exercise.id, changes);
@@ -65,20 +66,23 @@ function EditExercise({ exercise, usageCount }: EditExerciseProperties) {
         values={exerciseForm.values}
         errors={exerciseForm.errors}
         onChangeValues={exerciseForm.changeValues}
+        isFixedExercise={isFixedExercise}
         footer={
-          <Box gap="small" align="center">
-            <TextButton
-              label="Delete exercise"
-              color="danger"
-              onPress={confirmDelete}
-              disabled={isInUse || exerciseForm.isSaving}
-            />
-            {isInUse ? (
-              <Typography variant="caption" color="textSecondary" align="center">
-                This exercise is used in a workout or a past session, so it can&apos;t be deleted.
-              </Typography>
-            ) : null}
-          </Box>
+          isFixedExercise ? null : (
+            <Box gap="small" align="center">
+              <TextButton
+                label="Delete exercise"
+                color="danger"
+                onPress={confirmDelete}
+                disabled={isInUse || exerciseForm.isSaving}
+              />
+              {isInUse ? (
+                <Typography variant="caption" color="textSecondary" align="center">
+                  This exercise is used in a workout or a past session, so it can&apos;t be deleted.
+                </Typography>
+              ) : null}
+            </Box>
+          )
         }
       />
     </>

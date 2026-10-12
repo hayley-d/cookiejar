@@ -10,7 +10,11 @@ const exercises: { id: number; name: string; bodyPart: BodyPart }[] = [
   { id: 4, name: 'Romanian Deadlift', bodyPart: 'hamstrings' },
   { id: 5, name: 'Hip Thrust', bodyPart: 'glutes' },
   { id: 6, name: 'Glute Bridge', bodyPart: 'glutes' },
+  { id: 7, name: 'Freestyle', bodyPart: 'swimming' },
+  { id: 8, name: 'Pull', bodyPart: 'swimming' },
 ];
+
+const gymExercises = exercises.slice(0, 6);
 
 function namesOf(filteredExercises: { name: string }[]) {
   return filteredExercises.map((exercise) => exercise.name);
@@ -18,11 +22,11 @@ function namesOf(filteredExercises: { name: string }[]) {
 
 describe('filterExercises by search text', () => {
   test('empty search text keeps every exercise', () => {
-    expect(filterExercises(exercises, { searchText: '', bodyPart: null })).toEqual(exercises);
+    expect(filterExercises(exercises, { searchText: '', bodyPart: null })).toEqual(gymExercises);
   });
 
   test('search text of only spaces keeps every exercise', () => {
-    expect(filterExercises(exercises, { searchText: '   ', bodyPart: null })).toEqual(exercises);
+    expect(filterExercises(exercises, { searchText: '   ', bodyPart: null })).toEqual(gymExercises);
   });
 
   test('matches a substring anywhere in the name', () => {
@@ -57,8 +61,19 @@ describe('filterExercises by search text', () => {
 });
 
 describe('filterExercises by body part', () => {
-  test('no body part keeps every exercise', () => {
-    expect(filterExercises(exercises, { searchText: '', bodyPart: null })).toEqual(exercises);
+  test('no body part keeps every gym exercise', () => {
+    expect(filterExercises(exercises, { searchText: '', bodyPart: null })).toEqual(gymExercises);
+  });
+
+  test('no body part keeps swimming exercises out, even when searched for', () => {
+    expect(filterExercises(exercises, { searchText: 'freestyle', bodyPart: null })).toEqual([]);
+  });
+
+  test('the swimming body part shows only swimming exercises', () => {
+    expect(namesOf(filterExercises(exercises, { searchText: '', bodyPart: 'swimming' }))).toEqual([
+      'Freestyle',
+      'Pull',
+    ]);
   });
 
   test('keeps only exercises with that body part', () => {

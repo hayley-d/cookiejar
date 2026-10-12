@@ -8,8 +8,10 @@ import type { FinishedSessionSet } from '@/types/FinishedSessionSet';
 import type { ClassStatistics } from '@/types/ClassStatistics';
 import type { ActivityLog } from '@/types/ActivityLog';
 import type { ActivityType } from '@/types/ActivityType';
+import type { SwimLog } from '@/types/SwimLog';
 import type { ClassType } from '@/types/ClassType';
 import type { TrainingTotals, TrainingTotalsRange } from '@/types/TrainingTotals';
+import { buildSwimLogs } from '@/progress/buildSwimLogs';
 import { sortClassStatistics } from '@/progress/sortClassStatistics';
 
 type SessionTotalsRow = {
@@ -241,4 +243,49 @@ export async function listFinishedActivityLogs(
     distanceMeters: row.distance_meters,
     elevationGainMeters: row.elevation_gain_meters,
   }));
+}
+
+type SwimTickedSetQueryRow = {
+  session_id: number;
+  started_at: string;
+  duration_seconds: number;
+  stroke_name: string | null;
+  set_distance_meters: number | null;
+  ticked_repetition_count: number;
+};
+
+export type SwimLogFilter = {
+  startedBefore?: string;
+};
+
+export async function listFinishedSwimLogs(database: SQLiteDatabase, filter: SwimLogFilter = {}): Promise<SwimLog[]> {
+  const rows = await database.getAllAsync<SwimTickedSetQueryRow>(
+    `SELECT sessions.id AS session_id, sessions.started_at,
+      MAX(0, ${sessionDurationSecondsExpression}) AS duration_seconds,
+      session_swim_sets.exercise_name AS stroke_name,
+      session_swim_sets.distance_meters AS set_distance_meters,
+      COUNT(session_swim_repetitions.id) AS ticked_repetition_count
+    FROM sessions
+    LEFT JOIN session_swim_sections ON session_swim_sections.session_id = sessions.id
+    LEFT JOIN session_swim_blocks ON session_swim_blocks.section_id = session_swim_sections.id
+    LEFT JOIN session_swim_sets ON session_swim_sets.block_id = session_swim_blocks.id
+    LEFT JOIN session_swim_repetitions ON session_swim_repetitions.session_swim_set_id = session_swim_sets.id
+      AND session_swim_repetitions.completed_at IS NOT NULL
+    WHERE sessions.workout_kind = 'swim' AND sessions.finished_at IS NOT NULL
+      AND (? IS NULL OR sessions.started_at < ?)
+    GROUP BY sessions.id, session_swim_sets.id
+    ORDER BY sessions.started_at, sessions.id`,
+    filter.startedBefore ?? null,
+    filter.startedBefore ?? null,
+  );
+  return buildSwimLogs(
+    rows.map((row) => ({
+      sessionId: row.session_id,
+      startedAt: row.started_at,
+      durationSeconds: row.duration_seconds,
+      strokeName: row.stroke_name,
+      setDistanceMeters: row.set_distance_meters,
+      tickedRepetitionCount: row.ticked_repetition_count,
+    })),
+  );
 }

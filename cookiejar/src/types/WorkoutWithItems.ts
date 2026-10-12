@@ -1,4 +1,5 @@
 import type { Exercise } from '@/types/Exercise';
+import type { SwimWorkoutDetail } from '@/swimming/swimTypes';
 import type { TargetSet } from '@/types/TargetSet';
 import type { Workout } from '@/types/Workout';
 import type { WorkoutItem } from '@/types/WorkoutItem';
@@ -9,5 +10,6 @@ export type WorkoutItemWithTargetSets = WorkoutItem & {
 };
 
 export type WorkoutWithItems = Workout & {
+  swim: SwimWorkoutDetail | null;
   items: WorkoutItemWithTargetSets[];
 };

@@ -1,5 +1,6 @@
 import { Button } from '@/components/atoms/Button';
 import { ActivitySummary } from '@/components/organisms/ActivitySummary';
+import { SwimSummary } from '@/components/organisms/SwimSummary';
 import { NuggieImage } from '@/components/atoms/NuggieImage';
 import { HealthSuggestionBanner } from '@/components/molecules/HealthSuggestionBanner';
 import { LinkedHealthWorkoutRow } from '@/components/molecules/LinkedHealthWorkoutRow';
@@ -63,6 +64,10 @@ export function SessionSummary({
         onUnlinkGarmin={onUnlinkGarmin}
       />
     );
+  }
+
+  if (session.workoutKind === 'swim') {
+    return <SwimSummary session={session} nuggie={nuggie} newBestLabels={newBestLabels} now={now} onDone={onDone} />;
   }
 
   const totals = calculateSessionTotals(session, now);

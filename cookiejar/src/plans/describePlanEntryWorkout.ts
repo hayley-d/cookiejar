@@ -7,5 +7,8 @@ export function describePlanEntryWorkout(workout: DescribedPlanEntryWorkout): st
   if (workout.kind === 'individual') {
     return `${workout.exerciseCount} ex.`;
   }
+  if (workout.kind === 'swim') {
+    return 'Swim';
+  }
   return workoutTypeLabel(workout) ?? (workout.kind === 'activity' ? 'Activity' : 'Class');
 }

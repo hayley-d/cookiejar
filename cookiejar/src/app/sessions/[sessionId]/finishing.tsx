@@ -5,6 +5,7 @@ import { NuggieLoadingScreen } from '@/components/organisms/NuggieLoadingScreen'
 import { Box } from '@/components/primitives/Box';
 import { useFinishedSession } from '@/hooks/useFinishedSession';
 import { describeActivityBests } from '@/progress/detectActivityBests';
+import { describeSwimBests } from '@/progress/detectSwimBests';
 import { countExercisesWithRecords } from '@/progress/detectPersonalRecords';
 import { chooseStableFinishingPresentation } from '@/sessions/chooseFinishingNuggie';
 
@@ -26,7 +27,10 @@ export default function FinishingScreen() {
           classType: lookup.session.classType,
           activityType: lookup.session.activityType,
           personalRecordCount: countExercisesWithRecords(lookup.personalRecords),
-          newBestLabels: describeActivityBests(lookup.activityBests, lookup.session.activityType),
+          newBestLabels: [
+            ...describeActivityBests(lookup.activityBests, lookup.session.activityType),
+            ...describeSwimBests(lookup.swimBests),
+          ],
         })
       : null;
 

@@ -93,6 +93,12 @@ describe('describePlanEntryWorkout', () => {
     ).toBe('Hike');
   });
 
+  test('a swim shows Swim', () => {
+    expect(describePlanEntryWorkout({ kind: 'swim', classType: null, activityType: null, exerciseCount: 0 })).toBe(
+      'Swim',
+    );
+  });
+
   test('an activity without a type shows Activity', () => {
     expect(
       describePlanEntryWorkout({ kind: 'activity', classType: null, activityType: null, exerciseCount: 0 }),

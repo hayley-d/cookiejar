@@ -6,8 +6,9 @@ import { ImageUrlField } from '@/components/molecules/ImageUrlField';
 import { SegmentedControl } from '@/components/molecules/SegmentedControl';
 import { ScrollBox } from '@/components/primitives/ScrollBox';
 import { TextField } from '@/components/primitives/TextField';
+import { Typography } from '@/components/primitives/Typography';
 import type { ExerciseFormErrors, ExerciseFormValues } from '@/exercises/validateExerciseForm';
-import { bodyPartLabels, bodyParts } from '@/types/BodyPart';
+import { bodyPartLabels, gymBodyParts } from '@/types/BodyPart';
 import { trackingTypeLabels, trackingTypes } from '@/types/TrackingType';
 
 type ExerciseFormProperties = {
@@ -15,20 +16,22 @@ type ExerciseFormProperties = {
   errors: ExerciseFormErrors;
   onChangeValues: (values: ExerciseFormValues) => void;
   footer?: ReactNode;
+  isFixedExercise?: boolean;
 };
 
-const bodyPartOptions = bodyParts.map((bodyPart) => ({ value: bodyPart, label: bodyPartLabels[bodyPart] }));
+const bodyPartOptions = gymBodyParts.map((bodyPart) => ({ value: bodyPart, label: bodyPartLabels[bodyPart] }));
 
 const trackingTypeSegments = trackingTypes.map((trackingType) => ({
   value: trackingType,
   label: trackingTypeLabels[trackingType],
 }));
 
-export function ExerciseForm({ values, errors, onChangeValues, footer }: ExerciseFormProperties) {
+export function ExerciseForm({ values, errors, onChangeValues, footer, isFixedExercise = false }: ExerciseFormProperties) {
   return (
     <ScrollBox gap="large" automaticallyAdjustKeyboardInsets>
       <FormField label="Name" error={errors.name}>
         <TextField
+          editable={!isFixedExercise}
           value={values.name}
           onChangeText={(name) => onChangeValues({ ...values, name })}
           placeholder="e.g. Hip Thrust"
@@ -38,18 +41,26 @@ export function ExerciseForm({ values, errors, onChangeValues, footer }: Exercis
         />
       </FormField>
       <FormField label="Body part" error={errors.bodyPart}>
-        <ChipGroup
-          options={bodyPartOptions}
-          selectedValue={values.bodyPart}
-          onSelect={(bodyPart) => onChangeValues({ ...values, bodyPart })}
-        />
+        {values.bodyPart === 'swimming' ? (
+          <Typography>{bodyPartLabels.swimming}</Typography>
+        ) : (
+          <ChipGroup
+            options={bodyPartOptions}
+            selectedValue={values.bodyPart}
+            onSelect={(bodyPart) => onChangeValues({ ...values, bodyPart })}
+          />
+        )}
       </FormField>
       <FormField label="Usually measured by" error={errors.defaultTrackingType}>
-        <SegmentedControl
-          segments={trackingTypeSegments}
-          selectedValue={values.defaultTrackingType}
-          onSelect={(defaultTrackingType) => onChangeValues({ ...values, defaultTrackingType })}
-        />
+        {isFixedExercise && values.defaultTrackingType !== null ? (
+          <Typography>{trackingTypeLabels[values.defaultTrackingType]}</Typography>
+        ) : (
+          <SegmentedControl
+            segments={trackingTypeSegments}
+            selectedValue={values.defaultTrackingType}
+            onSelect={(defaultTrackingType) => onChangeValues({ ...values, defaultTrackingType })}
+          />
+        )}
       </FormField>
       <ImageUrlField
         imageUrl={values.imageUrl}

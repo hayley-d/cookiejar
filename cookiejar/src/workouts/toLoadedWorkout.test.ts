@@ -24,6 +24,7 @@ const individualWorkout: WorkoutWithItems = {
   durationMinutes: null,
   description: null,
   imageUrl: null,
+  swim: null,
   items: [
     {
       id: 11,
@@ -91,6 +92,48 @@ const classWorkout: WorkoutWithItems = {
   durationMinutes: 60,
   description: null,
   imageUrl: 'https://example.com/yoga.jpg',
+  swim: null,
+  items: [],
+};
+
+const swimWorkout: WorkoutWithItems = {
+  ...baseWorkout,
+  id: 10,
+  name: 'Tuesday Swim',
+  kind: 'swim',
+  classType: null,
+  activityType: null,
+  durationMinutes: null,
+  description: 'Easy pool session',
+  imageUrl: null,
+  swim: {
+    poolLengthMeters: 50,
+    sections: [
+      {
+        name: 'Main',
+        blocks: [
+          {
+            rounds: 3,
+            restAfterSeconds: 60,
+            sets: [
+              {
+                exerciseId: 5,
+                exerciseName: 'Backstroke',
+                repetitions: 4,
+                distanceMeters: 100,
+                restMode: 'send_off',
+                restSeconds: null,
+                sendOffSeconds: 105,
+                restAfterSeconds: 20,
+                equipment: ['fins'],
+                notes: 'build',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
   items: [],
 };
 
@@ -140,6 +183,7 @@ describe('toLoadedWorkout', () => {
       durationMinutes: null,
       description: 'Platteklip Gorge',
       imageUrl: null,
+      swim: null,
       items: [],
     });
 
@@ -147,6 +191,38 @@ describe('toLoadedWorkout', () => {
     expect(loadedWorkout.classDetails).toBeNull();
     expect(loadedWorkout.activityDetails).toEqual({ activityType: 'hike', description: 'Platteklip Gorge', imageUrl: '' });
     expect(loadedWorkout.items).toEqual([]);
+  });
+
+  test('a swim workout loads its pool length, description and structure', () => {
+    const loadedWorkout = toLoadedWorkout(swimWorkout);
+
+    expect(loadedWorkout.kind).toBe('swim');
+    expect(loadedWorkout.items).toEqual([]);
+    expect(loadedWorkout.swimDetails).toEqual({
+      poolLengthMeters: 50,
+      description: 'Easy pool session',
+      imageUrl: '',
+      sections: swimWorkout.swim?.sections ?? [],
+    });
+  });
+
+  test('saving a loaded swim workout reproduces its structure', () => {
+    const reducer = createWorkoutEditorReducer(createKeyCounter('test'));
+    const state = reducer(initialWorkoutEditorState, { type: 'loaded', workout: toLoadedWorkout(swimWorkout) });
+    const saveRows = toWorkoutSaveRows(state);
+
+    expect(saveRows.workout).toEqual({
+      name: 'Tuesday Swim',
+      kind: 'swim',
+      classType: null,
+      activityType: null,
+      durationMinutes: null,
+      poolLengthMeters: 50,
+      description: 'Easy pool session',
+      imageUrl: null,
+    });
+    expect(saveRows.swimSections).toEqual(swimWorkout.swim?.sections ?? []);
+    expect(saveRows.items).toEqual([]);
   });
 
   test('loading assigns keys from the counter and starts without unsaved changes', () => {

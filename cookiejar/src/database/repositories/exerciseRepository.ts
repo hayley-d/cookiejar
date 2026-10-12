@@ -135,6 +135,8 @@ export async function countExerciseUsages(database: SQLiteDatabase, exerciseId: 
     `SELECT
       (SELECT COUNT(*) FROM workout_items WHERE exercise_id = $exerciseId)
       + (SELECT COUNT(*) FROM session_exercises WHERE exercise_id = $exerciseId OR replaced_exercise_id = $exerciseId)
+      + (SELECT COUNT(*) FROM swim_sets WHERE exercise_id = $exerciseId)
+      + (SELECT COUNT(*) FROM session_swim_sets WHERE exercise_id = $exerciseId)
       AS usage_count`,
     { $exerciseId: exerciseId },
   );

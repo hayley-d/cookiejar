@@ -44,6 +44,9 @@ export function describeFinishingCaption(input: FinishingPresentationInput): str
   if (input.workoutKind === 'activity') {
     return input.activityType === null ? 'Activity complete!' : `${activityTypeLabels[input.activityType]} complete!`;
   }
+  if (input.workoutKind === 'swim') {
+    return 'Swim complete!';
+  }
   return input.classType === 'yoga' ? 'Namaste — class complete!' : 'Class complete!';
 }
 

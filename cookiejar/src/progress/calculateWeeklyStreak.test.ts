@@ -42,6 +42,20 @@ function statesOf(streak: ReturnType<typeof calculateWeeklyStreak>) {
   return streak.days.map((day) => day.state);
 }
 
+describe('swims in the weekly streak', () => {
+  test('a completed planned swim counts like any other completed workout', () => {
+    const completedSwim = workoutOf('2026-10-05', 'completed', 1);
+    const swim = { ...completedSwim, workout: { ...completedSwim.workout, kind: 'swim' as const } };
+    const streak = calculateWeeklyStreak({
+      today: '2026-10-06',
+      weekDates,
+      scheduledWorkoutsByDate: byDateOf(swim),
+    });
+    expect(streak.completedCount).toBe(1);
+    expect(streak.days[0].state).toBe('completed');
+  });
+});
+
 describe('calculateWeeklyStreak', () => {
   test('an empty week is seven rest days with zero counts', () => {
     const streak = calculateWeeklyStreak({ today: '2026-10-07', weekDates, scheduledWorkoutsByDate: new Map() });

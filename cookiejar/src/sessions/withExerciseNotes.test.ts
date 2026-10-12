@@ -26,6 +26,7 @@ function makeSession(): SessionWithExercises {
     activeKilocalories: null,
     averageHeartRate: null,
     plannedDurationMinutes: null,
+    swim: null,
     exercises: [
       { sessionExerciseId: 10, exerciseId: 5 },
       { sessionExerciseId: 20, exerciseId: 6 },

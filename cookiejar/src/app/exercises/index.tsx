@@ -37,7 +37,7 @@ export default function ExerciseLibraryScreen() {
   }>();
   const bodyPart = parseBodyPartParameter(bodyPartParameter);
   const visibleExercises = useMemo(
-    () => (exercises === null ? null : filterExercises(exercises, { searchText: '', bodyPart })),
+    () => (exercises === null || bodyPart === null ? exercises : filterExercises(exercises, { searchText: '', bodyPart })),
     [exercises, bodyPart],
   );
   const visibleRecentExercises = useMemo(

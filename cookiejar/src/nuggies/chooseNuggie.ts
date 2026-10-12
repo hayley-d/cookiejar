@@ -49,6 +49,9 @@ const nuggieRules: NuggieRules = {
     if (moment.personalRecordCount > 0) {
       return 'beast';
     }
+    if (moment.workoutKind === 'swim') {
+      return 'shark';
+    }
     if (moment.workoutKind !== 'individual') {
       return 'goodJob';
     }

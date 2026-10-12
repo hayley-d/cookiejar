@@ -73,6 +73,10 @@ describe('sessionFinished', () => {
     );
   });
 
+  test('a swim without records shows the shark', () => {
+    expect(chooseNuggie({ kind: 'sessionFinished', workoutKind: 'swim', personalRecordCount: 0 }, noon)).toBe('shark');
+  });
+
   test('a class without records shows goodJob', () => {
     expect(chooseNuggie({ kind: 'sessionFinished', workoutKind: 'class', personalRecordCount: 0 }, noon)).toBe(
       'goodJob',

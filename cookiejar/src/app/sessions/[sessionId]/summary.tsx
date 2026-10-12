@@ -9,6 +9,7 @@ import { useFinishedSession } from '@/hooks/useFinishedSession';
 import { useOverlappingHealthWorkouts } from '@/hooks/useOverlappingHealthWorkouts';
 import { useUnlinkHealthWorkout } from '@/hooks/useUnlinkHealthWorkout';
 import { describeActivityBests } from '@/progress/detectActivityBests';
+import { describeSwimBests } from '@/progress/detectSwimBests';
 import { countExercisesWithRecords } from '@/progress/detectPersonalRecords';
 import { chooseStableFinishingPresentation } from '@/sessions/chooseFinishingNuggie';
 
@@ -59,7 +60,10 @@ export default function SessionSummaryScreen() {
     return null;
   }
 
-  const newBestLabels = describeActivityBests(lookup.activityBests, lookup.session.activityType);
+  const newBestLabels = [
+    ...describeActivityBests(lookup.activityBests, lookup.session.activityType),
+    ...describeSwimBests(lookup.swimBests),
+  ];
   const nuggie = chooseStableFinishingPresentation(sessionId, {
     workoutKind: lookup.session.workoutKind,
     classType: lookup.session.classType,

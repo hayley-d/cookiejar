@@ -6,6 +6,7 @@ import { NuggieLoadingScreen } from '@/components/organisms/NuggieLoadingScreen'
 import { ActivityCountSection } from '@/components/organisms/ActivityCountSection';
 import { ClassCountSection } from '@/components/organisms/ClassCountSection';
 import { ExerciseProgressSection } from '@/components/organisms/ExerciseProgressSection';
+import { SwimStatisticsCard } from '@/components/organisms/SwimStatisticsCard';
 import { RecentRecordsSection } from '@/components/organisms/RecentRecordsSection';
 import { ProgressOverview } from '@/components/organisms/ProgressOverview';
 import { ScrollBox } from '@/components/primitives/ScrollBox';
@@ -14,6 +15,7 @@ import { useActivityStatistics } from '@/hooks/useActivityStatistics';
 import { useClassStatistics } from '@/hooks/useClassStatistics';
 import { useExercisesWithHistory } from '@/hooks/useExercisesWithHistory';
 import { usePersonalRecords } from '@/hooks/usePersonalRecords';
+import { useSwimStatistics } from '@/hooks/useSwimStatistics';
 import { useTrainingTotals } from '@/hooks/useTrainingTotals';
 import { chooseNuggie } from '@/nuggies/chooseNuggie';
 import { countNewRecordsThisMonth } from '@/progress/countNewRecordsThisMonth';
@@ -50,6 +52,7 @@ export default function ProgressScreen() {
   const { exercises } = useExercisesWithHistory();
   const { classStatistics } = useClassStatistics();
   const { activityStatistics } = useActivityStatistics();
+  const { swimStatistics } = useSwimStatistics();
   const newRecordCount = countNewRecordsThisMonth(personalRecords, now);
   const [isLoadingScreenVisible, setIsLoadingScreenVisible] = useState(true);
   const hasLoadFailed = monthLookup.hasLoadFailed || lifetimeLookup.hasLoadFailed;
@@ -87,6 +90,9 @@ export default function ProgressScreen() {
         />
         <ClassCountSection statistics={classStatistics ?? []} onOpenStatistics={openClassStatistics} />
         <ActivityCountSection statistics={activityStatistics ?? []} onOpenStatistics={openActivityStatistics} />
+        {swimStatistics === null ? null : (
+          <SwimStatisticsCard statistics={swimStatistics} />
+        )}
         <ExerciseProgressSection
           exercises={exercises ?? []}
           onPressExercise={openExerciseHistory}
