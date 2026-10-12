@@ -6,6 +6,7 @@ import { addExerciseNotes } from '@/database/migrations/addExerciseNotes';
 import { addNotificationIdentifier } from '@/database/migrations/addNotificationIdentifier';
 import { addSessionExerciseRestSeconds } from '@/database/migrations/addSessionExerciseRestSeconds';
 import { addSwimming } from '@/database/migrations/addSwimming';
+import { addWorkoutBuiltInKey } from '@/database/migrations/addWorkoutBuiltInKey';
 import { createInitialSchema } from '@/database/migrations/createInitialSchema';
 import { createTrainingSchema } from '@/database/migrations/createTrainingSchema';
 
@@ -20,4 +21,5 @@ export const migrations: Migration[] = [
   addAssistedTrackingAndExerciseVideo,
   addActivities,
   addSwimming,
+  addWorkoutBuiltInKey,
 ];

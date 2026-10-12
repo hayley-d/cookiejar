@@ -113,7 +113,7 @@ export async function listWorkouts(database: SQLiteDatabase): Promise<WorkoutSum
   return rows.map(toWorkoutSummary);
 }
 
-async function insertSwimSections(database: SQLiteDatabase, workoutId: number, sections: SwimSection[]) {
+export async function insertSwimSections(database: SQLiteDatabase, workoutId: number, sections: SwimSection[]) {
   for (const [sectionPosition, section] of sections.entries()) {
     const sectionResult = await database.runAsync(
       'INSERT INTO swim_sections (workout_id, position, name) VALUES (?, ?, ?)',
