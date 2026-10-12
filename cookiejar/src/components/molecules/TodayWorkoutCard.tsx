@@ -70,7 +70,7 @@ export function TodayWorkoutCard({ scheduledWorkout, width, onPress, onStart }: 
                 onError={() => setFailedImageUrl(imageUrl)}
               />
             ) : (
-              <NuggieImage name={workoutNuggie(workout.classType)} size={theme.sizes.todayCardNuggie} />
+              <NuggieImage name={workoutNuggie(workout)} size={theme.sizes.todayCardNuggie} />
             )}
           </View>
           <Box padding="medium" direction="row" align="flex-end" justify="space-between" gap="small">

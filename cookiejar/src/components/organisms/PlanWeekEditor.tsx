@@ -63,7 +63,7 @@ export function PlanWeekEditor({ banner, days, onAddEntry, onChangeEntryTime, on
                     name={entry.workout.name}
                     detail={describePlanEntryWorkout(entry.workout)}
                     imageUrl={entry.workout.imageUrl}
-                    nuggie={workoutNuggie(entry.workout.classType)}
+                    nuggie={workoutNuggie(entry.workout)}
                     onChangeTime={() => onChangeEntryTime(entry.id)}
                     onRemove={() => onRemoveEntry(entry.id)}
                   />

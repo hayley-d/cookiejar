@@ -13,7 +13,8 @@ const garminSteps = [
 ];
 
 export default function AppleHealthScreen() {
-  const { hasRequestedAuthorization, isRequesting, requestAuthorization } = useHealthAuthorization();
+  const { hasRequestedAuthorization, needsReadTypesRequest, isRequesting, requestAuthorization } =
+    useHealthAuthorization();
   const description = describeHealthAccessStatus(hasRequestedAuthorization);
 
   return (
@@ -27,9 +28,9 @@ export default function AppleHealthScreen() {
                 {description.detail}
               </Typography>
             ) : null}
-            {hasRequestedAuthorization === false ? (
+            {hasRequestedAuthorization === false || needsReadTypesRequest ? (
               <Button
-                label="Request access"
+                label={needsReadTypesRequest ? 'Update access' : 'Request access'}
                 onPress={() => {
                   void requestAuthorization();
                 }}

@@ -1,12 +1,15 @@
 import { chooseNuggie } from '@/nuggies/chooseNuggie';
 import type { NuggieName } from '@/nuggies/NuggieName';
+import { activityTypeLabels, type ActivityType } from '@/types/ActivityType';
 import type { ClassType } from '@/types/ClassType';
 import type { WorkoutKind } from '@/types/WorkoutKind';
 
 export type FinishingPresentationInput = {
   workoutKind: WorkoutKind;
   classType: ClassType | null;
+  activityType: ActivityType | null;
   personalRecordCount: number;
+  newBestLabels: readonly string[];
 };
 
 export type FinishingPresentation = {
@@ -29,11 +32,17 @@ export function randomFromSessionId(sessionId: number): () => number {
 }
 
 export function describeFinishingCaption(input: FinishingPresentationInput): string {
+  if (input.newBestLabels.length > 0) {
+    return `New best: ${input.newBestLabels.join(', ')}!`;
+  }
   if (input.personalRecordCount > 0) {
     return 'New personal record!';
   }
   if (input.workoutKind === 'individual') {
     return 'Workout complete!';
+  }
+  if (input.workoutKind === 'activity') {
+    return input.activityType === null ? 'Activity complete!' : `${activityTypeLabels[input.activityType]} complete!`;
   }
   return input.classType === 'yoga' ? 'Namaste — class complete!' : 'Class complete!';
 }
@@ -44,7 +53,7 @@ export function chooseFinishingPresentation(
 ): FinishingPresentation {
   return {
     nuggie: chooseNuggie(
-      { kind: 'sessionFinished', workoutKind: input.workoutKind, personalRecordCount: input.personalRecordCount },
+      { kind: 'sessionFinished', workoutKind: input.workoutKind, personalRecordCount: input.personalRecordCount + input.newBestLabels.length },
       new Date(),
       random,
     ),

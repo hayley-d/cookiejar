@@ -1,6 +1,19 @@
 import { queryStatisticsForQuantity, queryWorkoutSamples } from '@kingstinct/react-native-healthkit';
 
+import type { AnyMap } from 'react-native-nitro-modules';
+
 import type { HealthWorkout, WorkoutHeartRate } from '@/health/HealthTypes';
+
+const elevationAscendedMetadataKey = 'HKElevationAscended';
+
+function readElevationAscendedMeters(metadata: AnyMap): number | null {
+  const elevationAscended = metadata[elevationAscendedMetadataKey];
+  if (typeof elevationAscended !== 'object' || elevationAscended === null || Array.isArray(elevationAscended)) {
+    return null;
+  }
+  const quantity = elevationAscended.quantity;
+  return typeof quantity === 'number' && Number.isFinite(quantity) ? quantity : null;
+}
 
 export async function findOverlappingWorkouts(startDate: Date, endDate: Date): Promise<HealthWorkout[]> {
   const workoutProxies = await queryWorkoutSamples({ limit: 0, filter: { date: { startDate, endDate } } });
@@ -15,6 +28,8 @@ export async function findOverlappingWorkouts(startDate: Date, endDate: Date): P
         endDate: workoutProxy.endDate,
         durationSeconds: workoutProxy.duration.quantity,
         activeKilocalories: workoutProxy.totalEnergyBurned?.quantity ?? null,
+        distanceMeters: workoutProxy.totalDistance?.quantity ?? null,
+        elevationAscendedMeters: readElevationAscendedMeters(workoutProxy.metadata),
         sourceName: workoutProxy.sourceRevision?.source.name ?? '',
         bundleIdentifier: workoutProxy.sourceRevision?.source.bundleIdentifier ?? '',
       });

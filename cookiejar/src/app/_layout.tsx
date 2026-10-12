@@ -131,6 +131,7 @@ function ThemedNavigation() {
           options={{ title: 'Personal records', headerLargeTitleEnabled: false }}
         />
         <Stack.Screen name="progress/classes" options={{ title: 'Classes', headerLargeTitleEnabled: false }} />
+        <Stack.Screen name="progress/activities" options={{ title: 'Activities', headerLargeTitleEnabled: false }} />
         <Stack.Screen
           name="progress/exercises/[exerciseId]"
           options={{ title: '', headerLargeTitleEnabled: false }}
@@ -156,6 +157,16 @@ function ThemedNavigation() {
             presentation: 'formSheet',
             headerShown: false,
             sheetAllowedDetents: [0.6, 1],
+            sheetGrabberVisible: true,
+          }}
+        />
+        <Stack.Screen
+          name="activities/log"
+          options={{
+            presentation: 'formSheet',
+            title: 'Log activity',
+            headerLargeTitleEnabled: false,
+            sheetAllowedDetents: [0.95],
             sheetGrabberVisible: true,
           }}
         />

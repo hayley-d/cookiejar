@@ -8,6 +8,7 @@ import { findSuggestedHealthWorkout } from '@/health/findSuggestedHealthWorkout'
 import { useFinishedSession } from '@/hooks/useFinishedSession';
 import { useOverlappingHealthWorkouts } from '@/hooks/useOverlappingHealthWorkouts';
 import { useUnlinkHealthWorkout } from '@/hooks/useUnlinkHealthWorkout';
+import { describeActivityBests } from '@/progress/detectActivityBests';
 import { countExercisesWithRecords } from '@/progress/detectPersonalRecords';
 import { chooseStableFinishingPresentation } from '@/sessions/chooseFinishingNuggie';
 
@@ -58,10 +59,13 @@ export default function SessionSummaryScreen() {
     return null;
   }
 
+  const newBestLabels = describeActivityBests(lookup.activityBests, lookup.session.activityType);
   const nuggie = chooseStableFinishingPresentation(sessionId, {
     workoutKind: lookup.session.workoutKind,
     classType: lookup.session.classType,
+    activityType: lookup.session.activityType,
     personalRecordCount: countExercisesWithRecords(lookup.personalRecords),
+    newBestLabels,
   }).nuggie;
 
   const { session } = lookup;
@@ -92,8 +96,12 @@ export default function SessionSummaryScreen() {
       session={lookup.session}
       personalRecords={lookup.personalRecords}
       nuggie={nuggie}
+      newBestLabels={newBestLabels}
       now={openedAt}
       onDone={() => router.back()}
+      onEditActivity={() =>
+        router.push({ pathname: '/activities/log', params: { sessionId: String(sessionId) } })
+      }
       suggestedWorkout={suggestedWorkout}
       isLinkingSuggestedWorkout={healthWorkouts.isLinking}
       onLinkSuggestedWorkout={linkSuggestedWorkout}

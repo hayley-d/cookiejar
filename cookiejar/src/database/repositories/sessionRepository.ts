@@ -9,6 +9,7 @@ import type { SetValues } from '@/sessions/fillSetForTick';
 import { normaliseSessionExercises } from '@/sessions/normaliseSessionExercises';
 import { actualValuesAfterReplace, resolveReplacedExerciseId } from '@/sessions/replaceExercise';
 import type { ActiveSession } from '@/types/ActiveSession';
+import type { ActivityType } from '@/types/ActivityType';
 import type { ClassType } from '@/types/ClassType';
 import type { SessionSet } from '@/types/SessionSet';
 import type { SessionExerciseWithSets, SessionWithExercises } from '@/types/SessionWithExercises';
@@ -25,6 +26,7 @@ type WorkoutSnapshotRow = {
   name: string;
   kind: WorkoutKind;
   class_type: ClassType | null;
+  activity_type: ActivityType | null;
 };
 
 export class ActiveSessionExistsError extends Error {
@@ -74,6 +76,7 @@ type SessionRow = {
   workout_name: string;
   workout_kind: WorkoutKind;
   class_type: ClassType | null;
+  activity_type: ActivityType | null;
   scheduled_date: string;
   started_at: string;
   finished_at: string | null;
@@ -83,6 +86,10 @@ type SessionRow = {
   health_maximum_heart_rate: number | null;
   health_active_kilocalories: number | null;
   health_duration_seconds: number | null;
+  distance_meters: number | null;
+  elevation_gain_meters: number | null;
+  active_kilocalories: number | null;
+  average_heart_rate: number | null;
   planned_duration_minutes: number | null;
 };
 
@@ -169,7 +176,7 @@ export async function startSession(database: SQLiteDatabase, request: SessionSta
     }
 
     const workout = await database.getFirstAsync<WorkoutSnapshotRow>(
-      'SELECT name, kind, class_type FROM workouts WHERE id = ?',
+      'SELECT name, kind, class_type, activity_type FROM workouts WHERE id = ?',
       request.workoutId,
     );
     if (workout === null) {
@@ -177,13 +184,15 @@ export async function startSession(database: SQLiteDatabase, request: SessionSta
     }
 
     const sessionResult = await database.runAsync(
-      `INSERT INTO sessions (workout_id, plan_entry_id, workout_name, workout_kind, class_type, scheduled_date, started_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO sessions
+        (workout_id, plan_entry_id, workout_name, workout_kind, class_type, activity_type, scheduled_date, started_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       request.workoutId,
       sessionStart.planEntryId,
       workout.name,
       workout.kind,
       workout.class_type,
+      workout.activity_type,
       request.scheduledDate,
       startedAt,
     );
@@ -225,15 +234,127 @@ export async function startSession(database: SQLiteDatabase, request: SessionSta
   return sessionId;
 }
 
+export type ActivityLogInsert = {
+  workoutId: number;
+  planEntryId: number | null;
+  activityType: ActivityType;
+  scheduledDate: string;
+  startedAt: string;
+  finishedAt: string;
+  distanceMeters: number | null;
+  elevationGainMeters: number | null;
+  activeKilocalories: number | null;
+  averageHeartRate: number | null;
+  notes: string | null;
+};
+
+export async function insertActivitySession(database: SQLiteDatabase, log: ActivityLogInsert): Promise<number> {
+  let sessionId: number | null = null;
+
+  await database.withTransactionAsync(async () => {
+    const workout = await database.getFirstAsync<{ name: string; kind: string }>(
+      'SELECT name, kind FROM workouts WHERE id = ?',
+      log.workoutId,
+    );
+    if (workout === null) {
+      throw new Error('The workout to log no longer exists');
+    }
+    if (workout.kind !== 'activity') {
+      throw new Error('The workout to log is not an activity');
+    }
+    const existingSessions: ExistingPlanEntrySession[] =
+      log.planEntryId === null
+        ? []
+        : (
+            await database.getAllAsync<ExistingSessionRow>(
+              `SELECT id, finished_at FROM sessions
+              WHERE scheduled_date = ? AND plan_entry_id = ?
+              ORDER BY started_at, id`,
+              log.scheduledDate,
+              log.planEntryId,
+            )
+          ).map((row) => ({ id: row.id, finishedAt: row.finished_at }));
+    const sessionStart = resolveSessionStart(log.planEntryId, existingSessions);
+    const resolvedPlanEntryId = sessionStart.kind === 'create' ? sessionStart.planEntryId : null;
+    const result = await database.runAsync(
+      `INSERT INTO sessions
+        (workout_id, plan_entry_id, workout_name, workout_kind, activity_type, scheduled_date, started_at,
+          finished_at, distance_meters, elevation_gain_meters, active_kilocalories, average_heart_rate, notes)
+      VALUES (?, ?, ?, 'activity', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      log.workoutId,
+      resolvedPlanEntryId,
+      workout.name,
+      log.activityType,
+      log.scheduledDate,
+      log.startedAt,
+      log.finishedAt,
+      log.distanceMeters,
+      log.elevationGainMeters,
+      log.activeKilocalories,
+      log.averageHeartRate,
+      log.notes,
+    );
+    sessionId = result.lastInsertRowId;
+  });
+
+  if (sessionId === null) {
+    throw new Error('The activity was not logged');
+  }
+  return sessionId;
+}
+
+export type ActivityLogUpdate = {
+  activityType: ActivityType;
+  scheduledDate: string;
+  startedAt: string;
+  finishedAt: string;
+  distanceMeters: number | null;
+  elevationGainMeters: number | null;
+  activeKilocalories: number | null;
+  averageHeartRate: number | null;
+  notes: string | null;
+};
+
+export async function updateActivitySession(
+  database: SQLiteDatabase,
+  sessionId: number,
+  log: ActivityLogUpdate,
+): Promise<void> {
+  await database.withTransactionAsync(async () => {
+    const result = await database.runAsync(
+      `UPDATE sessions
+      SET activity_type = ?, scheduled_date = ?, started_at = ?, finished_at = ?, distance_meters = ?,
+        elevation_gain_meters = ?, active_kilocalories = ?, average_heart_rate = ?, notes = ?
+      WHERE id = ? AND workout_kind = 'activity'`,
+      log.activityType,
+      log.scheduledDate,
+      log.startedAt,
+      log.finishedAt,
+      log.distanceMeters,
+      log.elevationGainMeters,
+      log.activeKilocalories,
+      log.averageHeartRate,
+      log.notes,
+      sessionId,
+    );
+    if (result.changes === 0) {
+      throw new Error('The activity to update no longer exists');
+    }
+  });
+}
+
 export async function getSessionWithExercises(
   database: SQLiteDatabase,
   sessionId: number,
 ): Promise<SessionWithExercises | null> {
   const sessionRow = await database.getFirstAsync<SessionRow>(
     `SELECT sessions.id, sessions.workout_id, sessions.plan_entry_id, sessions.workout_name, sessions.workout_kind,
-      sessions.class_type, sessions.scheduled_date, sessions.started_at, sessions.finished_at, sessions.notes,
+      sessions.class_type, sessions.activity_type, sessions.scheduled_date, sessions.started_at, sessions.finished_at,
+      sessions.notes,
       sessions.health_workout_uuid, sessions.health_average_heart_rate, sessions.health_maximum_heart_rate,
       sessions.health_active_kilocalories, sessions.health_duration_seconds,
+      sessions.distance_meters, sessions.elevation_gain_meters, sessions.active_kilocalories,
+      sessions.average_heart_rate,
       workouts.duration_minutes AS planned_duration_minutes
     FROM sessions
     LEFT JOIN workouts ON workouts.id = sessions.workout_id
@@ -298,6 +419,7 @@ export async function getSessionWithExercises(
     workoutName: sessionRow.workout_name,
     workoutKind: sessionRow.workout_kind,
     classType: sessionRow.class_type,
+    activityType: sessionRow.activity_type,
     scheduledDate: sessionRow.scheduled_date,
     startedAt: sessionRow.started_at,
     finishedAt: sessionRow.finished_at,
@@ -307,6 +429,10 @@ export async function getSessionWithExercises(
     healthMaximumHeartRate: sessionRow.health_maximum_heart_rate,
     healthActiveKilocalories: sessionRow.health_active_kilocalories,
     healthDurationSeconds: sessionRow.health_duration_seconds,
+    distanceMeters: sessionRow.distance_meters,
+    elevationGainMeters: sessionRow.elevation_gain_meters,
+    activeKilocalories: sessionRow.active_kilocalories,
+    averageHeartRate: sessionRow.average_heart_rate,
     plannedDurationMinutes: sessionRow.planned_duration_minutes,
     exercises,
   };

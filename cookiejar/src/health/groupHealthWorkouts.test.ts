@@ -11,6 +11,8 @@ function buildWorkout(uuid: string, startHour: number, bundleIdentifier: string,
     endDate: new Date(2026, 9, 5, startHour + 1, 0),
     durationSeconds: 3600,
     activeKilocalories: null,
+    distanceMeters: null,
+    elevationAscendedMeters: null,
     sourceName,
     bundleIdentifier,
   };

@@ -1,5 +1,5 @@
 import type { WorkoutWithItems } from '@/types/WorkoutWithItems';
-import { defaultClassDetails, type LoadedWorkout } from '@/workouts/workoutEditorReducer';
+import { defaultActivityDetails, defaultClassDetails, type LoadedWorkout } from '@/workouts/workoutEditorReducer';
 
 export function toLoadedWorkout(workout: WorkoutWithItems): LoadedWorkout {
   if (workout.kind === 'class') {
@@ -13,6 +13,22 @@ export function toLoadedWorkout(workout: WorkoutWithItems): LoadedWorkout {
         description: workout.description ?? '',
         imageUrl: workout.imageUrl ?? '',
       },
+      activityDetails: null,
+      items: [],
+    };
+  }
+
+  if (workout.kind === 'activity') {
+    return {
+      workoutId: workout.id,
+      name: workout.name,
+      kind: 'activity',
+      classDetails: null,
+      activityDetails: {
+        activityType: workout.activityType ?? defaultActivityDetails.activityType,
+        description: workout.description ?? '',
+        imageUrl: workout.imageUrl ?? '',
+      },
       items: [],
     };
   }
@@ -22,6 +38,7 @@ export function toLoadedWorkout(workout: WorkoutWithItems): LoadedWorkout {
     name: workout.name,
     kind: 'individual',
     classDetails: null,
+    activityDetails: null,
     items: workout.items.map((item) => ({
       exercise: {
         id: item.exercise.id,

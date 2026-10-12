@@ -164,7 +164,7 @@ The profile form (see Profile and Progress) is the only writer.
 
 ### Migrations
 
-Migrations run in order through `src/database/migrations/migrations.ts` array: `[createInitialSchema, createTrainingSchema, addSessionExerciseRestSeconds, addNotificationIdentifier, addExerciseNotes, addAssistedTrackingAndExerciseVideo]`. The `user_version` PRAGMA tracks which migrations have run.
+Migrations run in order through `src/database/migrations/migrations.ts` array: `[createInitialSchema, createTrainingSchema, addSessionExerciseRestSeconds, addNotificationIdentifier, addExerciseNotes, addAssistedTrackingAndExerciseVideo, addActivities]`. The `user_version` PRAGMA tracks which migrations have run.
 
 - **v1 (createInitialSchema)**: Draft schema with exercises, workouts, workout_exercises and sets tables. Never edited. Kept so the migration order stays the same on every device.
 - **v2 (createTrainingSchema)**: Drops draft tables and creates the full training schema for production use.
@@ -172,18 +172,19 @@ Migrations run in order through `src/database/migrations/migrations.ts` array: `
 - **v4 (addNotificationIdentifier)**: Adds a nullable `identifier` column to `notifications` and the unique index `notifications_by_identifier` on it. SQLite can't add a `UNIQUE` column with `ALTER TABLE`, so the uniqueness comes from the index.
 - **v5 (addExerciseNotes)**: Adds a nullable `notes` column to `exercises` (`ALTER TABLE exercises ADD COLUMN notes TEXT`). Existing exercises get `NULL`.
 - **v6 (addAssistedTrackingAndExerciseVideo)**: Rebuilds `exercises` (adding a nullable `video_url`) and `workout_items` so their tracking type `CHECK` constraints accept `repetitions_and_assistance`. SQLite can't alter a `CHECK`, so each table is created as `*_rebuilt`, its rows copied with their ids, the old table dropped and the new one renamed. The `workout_items` indexes are recreated. This relies on `foreign_keys` being `OFF` during migrations; otherwise dropping `workout_items` would cascade-delete `target_sets`.
+- **v7 (addActivities)**: Rebuilds `workouts` so `kind` accepts `activity`, adds `activity_type` (hike\|run\|walk), drops `hiking` from the class types and requires `class_type` exactly for classes and `activity_type` exactly for activities. Every hiking class becomes a Hike activity with no `duration_minutes`. Rebuilds `sessions` so `workout_kind` accepts `activity`, adds `activity_type`, `distance_meters`, `elevation_gain_meters`, `active_kilocalories` and `average_heart_rate`, and turns every hiking session into a Hike activity, keeping its times, notes and Health link. The `sessions` indexes are recreated.
 
 ### Schema v2
 
 | Table | Purpose | Key Columns |
 | --- | --- | --- |
 | **exercises** | Exercise definitions | `id`, `name` (unique), `body_part`, `default_tracking_type`, `image_url`, `video_url` (nullable, added by v6), `created_at`, `notes` (nullable, added by v5) |
-| **workouts** | Workout templates | `id`, `name`, `kind` (individual\|class), `class_type` (yoga\|pilates\|spin\|hiking\|barre\|other), `duration_minutes`, `created_at`, `updated_at` |
+| **workouts** | Workout templates | `id`, `name`, `kind` (individual\|class\|activity), `class_type` (yoga\|pilates\|spin\|barre\|other), `activity_type` (hike\|run\|walk, v7), `duration_minutes`, `created_at`, `updated_at` |
 | **workout_items** | Exercises in a workout template | `id`, `workout_id`, `exercise_id`, `position`, `superset_group`, `tracking_type`, `rest_seconds`, `notes` |
 | **target_sets** | Target reps/weight/duration for a workout_item | `id`, `workout_item_id`, `position`, `repetitions`, `weight_kilograms`, `duration_seconds`, `distance_meters` |
 | **plans** | Training plans | `id`, `name`, `is_active` (0\|1 unique), `starts_on`, `created_at` |
 | **plan_entries** | Workouts scheduled in a plan | `id`, `plan_id`, `workout_id`, `day_of_week`, `time_of_day` |
-| **sessions** | Started or finished workout sessions (copies workout_name/kind/class_type at time of session) | `id`, `workout_id`, `workout_name`, `workout_kind`, `class_type`, `scheduled_date`, `started_at`, `finished_at`, `health_*` fields, `notes` |
+| **sessions** | Started or finished workout sessions (copies workout_name/kind/class_type/activity_type at time of session) | `id`, `workout_id`, `workout_name`, `workout_kind`, `class_type`, `activity_type`, `scheduled_date`, `started_at`, `finished_at`, `health_*` fields, `notes`, activity metrics `distance_meters`, `elevation_gain_meters`, `active_kilocalories`, `average_heart_rate` (v7) |
 | **session_exercises** | Exercises in a session | `id`, `session_id`, `exercise_id`, `replaced_exercise_id`, `position`, `superset_group`, `tracking_type`, `rest_seconds` (added by v3) |
 | **session_sets** | Completed sets in a session | `id`, `session_exercise_id`, `position`, `target_*` columns, `repetitions`, `weight_kilograms`, `duration_seconds`, `distance_meters`, `completed_at` |
 | **profile** | Single user profile (id=1) | `id`, `display_name`, `birth_date`, `sex`, `height_centimetres`, `goal`, `weekly_workout_target`, `daily_step_goal`, `updated_at` |
@@ -198,7 +199,7 @@ Migrations run in order through `src/database/migrations/migrations.ts` array: `
 - **Dates**: Local `YYYY-MM-DD`, e.g. `2026-10-04` for `scheduled_date`, `measured_on`, `health_snapshots.date`, `plans.starts_on`. Belongs to the user's local day, not UTC.
 - **Time of day**: Local `HH:MM` 24-hour, e.g. `14:30` for `time_of_day` in plan_entries.
 - **Day of week**: 1 (Monday) through 7 (Sunday).
-- **Sessions copy metadata**: `workout_name`, `workout_kind`, and `class_type` are copied from the workout at session creation so history survives edits or deletes.
+- **Sessions copy metadata**: `workout_name`, `workout_kind`, `class_type` and `activity_type` are copied from the workout at session creation so history survives edits or deletes.
 
 ## Component Architecture
 
@@ -301,6 +302,7 @@ All routes are nested under `src/app/workouts/_layout.tsx`, which wraps them in 
 | --- | --- | --- |
 | `/workouts/new` | Stack push (first) | Name and kind choice (Individual or Class) |
 | `/workouts/class-details` | Stack push | Step 2 for class workouts: class type, duration, description, image URL |
+| `/workouts/activity-details` | Stack push | Step 2 for activity workouts: activity type (Hike, Run, Walk), description, image URL. Editing an activity reopens it |
 | `/workouts/editor` | Stack push | Step 2 for individual workouts: exercise picker on open (if `pickOnOpen`), then exercise editor with target sets, superset grouping, and drag to reorder |
 | `/workouts/[workoutId]/edit` | Stack push (first, no anchor) | Loads an existing workout into the editor or the class form after `loaded`. Both show a Name field at the top (only when `workoutId` is set), so a saved workout or a duplicate can be renamed; Save is disabled and the error shows inline while the name is empty. It is pushed from the Create hub without `withAnchor`, and `workouts/_layout.tsx` sets no `unstable_settings.anchor`, so the builder stack opens as `[edit]` and never stacks it on `new` |
 | `/workouts/superset-info` | Form sheet | Info about supersets with the `coach` nuggie and a tip |
@@ -1067,6 +1069,36 @@ These import no React Native, expo-sqlite, Skia, victory-native or HealthKit cod
 
 Elsewhere: `src/stats/healthChartPoints.ts` (`healthChartPoints`, `healthChartUnits`, `averageOfPoints`), `src/health/describeHealthAccessStatus.ts` (caption, headline and detail for the three access states) and `src/dates/formatDayMonth.ts`. New shared types are `ChartPoint`, `ClassStatistics`, `ExerciseHistory` (with `ExerciseWithHistory`), `FinishedSessionSet` and `TrainingTotals`; `BodyMeasurement.ts` gains `BodyMeasurementInput` and `WeightMeasurement`.
 
+## Activities
+
+An activity is a workout with `kind` `activity` and an `activity_type` of hike, run or walk. It has no exercises: it is logged after the fact, not run in the session logger. Hike shows the hiking nuggie, Run the workout nuggie and Walk the good job nuggie. Migration v7 converted the old hiking classes into Hike activities.
+
+### Routes
+
+| Route | Presentation | Purpose |
+| --- | --- | --- |
+| `/workouts/activity-details` | Stack push | Builder step 2 for an activity workout (see Workout Builder) |
+| `/activities/log` | Form sheet | `ActivityLogForm`: type chips, date, start time, hours and minutes, distance, elevation, kcal, heart rate, a live pace line and notes. Params `workoutId`, `date` and `planEntryId` create a session. Param `sessionId` edits one, prefilled from the session, and saves with `updateActivitySession` without touching the Health link. A planned activity opened from the calendar routes here through `resolveScheduledWorkoutRoute`, and the activity workout detail has LOG ACTIVITY. With a `planEntryId` the date is locked to the plan entry date (a future planned date is allowed), so calendar completion stays linked. Saving opens the summary |
+| `/progress/activities` | Push | One `ActivityStatisticsCard` per activity type that has logs |
+
+### Session Activity Metrics
+
+`insertActivitySession` writes one finished activity session in a transaction: `started_at` and `finished_at` from the start time and duration, plus `distance_meters`, `elevation_gain_meters`, `active_kilocalories` and `average_heart_rate`, all nullable. These columns are the user's own numbers and stay separate from the `health_*` columns, which only hold a linked Garmin workout. `ActivitySummary` shows distance, duration, pace, elevation, kcal and heart rate tiles. Pace is not stored: `derivePace` computes seconds per km from distance and duration, and is `null` for missing or zero distance.
+
+### Health Auto-fill
+
+The log form lists the chosen day's Hiking, Running and Walking Apple Health workouts (activity codes 24, 37 and 52) with a Garmin badge, refreshed when the date changes and hidden without Health access. `readDayActivityWorkouts` reads them, and `useDayActivityWorkouts` exposes them. `readHealthWorkouts.ts` reads each workout's total distance and the `HKElevationAscended` metadata value, both in metres, and `healthAuthorization.ts` requests distance read access. Picking a workout fills the form through `activityMetricsFromHealthWorkout` and links it through the existing Health link when saving, for create and edit. Whether Garmin supplies elevation is confirmed on the device.
+
+### Statistics and Bests
+
+Both modules are pure and covered by `bun test`:
+
+- `src/progress/buildActivityStatistics.ts`: per type session count, distance and elevation for this month and all time, plus the bests (longest distance, most elevation, fastest pace)
+- `src/progress/detectActivityBests.ts`: compares a log with the earlier logs of the same type. A metric is a best only when at least one earlier log of the same type recorded it and the new value strictly beats every earlier recorded value. Earlier logs without the metric, a first log and a tie are not bests. Pace only counts earlier logs of at least 1 km
+- `src/progress/activityBestRules.ts`: pace counts as a best only for distances of at least 1 km (`minimumPaceDistanceMeters`), so a short walk cannot set a record
+
+`listFinishedActivityLogs` in `progressRepository` returns the raw finished logs with optional type and started-before filters, and `useActivityStatistics` builds the statistics. The Progress hub shows an Activities section. The activity summary shows a NEW BEST badge naming each best, and the finishing caption mentions it with the record nuggie.
+
 ## Coach Nuggie
 
 Phase 09a replaces the placeholder coach modal with a rule-based coach. It adds no migration and makes no network calls. Notifications are Phase 09b (see Notifications).
@@ -1315,7 +1347,7 @@ src/
     _layout.tsx             root: ThemeProvider → Suspense → SQLiteProvider → GestureHandlerRootView → Stack
     coach.tsx               Coach modal screen: conversation, prompt chips, action routing
     exercises/              library (index), new, [exerciseId] edit, picker
-    workouts/               builder: _layout with WorkoutEditorProvider, new, class-details, editor, [workoutId]/edit, superset-info
+    workouts/               builder: _layout with WorkoutEditorProvider, new, class-details, activity-details, editor, [workoutId]/edit, superset-info
     plans/                  new, [planId] editor, [planId]/add-entry, entry-time, activate, copy-day
     workout/                [workoutId] detail screen
     stats/                  [metric] 14-day detail screen with chart
@@ -1329,7 +1361,7 @@ src/
     molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField, PlanEntryRow, DaySectionHeader, PlanRow, RestDay, ActivePlanBanner, DayChip, ScheduledWorkoutCard, HeaderImageCard, WorkoutDetailExerciseRow, ActiveSessionBanner, PersonalRecordRow, RestTimerBar, SessionSetRow, SessionTopBar, StatTile, HealthPermissionCard, HealthWorkoutRow, LinkedHealthWorkoutRow, HealthSuggestionBanner, GreetingHeader, TodayWorkoutCard, NuggieActionCard, RestDayCard, NoPlanCard, WeeklyStreakTile, StatBarRow, ProfileSummaryHeader, SettingsRow, MeasurementRow, RangeSwitcher, ClassCountTile, StatisticLine, CoachMessageBubble, UserMessageBubble, PromptChip, NotificationBell, NotificationRow, ToggleRow, ChoiceRow
     organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter, PlanWeekEditor, AddPlanEntrySheet, ActivatePlanSheet, EntryTimeSheet, CopyDaySheet, WeekStrip, DayWorkoutList, IndividualWorkoutDetail, ClassWorkoutDetail, SessionLogger, ClassSessionView, SessionExerciseCard, SessionSummary, LinkHealthWorkoutSheet, TodayCarousel, StatTileGrid, StatBarList, HealthMetricBarList, StreakBarList, ProfileForm, MeasurementForm, ProgressOverview, RecentRecordsSection, PersonalRecordItemRow, ClassCountSection, ClassStatisticsCard, ExerciseProgressSection, ExerciseHistoryList, ProgressChartFrame, ProgressLineChart, ProgressBarChart, CoachConversation, PromptChipBar, NotificationList
   database/
-    migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2), addSessionExerciseRestSeconds (v3), addNotificationIdentifier (v4), addExerciseNotes (v5)
+    migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2), addSessionExerciseRestSeconds (v3), addNotificationIdentifier (v4), addExerciseNotes (v5), addAssistedTrackingAndExerciseVideo (v6), addActivities (v7)
     repositories/           one file per entity: exerciseRepository, workoutRepository, planRepository, scheduleRepository, sessionRepository, appSettingsRepository, healthSnapshotRepository, profileRepository, bodyMeasurementRepository, progressRepository, notificationRepository
   exercises/                pure exercise logic with tests: validation, A–Z grouping, filtering, selection, body part param parsing, notes trimming
   hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan, usePlanActions, useScheduledWorkouts, useWeekPages, useSelectedDate, useScheduledWeeks, useSession, useStartSession, useActiveSession, useFinishedSession, useRestTimer, useSessionExercisePicks, useHealthAuthorization, useDailyHealth, useOverlappingHealthWorkouts, useUnlinkHealthWorkout, useProfile, useWeeklyStreak, useHealthRange, useFocusReloadKey, useProfileForm, useBodyMeasurements, useMeasurementForm, useTrainingTotals, usePersonalRecords, useNewRecordCount, useExercisesWithHistory, useExerciseHistory, useClassStatistics, useCoachSnapshot, useCoachConversation, useTipOfTheDay, useNotifications, useUnreadNotificationCount, useNotificationSettings, useNotificationPermissionStatus, useNotificationReconciler, useNotificationTapRouting, useNotificationReceivedRefresh, useRestAlertScheduling, useNotificationPermissionSheet, plus the plain loaders `reconcileNotifications` and `loadNotificationSettings`

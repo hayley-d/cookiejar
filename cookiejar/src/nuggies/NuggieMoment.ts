@@ -1,11 +1,14 @@
+import type { ActivityType } from '@/types/ActivityType';
 import type { ClassType } from '@/types/ClassType';
+import type { WorkoutKind } from '@/types/WorkoutKind';
 
 export type NuggieMoment =
   | { kind: 'appLoading' }
   | { kind: 'sessionStarting'; startsAt: Date }
   | { kind: 'sessionInProgress' }
-  | { kind: 'sessionFinished'; workoutKind: 'individual' | 'class'; personalRecordCount: number }
+  | { kind: 'sessionFinished'; workoutKind: WorkoutKind; personalRecordCount: number }
   | { kind: 'classDisplay'; classType: ClassType }
+  | { kind: 'activityDisplay'; activityType: ActivityType }
   | { kind: 'restDay' }
   | { kind: 'lowSleep' }
   | { kind: 'stepGoalReached' }

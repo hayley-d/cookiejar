@@ -67,6 +67,12 @@ describe('sessionFinished', () => {
     );
   });
 
+  test('an activity without records shows goodJob', () => {
+    expect(chooseNuggie({ kind: 'sessionFinished', workoutKind: 'activity', personalRecordCount: 0 }, noon)).toBe(
+      'goodJob',
+    );
+  });
+
   test('a class without records shows goodJob', () => {
     expect(chooseNuggie({ kind: 'sessionFinished', workoutKind: 'class', personalRecordCount: 0 }, noon)).toBe(
       'goodJob',
@@ -90,12 +96,21 @@ describe('classDisplay', () => {
   test.each([
     ['yoga', 'yoga'],
     ['pilates', 'pilates'],
-    ['hiking', 'hiking'],
     ['spin', 'workout'],
     ['barre', 'workout'],
     ['other', 'workout'],
   ] as const)('%s shows %s', (classType, expected) => {
     expect(chooseNuggie({ kind: 'classDisplay', classType }, noon)).toBe(expected);
+  });
+});
+
+describe('activityDisplay', () => {
+  test.each([
+    ['hike', 'hiking'],
+    ['run', 'workout'],
+    ['walk', 'goodJob'],
+  ] as const)('%s shows %s', (activityType, expected) => {
+    expect(chooseNuggie({ kind: 'activityDisplay', activityType }, noon)).toBe(expected);
   });
 });
 

@@ -1,4 +1,5 @@
 import { Button } from '@/components/atoms/Button';
+import { ActivitySummary } from '@/components/organisms/ActivitySummary';
 import { NuggieImage } from '@/components/atoms/NuggieImage';
 import { HealthSuggestionBanner } from '@/components/molecules/HealthSuggestionBanner';
 import { LinkedHealthWorkoutRow } from '@/components/molecules/LinkedHealthWorkoutRow';
@@ -25,8 +26,10 @@ type SessionSummaryProperties = {
   session: SessionWithExercises;
   personalRecords: readonly PersonalRecord[];
   nuggie: NuggieName;
+  newBestLabels: readonly string[];
   now: Date;
   onDone: () => void;
+  onEditActivity: () => void;
   suggestedWorkout: HealthWorkout | null;
   isLinkingSuggestedWorkout: boolean;
   onLinkSuggestedWorkout: () => void;
@@ -38,14 +41,30 @@ export function SessionSummary({
   session,
   personalRecords,
   nuggie,
+  newBestLabels,
   now,
   onDone,
+  onEditActivity,
   suggestedWorkout,
   isLinkingSuggestedWorkout,
   onLinkSuggestedWorkout,
   onLinkGarmin,
   onUnlinkGarmin,
 }: SessionSummaryProperties) {
+  if (session.workoutKind === 'activity') {
+    return (
+      <ActivitySummary
+        session={session}
+        nuggie={nuggie}
+        newBestLabels={newBestLabels}
+        now={now}
+        onDone={onDone}
+        onEdit={onEditActivity}
+        onUnlinkGarmin={onUnlinkGarmin}
+      />
+    );
+  }
+
   const totals = calculateSessionTotals(session, now);
   const bestRecords = selectBestRecordPerExercise(personalRecords);
   const exerciseNames = new Map(

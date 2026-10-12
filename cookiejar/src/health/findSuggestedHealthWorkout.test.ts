@@ -21,6 +21,8 @@ function buildWorkout(
     endDate: new Date(2026, 9, 5, 10, endMinute),
     durationSeconds: (endMinute - startMinute) * 60,
     activeKilocalories: null,
+    distanceMeters: null,
+    elevationAscendedMeters: null,
     sourceName,
     bundleIdentifier,
   };

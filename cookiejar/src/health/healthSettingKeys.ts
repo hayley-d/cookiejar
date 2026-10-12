@@ -1,1 +1,2 @@
 export const healthAuthorizationRequestedAtSettingKey = 'health_authorization_requested_at';
+export const healthAuthorizationReadTypesVersionSettingKey = 'health_authorization_read_types_version';

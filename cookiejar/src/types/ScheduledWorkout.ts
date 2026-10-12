@@ -2,7 +2,7 @@ import type { Workout } from '@/types/Workout';
 
 export type ScheduledWorkoutSummary = Pick<
   Workout,
-  'name' | 'kind' | 'classType' | 'durationMinutes' | 'imageUrl'
+  'name' | 'kind' | 'classType' | 'activityType' | 'durationMinutes' | 'imageUrl'
 > & {
   id: number | null;
   exerciseCount: number;

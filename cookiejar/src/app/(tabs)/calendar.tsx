@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -17,6 +18,7 @@ import { useSelectedDate } from '@/hooks/useSelectedDate';
 import { useStartSession } from '@/hooks/useStartSession';
 import { useWeekPages } from '@/hooks/useWeekPages';
 import { dayMarkerState } from '@/plans/dayMarkerState';
+import { resolveScheduledWorkoutRoute } from '@/sessions/resolveScheduledWorkoutRoute';
 import { useTheme } from '@/theme/useTheme';
 import type { ScheduledWorkout } from '@/types/ScheduledWorkout';
 
@@ -43,6 +45,13 @@ export default function CalendarScreen() {
     (scheduledWorkout: ScheduledWorkout) => {
       const workoutId = scheduledWorkout.workout.id;
       if (workoutId === null) {
+        return;
+      }
+      if (scheduledWorkout.workout.kind === 'activity') {
+        const route = resolveScheduledWorkoutRoute(scheduledWorkout);
+        if (route !== null) {
+          router.push(route);
+        }
         return;
       }
       void startSession({ workoutId, date: scheduledWorkout.date, planEntryId: scheduledWorkout.planEntryId });

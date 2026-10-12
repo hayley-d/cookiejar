@@ -2,6 +2,7 @@ import type { ScheduledWorkout } from '@/types/ScheduledWorkout';
 
 export type ScheduledWorkoutRoute =
   | { pathname: '/workout/[workoutId]'; params: { workoutId: string; date: string; planEntryId?: string } }
+  | { pathname: '/activities/log'; params: { workoutId: string; date: string; planEntryId?: string } }
   | { pathname: '/sessions/[sessionId]'; params: { sessionId: string } }
   | { pathname: '/sessions/[sessionId]/summary'; params: { sessionId: string } }
   | null;
@@ -30,14 +31,15 @@ export function resolveScheduledWorkoutRoute(scheduledWorkout: ScheduledWorkout)
     if (workoutId === null) {
       return null;
     }
-    return {
-      pathname: '/workout/[workoutId]',
-      params: {
-        workoutId: String(workoutId),
-        date: scheduledWorkout.date,
-        ...(scheduledWorkout.planEntryId === null ? {} : { planEntryId: String(scheduledWorkout.planEntryId) }),
-      },
+    const params = {
+      workoutId: String(workoutId),
+      date: scheduledWorkout.date,
+      ...(scheduledWorkout.planEntryId === null ? {} : { planEntryId: String(scheduledWorkout.planEntryId) }),
     };
+    if (scheduledWorkout.workout.kind === 'activity') {
+      return { pathname: '/activities/log', params };
+    }
+    return { pathname: '/workout/[workoutId]', params };
   }
 
   return null;

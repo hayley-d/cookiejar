@@ -7,11 +7,11 @@ import {
   randomFromSessionId,
 } from '@/sessions/chooseFinishingNuggie';
 
-const individual = { workoutKind: 'individual', classType: null, personalRecordCount: 0 } as const;
+const individual = { workoutKind: 'individual', classType: null, activityType: null, personalRecordCount: 0, newBestLabels: [] } as const;
 
 describe('chooseFinishingPresentation', () => {
   test('a record gives the beast nuggie and the record caption', () => {
-    expect(chooseFinishingPresentation({ ...individual, personalRecordCount: 2 })).toEqual({
+    expect(chooseFinishingPresentation({ ...individual, personalRecordCount: 2, newBestLabels: [] })).toEqual({
       nuggie: 'beast',
       caption: 'New personal record!',
     });
@@ -28,19 +28,36 @@ describe('chooseFinishingPresentation', () => {
   });
 
   test('a yoga class says namaste with the good job nuggie', () => {
-    expect(chooseFinishingPresentation({ workoutKind: 'class', classType: 'yoga', personalRecordCount: 0 })).toEqual({
+    expect(chooseFinishingPresentation({ workoutKind: 'class', classType: 'yoga', activityType: null, personalRecordCount: 0, newBestLabels: [] })).toEqual({
       nuggie: 'goodJob',
       caption: 'Namaste — class complete!',
     });
   });
 
   test('another class says class complete', () => {
-    expect(describeFinishingCaption({ workoutKind: 'class', classType: 'spin', personalRecordCount: 0 })).toBe(
+    expect(describeFinishingCaption({ workoutKind: 'class', classType: 'spin', activityType: null, personalRecordCount: 0, newBestLabels: [] })).toBe(
       'Class complete!',
     );
-    expect(describeFinishingCaption({ workoutKind: 'class', classType: null, personalRecordCount: 0 })).toBe(
+    expect(describeFinishingCaption({ workoutKind: 'class', classType: null, activityType: null, personalRecordCount: 0, newBestLabels: [] })).toBe(
       'Class complete!',
     );
+  });
+});
+
+describe('activities', () => {
+  test('an activity says its type is complete with the good job nuggie', () => {
+    expect(
+      chooseFinishingPresentation({ workoutKind: 'activity', classType: null, activityType: 'hike', personalRecordCount: 0, newBestLabels: [] }),
+    ).toEqual({ nuggie: 'goodJob', caption: 'Hike complete!' });
+    expect(
+      describeFinishingCaption({ workoutKind: 'activity', classType: null, activityType: 'run', personalRecordCount: 0, newBestLabels: [] }),
+    ).toBe('Run complete!');
+  });
+
+  test('an activity without a type says activity complete', () => {
+    expect(
+      describeFinishingCaption({ workoutKind: 'activity', classType: null, activityType: null, personalRecordCount: 0, newBestLabels: [] }),
+    ).toBe('Activity complete!');
   });
 });
 
@@ -71,7 +88,7 @@ describe('stable choice by session id', () => {
   });
 
   test('the finishing screen and a later summary choose the same nuggie for a session', () => {
-    const classInput = { workoutKind: 'class', classType: 'spin', personalRecordCount: 0 } as const;
+    const classInput = { workoutKind: 'class', classType: 'spin', activityType: null, personalRecordCount: 0, newBestLabels: [] } as const;
     for (const input of [individual, classInput]) {
       const onFinishing = chooseStableFinishingPresentation(42, input);
       const onLaterSummary = chooseStableFinishingPresentation(42, input);
@@ -80,6 +97,24 @@ describe('stable choice by session id', () => {
   });
 
   test('a record still gives beast', () => {
-    expect(chooseStableFinishingPresentation(3, { ...individual, personalRecordCount: 1 }).nuggie).toBe('beast');
+    expect(chooseStableFinishingPresentation(3, { ...individual, personalRecordCount: 1, newBestLabels: [] }).nuggie).toBe('beast');
+  });
+});
+
+describe('new activity bests', () => {
+  const hikeInput = {
+    workoutKind: 'activity',
+    classType: null,
+    activityType: 'hike',
+    personalRecordCount: 0,
+    newBestLabels: ['Longest hike', 'Fastest pace'],
+  } as const;
+
+  test('the caption names the new bests', () => {
+    expect(describeFinishingCaption(hikeInput)).toBe('New best: Longest hike, Fastest pace!');
+  });
+
+  test('a new best gets the record nuggie', () => {
+    expect(chooseFinishingPresentation(hikeInput).nuggie).toBe('beast');
   });
 });

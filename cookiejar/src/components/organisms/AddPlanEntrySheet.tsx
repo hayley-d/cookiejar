@@ -6,11 +6,11 @@ import { Stack } from '@/components/primitives/Stack';
 import { TimePickerBox } from '@/components/primitives/TimePickerBox';
 import { Typography } from '@/components/primitives/Typography';
 import { dateToTimeOfDay, timeOfDayToDate } from '@/plans/timeOfDay';
-import { classTypeLabels } from '@/types/ClassType';
 import type { WorkoutSummary } from '@/types/WorkoutSummary';
 import { describeWorkout } from '@/workouts/describeWorkout';
 import { filterWorkouts } from '@/workouts/filterWorkouts';
 import { workoutNuggie } from '@/workouts/workoutNuggie';
+import { workoutTypeLabel } from '@/workouts/workoutTypeLabel';
 
 type AddPlanEntrySheetProperties = {
   dayName: string;
@@ -56,8 +56,8 @@ export function AddPlanEntrySheet({
           name={workout.name}
           summary={describeWorkout(workout)}
           imageUrl={workout.imageUrl}
-          nuggie={workoutNuggie(workout.classType)}
-          badgeLabel={workout.classType === null ? undefined : classTypeLabels[workout.classType]}
+          nuggie={workoutNuggie(workout)}
+          badgeLabel={workoutTypeLabel(workout) ?? undefined}
           disabled={isAdding}
           onPress={() => onSelectWorkout(workout)}
         />

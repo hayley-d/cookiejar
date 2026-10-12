@@ -29,6 +29,7 @@ function makeSession(): SessionWithExercises {
     workoutName: 'Push Day',
     workoutKind: 'individual',
     classType: null,
+    activityType: null,
     scheduledDate: '2026-10-05',
     startedAt: '2026-10-05T08:00:00Z',
     finishedAt: null,
@@ -38,6 +39,10 @@ function makeSession(): SessionWithExercises {
     healthMaximumHeartRate: null,
     healthActiveKilocalories: null,
     healthDurationSeconds: null,
+    distanceMeters: null,
+    elevationGainMeters: null,
+    activeKilocalories: null,
+    averageHeartRate: null,
     plannedDurationMinutes: null,
     exercises: [10, 20].map((sessionExerciseId) => ({
       id: sessionExerciseId,

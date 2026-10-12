@@ -14,6 +14,8 @@ export type HealthWorkout = {
   endDate: Date;
   durationSeconds: number;
   activeKilocalories: number | null;
+  distanceMeters: number | null;
+  elevationAscendedMeters: number | null;
   sourceName: string;
   bundleIdentifier: string;
 };

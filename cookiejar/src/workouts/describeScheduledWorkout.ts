@@ -1,11 +1,18 @@
 import { formatTimeOfDay } from '@/plans/timeOfDay';
-import { classTypeLabels } from '@/types/ClassType';
 import type { ScheduledWorkout } from '@/types/ScheduledWorkout';
+import type { WorkoutKind } from '@/types/WorkoutKind';
 import { estimateWorkoutMinutes } from '@/workouts/estimateWorkoutMinutes';
+import { workoutTypeLabel } from '@/workouts/workoutTypeLabel';
+
+const kindFallbackLabels: Record<WorkoutKind, string> = {
+  individual: 'Workout',
+  class: 'Class',
+  activity: 'Activity',
+};
 
 export function describeScheduledWorkoutKind(scheduledWorkout: ScheduledWorkout): string {
-  const { kind, classType } = scheduledWorkout.workout;
-  const kindLabel = kind === 'class' ? (classType === null ? 'Class' : classTypeLabels[classType]) : 'Workout';
+  const { workout } = scheduledWorkout;
+  const kindLabel = workoutTypeLabel(workout) ?? kindFallbackLabels[workout.kind];
   if (scheduledWorkout.timeOfDay === null) {
     return kindLabel;
   }
@@ -14,6 +21,9 @@ export function describeScheduledWorkoutKind(scheduledWorkout: ScheduledWorkout)
 
 export function describeScheduledWorkoutSummary(scheduledWorkout: ScheduledWorkout): string | null {
   const { kind, durationMinutes, exerciseCount, targetSetCount, targetRestSeconds } = scheduledWorkout.workout;
+  if (kind === 'activity') {
+    return null;
+  }
   if (kind === 'class') {
     return durationMinutes === null ? null : `${durationMinutes} min`;
   }

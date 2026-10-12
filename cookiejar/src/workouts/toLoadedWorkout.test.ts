@@ -20,6 +20,7 @@ const individualWorkout: WorkoutWithItems = {
   ...baseWorkout,
   kind: 'individual',
   classType: null,
+  activityType: null,
   durationMinutes: null,
   description: null,
   imageUrl: null,
@@ -86,6 +87,7 @@ const classWorkout: WorkoutWithItems = {
   name: 'Evening Yoga',
   kind: 'class',
   classType: 'yoga',
+  activityType: null,
   durationMinutes: 60,
   description: null,
   imageUrl: 'https://example.com/yoga.jpg',
@@ -123,6 +125,27 @@ describe('toLoadedWorkout', () => {
       description: '',
       imageUrl: 'https://example.com/yoga.jpg',
     });
+    expect(loadedWorkout.items).toEqual([]);
+    expect(loadedWorkout.activityDetails).toBeNull();
+  });
+
+  test('an activity workout turns nullable details into form text', () => {
+    const loadedWorkout = toLoadedWorkout({
+      ...baseWorkout,
+      id: 9,
+      name: 'Table Mountain',
+      kind: 'activity',
+      classType: null,
+      activityType: 'hike',
+      durationMinutes: null,
+      description: 'Platteklip Gorge',
+      imageUrl: null,
+      items: [],
+    });
+
+    expect(loadedWorkout.kind).toBe('activity');
+    expect(loadedWorkout.classDetails).toBeNull();
+    expect(loadedWorkout.activityDetails).toEqual({ activityType: 'hike', description: 'Platteklip Gorge', imageUrl: '' });
     expect(loadedWorkout.items).toEqual([]);
   });
 

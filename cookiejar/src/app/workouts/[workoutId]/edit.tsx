@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/molecules/EmptyState';
 import { useWorkoutEditor } from '@/hooks/useWorkoutEditor';
 import { useWorkoutWithItems } from '@/hooks/useWorkoutWithItems';
 import { toLoadedWorkout } from '@/workouts/toLoadedWorkout';
+import ActivityDetailsScreen from '../activity-details';
 import ClassDetailsScreen from '../class-details';
 import WorkoutEditorScreen from '../editor';
 
@@ -53,7 +54,9 @@ export default function EditWorkoutScreen() {
   return (
     <>
       <Stack.Screen options={{ headerLeft: () => closeButton }} />
-      {state.kind === 'class' ? <ClassDetailsScreen /> : <WorkoutEditorScreen />}
+      {state.kind === 'class' ? <ClassDetailsScreen /> : null}
+      {state.kind === 'activity' ? <ActivityDetailsScreen /> : null}
+      {state.kind === 'individual' ? <WorkoutEditorScreen /> : null}
     </>
   );
 }

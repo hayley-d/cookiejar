@@ -55,7 +55,7 @@ export function ScheduledWorkoutCard({ scheduledWorkout, today, onPress, onStart
               onError={() => setFailedImageUrl(imageUrl)}
             />
           ) : (
-            <NuggieImage name={workoutNuggie(workout.classType)} size={theme.sizes.workoutRowImage} shape="rounded" />
+            <NuggieImage name={workoutNuggie(workout)} size={theme.sizes.workoutRowImage} shape="rounded" />
           )}
           <Box
             flex={1}

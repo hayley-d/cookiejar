@@ -2,11 +2,15 @@ import { isHealthDataAvailable, requestAuthorization } from '@kingstinct/react-n
 
 import type { HealthAuthorizationOutcome } from '@/health/HealthTypes';
 
+export const healthReadTypesVersion = 2;
+
 const healthReadTypes = [
   'HKQuantityTypeIdentifierStepCount',
   'HKCategoryTypeIdentifierSleepAnalysis',
   'HKQuantityTypeIdentifierRestingHeartRate',
   'HKQuantityTypeIdentifierHeartRate',
+  'HKQuantityTypeIdentifierDistanceWalkingRunning',
+  'HKQuantityTypeIdentifierDistanceCycling',
   'HKWorkoutTypeIdentifier',
 ] as const;
 
