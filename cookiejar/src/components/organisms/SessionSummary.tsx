@@ -67,7 +67,7 @@ export function SessionSummary({
   }
 
   if (session.workoutKind === 'swim') {
-    return <SwimSummary session={session} nuggie={nuggie} now={now} onDone={onDone} />;
+    return <SwimSummary session={session} nuggie={nuggie} newBestLabels={newBestLabels} now={now} onDone={onDone} />;
   }
 
   const totals = calculateSessionTotals(session, now);

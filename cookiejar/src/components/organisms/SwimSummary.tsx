@@ -1,3 +1,4 @@
+import { Badge } from '@/components/atoms/Badge';
 import { Button } from '@/components/atoms/Button';
 import { NuggieImage } from '@/components/atoms/NuggieImage';
 import { StatTile } from '@/components/molecules/StatTile';
@@ -19,11 +20,12 @@ const missingPaceText = '—';
 type SwimSummaryProperties = {
   session: SessionWithExercises;
   nuggie: NuggieName;
+  newBestLabels: readonly string[];
   now: Date;
   onDone: () => void;
 };
 
-export function SwimSummary({ session, nuggie, now, onDone }: SwimSummaryProperties) {
+export function SwimSummary({ session, nuggie, newBestLabels, now, onDone }: SwimSummaryProperties) {
   const repetitionRecords = flattenSwimRepetitions(session.swim?.sections ?? []);
   const swumMeters = swumDistance(repetitionRecords);
   const strokeDistances = swumDistanceByStroke(repetitionRecords);
@@ -40,6 +42,9 @@ export function SwimSummary({ session, nuggie, now, onDone }: SwimSummaryPropert
         <Typography variant="label" color="textSecondary" align="center">
           {`${session.workoutName.toUpperCase()} · ${formatFullDate(session.scheduledDate)}`}
         </Typography>
+        {newBestLabels.map((label) => (
+          <Badge key={label} label={`NEW BEST · ${label}`} />
+        ))}
       </Box>
       <Box direction="row" gap="small">
         <StatTile value={formatSwimDistance(swumMeters)} label="Distance" />
