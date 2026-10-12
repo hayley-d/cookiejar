@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   createKeyCounter,
   createWorkoutEditorReducer,
+  defaultActivityDetails,
   defaultClassDetails,
   initialWorkoutEditorState,
   type EditorExercise,
@@ -19,6 +20,7 @@ const loadedIndividualWorkout: LoadedWorkout = {
   name: 'Push Day',
   kind: 'individual',
   classDetails: null,
+  activityDetails: null,
   items: [
     {
       exercise: { id: 3, name: 'Bench Press', imageUrl: null, defaultTrackingType: 'repetitions_and_weight' },
@@ -60,6 +62,7 @@ describe('workoutEditorReducer', () => {
       name: '',
       kind: 'individual',
       classDetails: null,
+      activityDetails: null,
       items: [],
       hasUnsavedChanges: false,
     });
@@ -96,6 +99,66 @@ describe('workoutEditorReducer', () => {
     expect(state.classDetails).toBeNull();
   });
 
+  test('choosing activity starts the activity details as a hike and clears the class details', () => {
+    const reducer = createReducer();
+    const classState = reducer(initialWorkoutEditorState, { type: 'kindChosen', kind: 'class' });
+    const state = reducer(classState, { type: 'kindChosen', kind: 'activity' });
+    expect(state.kind).toBe('activity');
+    expect(state.activityDetails).toEqual({ activityType: 'hike', description: '', imageUrl: '' });
+    expect(state.classDetails).toBeNull();
+    expect(state.hasUnsavedChanges).toBe(true);
+  });
+
+  test('choosing activity again keeps the activity details already entered', () => {
+    const reducer = createReducer();
+    const runState = reducer(reducer(initialWorkoutEditorState, { type: 'kindChosen', kind: 'activity' }), {
+      type: 'activityDetailsChanged',
+      changes: { activityType: 'run' },
+    });
+    const state = reducer(runState, { type: 'kindChosen', kind: 'activity' });
+    expect(state.activityDetails).toEqual({ ...defaultActivityDetails, activityType: 'run' });
+  });
+
+  test('choosing individual clears the activity details', () => {
+    const reducer = createReducer();
+    const activityState = reducer(initialWorkoutEditorState, { type: 'kindChosen', kind: 'activity' });
+    const state = reducer(activityState, { type: 'kindChosen', kind: 'individual' });
+    expect(state.activityDetails).toBeNull();
+  });
+
+  test('activityDetailsChanged merges only the changed fields', () => {
+    const reducer = createReducer();
+    const activityState = reducer(initialWorkoutEditorState, { type: 'kindChosen', kind: 'activity' });
+    const state = reducer(activityState, { type: 'activityDetailsChanged', changes: { description: 'Sunrise' } });
+    expect(state.activityDetails).toEqual({ ...defaultActivityDetails, description: 'Sunrise' });
+    expect(state.hasUnsavedChanges).toBe(true);
+  });
+
+  test('activityDetailsChanged without activity details starts from the defaults', () => {
+    const state = createReducer()(initialWorkoutEditorState, {
+      type: 'activityDetailsChanged',
+      changes: { activityType: 'walk' },
+    });
+    expect(state.activityDetails).toEqual({ ...defaultActivityDetails, activityType: 'walk' });
+  });
+
+  test('loaded keeps the activity details', () => {
+    const state = createReducer()(initialWorkoutEditorState, {
+      type: 'loaded',
+      workout: {
+        workoutId: 5,
+        name: 'Sunday Run',
+        kind: 'activity',
+        classDetails: null,
+        activityDetails: { activityType: 'run', description: '', imageUrl: '' },
+        items: [],
+      },
+    });
+    expect(state.kind).toBe('activity');
+    expect(state.activityDetails).toEqual({ activityType: 'run', description: '', imageUrl: '' });
+    expect(state.hasUnsavedChanges).toBe(false);
+  });
+
   test('classDetailsChanged merges only the changed fields', () => {
     const reducer = createReducer();
     const classState = reducer(initialWorkoutEditorState, { type: 'kindChosen', kind: 'class' });
@@ -121,6 +184,7 @@ describe('workoutEditorReducer', () => {
         name: 'Morning Pilates',
         kind: 'class',
         classDetails: { classType: 'pilates', durationMinutes: 50, description: '', imageUrl: '' },
+        activityDetails: null,
         items: [],
       },
     });
@@ -129,6 +193,7 @@ describe('workoutEditorReducer', () => {
       name: 'Morning Pilates',
       kind: 'class',
       classDetails: { classType: 'pilates', durationMinutes: 50, description: '', imageUrl: '' },
+      activityDetails: null,
       items: [],
       hasUnsavedChanges: false,
     });

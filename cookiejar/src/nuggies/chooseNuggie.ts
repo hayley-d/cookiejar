@@ -1,6 +1,7 @@
 import type { NuggieMoment } from '@/nuggies/NuggieMoment';
 import type { NuggieName } from '@/nuggies/NuggieName';
 import type { ClassType } from '@/types/ClassType';
+import { activityTypeNuggie } from '@/workouts/activityTypeNuggie';
 
 type NuggieResolver<Moment extends NuggieMoment> = (moment: Moment, now: Date, random: () => number) => NuggieName;
 
@@ -19,7 +20,6 @@ const celebrateNuggies: readonly NuggieName[] = ['celebrate', 'celebrateAlternat
 const classTypeNuggies: Record<ClassType, NuggieName> = {
   yoga: 'yoga',
   pilates: 'pilates',
-  hiking: 'hiking',
   spin: 'workout',
   barre: 'workout',
   other: 'workout',
@@ -49,12 +49,13 @@ const nuggieRules: NuggieRules = {
     if (moment.personalRecordCount > 0) {
       return 'beast';
     }
-    if (moment.workoutKind === 'class') {
+    if (moment.workoutKind !== 'individual') {
       return 'goodJob';
     }
     return pickCelebrateNuggie(random);
   },
   classDisplay: (moment) => classTypeNuggies[moment.classType],
+  activityDisplay: (moment) => activityTypeNuggie(moment.activityType),
   restDay: 'restDay',
   lowSleep: 'tired',
   stepGoalReached: 'hiking',

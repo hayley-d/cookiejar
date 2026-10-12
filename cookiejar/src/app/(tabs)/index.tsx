@@ -28,6 +28,7 @@ import { useScheduledWorkoutsForDate } from '@/hooks/useScheduledWorkouts';
 import { useStartSession } from '@/hooks/useStartSession';
 import { useUnreadNotificationCount } from '@/hooks/useUnreadNotificationCount';
 import { useWeeklyStreak } from '@/hooks/useWeeklyStreak';
+import { resolveScheduledWorkoutRoute } from '@/sessions/resolveScheduledWorkoutRoute';
 import type { StatsMetric } from '@/stats/parseStatsMetric';
 import { useTheme } from '@/theme/useTheme';
 import type { ScheduledWorkout } from '@/types/ScheduledWorkout';
@@ -66,6 +67,13 @@ export default function HomeScreen() {
     (scheduledWorkout: ScheduledWorkout) => {
       const workoutId = scheduledWorkout.workout.id;
       if (workoutId === null) {
+        return;
+      }
+      if (scheduledWorkout.workout.kind === 'activity') {
+        const route = resolveScheduledWorkoutRoute(scheduledWorkout);
+        if (route !== null) {
+          router.push(route);
+        }
         return;
       }
       void startSession({ workoutId, date: scheduledWorkout.date, planEntryId: scheduledWorkout.planEntryId });

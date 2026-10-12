@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import type { ActivityType } from '@/types/ActivityType';
 import type { ClassType } from '@/types/ClassType';
 import type { SessionSummary } from '@/types/SessionSummary';
 import type { WorkoutKind } from '@/types/WorkoutKind';
@@ -12,6 +13,7 @@ type SessionSummaryRow = {
   session_workout_name: string;
   session_workout_kind: WorkoutKind;
   session_class_type: ClassType | null;
+  session_activity_type: ActivityType | null;
   scheduled_date: string;
   started_at: string;
   finished_at: string | null;
@@ -34,6 +36,7 @@ function toSessionSummary(row: SessionSummaryRow): SessionSummary {
       name: row.session_workout_name,
       kind: row.session_workout_kind,
       classType: row.session_class_type,
+      activityType: row.session_activity_type,
       durationMinutes: row.workout_duration_minutes,
       imageUrl: row.workout_image_url,
       exerciseCount: row.workout_exercise_count,
@@ -51,7 +54,8 @@ export async function listSessionsBetween(
   const rows = await database.getAllAsync<SessionSummaryRow>(
     `SELECT sessions.id, sessions.workout_id, sessions.plan_entry_id,
       sessions.workout_name AS session_workout_name, sessions.workout_kind AS session_workout_kind,
-      sessions.class_type AS session_class_type, sessions.scheduled_date, sessions.started_at, sessions.finished_at,
+      sessions.class_type AS session_class_type, sessions.activity_type AS session_activity_type,
+      sessions.scheduled_date, sessions.started_at, sessions.finished_at,
       workouts.duration_minutes AS workout_duration_minutes, workouts.image_url AS workout_image_url,
       (SELECT COUNT(*) FROM workout_items WHERE workout_items.workout_id = sessions.workout_id) AS workout_exercise_count,
       (SELECT COUNT(*) FROM target_sets

@@ -17,6 +17,7 @@ function workoutOf(date: string, status: ScheduledWorkoutStatus, planEntryId: nu
       name: 'Workout',
       kind: 'individual',
       classType: null,
+      activityType: null,
       durationMinutes: null,
       imageUrl: null,
       exerciseCount: 0,

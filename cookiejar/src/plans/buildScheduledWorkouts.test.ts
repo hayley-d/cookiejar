@@ -13,6 +13,7 @@ function makeWorkout(id: number, name: string) {
     name,
     kind: 'individual' as const,
     classType: null,
+    activityType: null,
     durationMinutes: null,
     imageUrl: null,
     exerciseCount: 3,

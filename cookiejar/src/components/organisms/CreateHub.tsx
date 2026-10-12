@@ -13,11 +13,11 @@ import { Touchable } from '@/components/primitives/Touchable';
 import { Typography } from '@/components/primitives/Typography';
 import { describePlanSummary } from '@/plans/describePlanSummary';
 import { useTheme } from '@/theme/useTheme';
-import { classTypeLabels } from '@/types/ClassType';
 import type { PlanSummary } from '@/types/PlanSummary';
 import type { WorkoutSummary } from '@/types/WorkoutSummary';
 import { describeWorkout } from '@/workouts/describeWorkout';
 import { workoutNuggie } from '@/workouts/workoutNuggie';
+import { workoutTypeLabel } from '@/workouts/workoutTypeLabel';
 
 export type CreateHubToast = {
   key: string;
@@ -70,8 +70,8 @@ function renderWorkout(workout: WorkoutSummary, handlers: WorkoutMenuHandlers) {
       name={workout.name}
       summary={describeWorkout(workout)}
       imageUrl={workout.imageUrl}
-      nuggie={workoutNuggie(workout.classType)}
-      badgeLabel={workout.classType === null ? undefined : classTypeLabels[workout.classType]}
+      nuggie={workoutNuggie(workout)}
+      badgeLabel={workoutTypeLabel(workout) ?? undefined}
       onLongPress={() => openWorkoutMenu(workout, handlers)}
     />
   );

@@ -1,6 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { planCopyDay } from '@/plans/planCopyDay';
+import type { ActivityType } from '@/types/ActivityType';
 import type { ClassType } from '@/types/ClassType';
 import type { Plan } from '@/types/Plan';
 import type { PlanSummary } from '@/types/PlanSummary';
@@ -29,6 +30,7 @@ type PlanEntryWithWorkoutRow = {
   workout_name: string;
   workout_kind: WorkoutKind;
   workout_class_type: ClassType | null;
+  workout_activity_type: ActivityType | null;
   workout_duration_minutes: number | null;
   workout_image_url: string | null;
   workout_exercise_count: number;
@@ -65,6 +67,7 @@ function toPlanEntryWithWorkout(row: PlanEntryWithWorkoutRow): PlanEntryWithWork
       name: row.workout_name,
       kind: row.workout_kind,
       classType: row.workout_class_type,
+      activityType: row.workout_activity_type,
       durationMinutes: row.workout_duration_minutes,
       imageUrl: row.workout_image_url,
       exerciseCount: row.workout_exercise_count,
@@ -99,6 +102,7 @@ export async function getPlanWithEntries(database: SQLiteDatabase, planId: numbe
     `SELECT plan_entries.id, plan_entries.plan_id, plan_entries.workout_id, plan_entries.day_of_week,
       plan_entries.time_of_day,
       workouts.name AS workout_name, workouts.kind AS workout_kind, workouts.class_type AS workout_class_type,
+      workouts.activity_type AS workout_activity_type,
       workouts.duration_minutes AS workout_duration_minutes, workouts.image_url AS workout_image_url,
       (SELECT COUNT(*) FROM workout_items WHERE workout_items.workout_id = workouts.id) AS workout_exercise_count,
       (SELECT COUNT(*) FROM target_sets

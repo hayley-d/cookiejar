@@ -1,10 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 
+import { activityTypeNuggie } from '@/workouts/activityTypeNuggie';
 import { classTypeNuggie } from '@/workouts/classTypeNuggie';
 import { describeWorkout } from '@/workouts/describeWorkout';
 import { filterWorkouts } from '@/workouts/filterWorkouts';
 import { workoutNameError } from '@/workouts/workoutNameError';
 import { workoutNuggie } from '@/workouts/workoutNuggie';
+import { workoutTypeLabel } from '@/workouts/workoutTypeLabel';
 
 describe('workoutNameError', () => {
   test('a name is required', () => {
@@ -29,6 +31,10 @@ describe('describeWorkout', () => {
     expect(describeWorkout({ kind: 'class', durationMinutes: null, exerciseCount: 0 })).toBe('Class');
   });
 
+  test('an activity shows Activity', () => {
+    expect(describeWorkout({ kind: 'activity', durationMinutes: null, exerciseCount: 0 })).toBe('Activity');
+  });
+
   test('an individual workout counts its exercises', () => {
     expect(describeWorkout({ kind: 'individual', durationMinutes: null, exerciseCount: 6 })).toBe(
       'Individual · 6 exercises',
@@ -43,10 +49,9 @@ describe('describeWorkout', () => {
 });
 
 describe('classTypeNuggie', () => {
-  test('yoga, pilates and hiking have their own nuggie', () => {
+  test('yoga and pilates have their own nuggie', () => {
     expect(classTypeNuggie('yoga')).toBe('yoga');
     expect(classTypeNuggie('pilates')).toBe('pilates');
-    expect(classTypeNuggie('hiking')).toBe('hiking');
   });
 
   test('every other class type shows the workout nuggie', () => {
@@ -56,14 +61,41 @@ describe('classTypeNuggie', () => {
   });
 });
 
+describe('activityTypeNuggie', () => {
+  test('a hike shows the hiking nuggie', () => {
+    expect(activityTypeNuggie('hike')).toBe('hiking');
+  });
+
+  test('a run shows the workout nuggie and a walk shows the good job nuggie', () => {
+    expect(activityTypeNuggie('run')).toBe('workout');
+    expect(activityTypeNuggie('walk')).toBe('goodJob');
+  });
+});
+
 describe('workoutNuggie', () => {
   test('an individual workout shows the workout nuggie', () => {
-    expect(workoutNuggie(null)).toBe('workout');
+    expect(workoutNuggie({ classType: null, activityType: null })).toBe('workout');
   });
 
   test('a class shows its class nuggie', () => {
-    expect(workoutNuggie('yoga')).toBe('yoga');
-    expect(workoutNuggie('spin')).toBe('workout');
+    expect(workoutNuggie({ classType: 'yoga', activityType: null })).toBe('yoga');
+    expect(workoutNuggie({ classType: 'spin', activityType: null })).toBe('workout');
+  });
+
+  test('an activity shows its activity nuggie', () => {
+    expect(workoutNuggie({ classType: null, activityType: 'hike' })).toBe('hiking');
+    expect(workoutNuggie({ classType: null, activityType: 'walk' })).toBe('goodJob');
+  });
+});
+
+describe('workoutTypeLabel', () => {
+  test('a class shows its class type and an activity its activity type', () => {
+    expect(workoutTypeLabel({ classType: 'pilates', activityType: null })).toBe('Pilates');
+    expect(workoutTypeLabel({ classType: null, activityType: 'run' })).toBe('Run');
+  });
+
+  test('an individual workout has no type label', () => {
+    expect(workoutTypeLabel({ classType: null, activityType: null })).toBeNull();
   });
 });
 

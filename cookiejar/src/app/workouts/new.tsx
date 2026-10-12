@@ -28,6 +28,10 @@ export default function NewWorkoutScreen() {
       router.push('/workouts/class-details');
       return;
     }
+    if (selectedKind === 'activity') {
+      router.push('/workouts/activity-details');
+      return;
+    }
     router.push({ pathname: '/workouts/editor', params: { pickOnOpen: 'true' } });
   };
 
@@ -53,7 +57,7 @@ export default function NewWorkoutScreen() {
         </FormField>
         <FormField
           label="Type"
-          error={hasAttemptedNext && selectedKind === null ? 'Choose Individual or Class' : undefined}
+          error={hasAttemptedNext && selectedKind === null ? 'Choose Individual, Class or Activity' : undefined}
         >
           <KindChoiceCard
             title="Individual workout"
@@ -68,6 +72,13 @@ export default function NewWorkoutScreen() {
             nuggie="yoga"
             isSelected={selectedKind === 'class'}
             onPress={() => setSelectedKind('class')}
+          />
+          <KindChoiceCard
+            title="Activity"
+            description="Hike, run or walk"
+            nuggie="hiking"
+            isSelected={selectedKind === 'activity'}
+            onPress={() => setSelectedKind('activity')}
           />
         </FormField>
       </ScrollBox>

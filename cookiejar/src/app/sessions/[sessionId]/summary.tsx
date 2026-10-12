@@ -61,6 +61,7 @@ export default function SessionSummaryScreen() {
   const nuggie = chooseStableFinishingPresentation(sessionId, {
     workoutKind: lookup.session.workoutKind,
     classType: lookup.session.classType,
+    activityType: lookup.session.activityType,
     personalRecordCount: countExercisesWithRecords(lookup.personalRecords),
   }).nuggie;
 

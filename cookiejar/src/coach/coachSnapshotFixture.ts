@@ -54,6 +54,7 @@ export function createScheduledWorkout({
       name,
       kind: 'individual',
       classType: null,
+      activityType: null,
       durationMinutes: null,
       imageUrl: null,
       exerciseCount: 3,

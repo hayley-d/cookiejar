@@ -54,6 +54,7 @@ const workoutSummary = {
   name: 'Push Day',
   kind: 'individual' as const,
   classType: null,
+  activityType: null,
   durationMinutes: null,
   imageUrl: null,
   videoUrl: null,

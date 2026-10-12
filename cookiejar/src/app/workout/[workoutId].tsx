@@ -2,6 +2,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 
 import { IconButton } from '@/components/atoms/IconButton';
 import { EmptyState } from '@/components/molecules/EmptyState';
+import { ActivityWorkoutDetail } from '@/components/organisms/ActivityWorkoutDetail';
 import { ClassWorkoutDetail } from '@/components/organisms/ClassWorkoutDetail';
 import { IndividualWorkoutDetail } from '@/components/organisms/IndividualWorkoutDetail';
 import { exerciseVideoHref } from '@/exercises/exerciseVideo';
@@ -80,9 +81,9 @@ export default function WorkoutDetailScreen() {
           onStart={startWorkout}
           onPlayVideo={(video) => router.push(exerciseVideoHref(video))}
         />
-      ) : (
-        <ClassWorkoutDetail workout={workout} onStart={startWorkout} />
-      )}
+      ) : null}
+      {workout.kind === 'class' ? <ClassWorkoutDetail workout={workout} onStart={startWorkout} /> : null}
+      {workout.kind === 'activity' ? <ActivityWorkoutDetail workout={workout} /> : null}
     </>
   );
 }

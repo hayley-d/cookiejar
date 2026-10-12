@@ -41,7 +41,7 @@ export function IndividualWorkoutDetail({ workout, onStart, onPlayVideo }: Indiv
   return (
     <Box flex={1}>
       <ScrollBox gap="medium">
-        <HeaderImageCard imageUrl={workout.imageUrl} nuggie={workoutNuggie(null)} />
+        <HeaderImageCard imageUrl={workout.imageUrl} nuggie={workoutNuggie(workout)} />
         <Box gap="extraSmall">
           <Typography variant="display">{workout.name}</Typography>
           <Typography color="textSecondary">{describeSummary(workout)}</Typography>

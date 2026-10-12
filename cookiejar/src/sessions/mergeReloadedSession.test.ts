@@ -11,6 +11,7 @@ function makeSession(overrides: { completedAt: string | null; repetitions: numbe
     workoutName: 'Push',
     workoutKind: 'individual',
     classType: null,
+    activityType: null,
     scheduledDate: '2026-10-05',
     startedAt: '2026-10-05T10:00:00.000Z',
     finishedAt: null,

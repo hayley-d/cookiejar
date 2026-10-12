@@ -1,3 +1,4 @@
+import type { ActivityType } from '@/types/ActivityType';
 import type { ClassType } from '@/types/ClassType';
 import type { Exercise } from '@/types/Exercise';
 import type { TrackingType } from '@/types/TrackingType';
@@ -27,11 +28,14 @@ export type EditorItem = {
 
 export type ClassDetails = { classType: ClassType; durationMinutes: number; description: string; imageUrl: string };
 
+export type ActivityDetails = { activityType: ActivityType; description: string; imageUrl: string };
+
 export type WorkoutEditorState = {
   workoutId: number | null;
   name: string;
   kind: WorkoutKind;
   classDetails: ClassDetails | null;
+  activityDetails: ActivityDetails | null;
   items: EditorItem[];
   hasUnsavedChanges: boolean;
 };
@@ -45,6 +49,7 @@ export type LoadedWorkout = {
   name: string;
   kind: WorkoutKind;
   classDetails: ClassDetails | null;
+  activityDetails: ActivityDetails | null;
   items: LoadedItem[];
 };
 
@@ -52,6 +57,7 @@ export type WorkoutEditorAction =
   | { type: 'renamed'; name: string }
   | { type: 'kindChosen'; kind: WorkoutKind }
   | { type: 'classDetailsChanged'; changes: Partial<ClassDetails> }
+  | { type: 'activityDetailsChanged'; changes: Partial<ActivityDetails> }
   | { type: 'exercisesAdded'; exercises: EditorExercise[]; asSuperset: boolean }
   | { type: 'itemRemoved'; itemKey: string }
   | { type: 'supersetCreated'; itemKey: string }
@@ -74,11 +80,18 @@ export const defaultClassDetails: ClassDetails = {
   imageUrl: '',
 };
 
+export const defaultActivityDetails: ActivityDetails = {
+  activityType: 'hike',
+  description: '',
+  imageUrl: '',
+};
+
 export const initialWorkoutEditorState: WorkoutEditorState = {
   workoutId: null,
   name: '',
   kind: 'individual',
   classDetails: null,
+  activityDetails: null,
   items: [],
   hasUnsavedChanges: false,
 };
@@ -145,12 +158,19 @@ export function createWorkoutEditorReducer(createKey: CreateKey) {
           ...state,
           kind: action.kind,
           classDetails: action.kind === 'class' ? (state.classDetails ?? defaultClassDetails) : null,
+          activityDetails: action.kind === 'activity' ? (state.activityDetails ?? defaultActivityDetails) : null,
           hasUnsavedChanges: true,
         };
       case 'classDetailsChanged':
         return {
           ...state,
           classDetails: { ...(state.classDetails ?? defaultClassDetails), ...action.changes },
+          hasUnsavedChanges: true,
+        };
+      case 'activityDetailsChanged':
+        return {
+          ...state,
+          activityDetails: { ...(state.activityDetails ?? defaultActivityDetails), ...action.changes },
           hasUnsavedChanges: true,
         };
       case 'exercisesAdded': {
@@ -264,6 +284,7 @@ export function createWorkoutEditorReducer(createKey: CreateKey) {
           name: action.workout.name,
           kind: action.workout.kind,
           classDetails: action.workout.classDetails,
+          activityDetails: action.workout.activityDetails,
           items: action.workout.items.map(loadItem),
           hasUnsavedChanges: false,
         };

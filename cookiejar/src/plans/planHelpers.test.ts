@@ -76,14 +76,32 @@ describe('groupEntriesByWeekday', () => {
 
 describe('describePlanEntryWorkout', () => {
   test('a class shows its class type', () => {
-    expect(describePlanEntryWorkout({ kind: 'class', classType: 'spin', exerciseCount: 0 })).toBe('Spin');
+    expect(describePlanEntryWorkout({ kind: 'class', classType: 'spin', activityType: null, exerciseCount: 0 })).toBe(
+      'Spin',
+    );
   });
 
   test('a class without a type shows Class', () => {
-    expect(describePlanEntryWorkout({ kind: 'class', classType: null, exerciseCount: 0 })).toBe('Class');
+    expect(describePlanEntryWorkout({ kind: 'class', classType: null, activityType: null, exerciseCount: 0 })).toBe(
+      'Class',
+    );
+  });
+
+  test('an activity shows its activity type', () => {
+    expect(
+      describePlanEntryWorkout({ kind: 'activity', classType: null, activityType: 'hike', exerciseCount: 0 }),
+    ).toBe('Hike');
+  });
+
+  test('an activity without a type shows Activity', () => {
+    expect(
+      describePlanEntryWorkout({ kind: 'activity', classType: null, activityType: null, exerciseCount: 0 }),
+    ).toBe('Activity');
   });
 
   test('an individual workout shows its exercise count', () => {
-    expect(describePlanEntryWorkout({ kind: 'individual', classType: null, exerciseCount: 6 })).toBe('6 ex.');
+    expect(
+      describePlanEntryWorkout({ kind: 'individual', classType: null, activityType: null, exerciseCount: 6 }),
+    ).toBe('6 ex.');
   });
 });

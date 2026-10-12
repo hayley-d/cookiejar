@@ -7,7 +7,7 @@ import {
   randomFromSessionId,
 } from '@/sessions/chooseFinishingNuggie';
 
-const individual = { workoutKind: 'individual', classType: null, personalRecordCount: 0 } as const;
+const individual = { workoutKind: 'individual', classType: null, activityType: null, personalRecordCount: 0 } as const;
 
 describe('chooseFinishingPresentation', () => {
   test('a record gives the beast nuggie and the record caption', () => {
@@ -28,19 +28,36 @@ describe('chooseFinishingPresentation', () => {
   });
 
   test('a yoga class says namaste with the good job nuggie', () => {
-    expect(chooseFinishingPresentation({ workoutKind: 'class', classType: 'yoga', personalRecordCount: 0 })).toEqual({
+    expect(chooseFinishingPresentation({ workoutKind: 'class', classType: 'yoga', activityType: null, personalRecordCount: 0 })).toEqual({
       nuggie: 'goodJob',
       caption: 'Namaste — class complete!',
     });
   });
 
   test('another class says class complete', () => {
-    expect(describeFinishingCaption({ workoutKind: 'class', classType: 'spin', personalRecordCount: 0 })).toBe(
+    expect(describeFinishingCaption({ workoutKind: 'class', classType: 'spin', activityType: null, personalRecordCount: 0 })).toBe(
       'Class complete!',
     );
-    expect(describeFinishingCaption({ workoutKind: 'class', classType: null, personalRecordCount: 0 })).toBe(
+    expect(describeFinishingCaption({ workoutKind: 'class', classType: null, activityType: null, personalRecordCount: 0 })).toBe(
       'Class complete!',
     );
+  });
+});
+
+describe('activities', () => {
+  test('an activity says its type is complete with the good job nuggie', () => {
+    expect(
+      chooseFinishingPresentation({ workoutKind: 'activity', classType: null, activityType: 'hike', personalRecordCount: 0 }),
+    ).toEqual({ nuggie: 'goodJob', caption: 'Hike complete!' });
+    expect(
+      describeFinishingCaption({ workoutKind: 'activity', classType: null, activityType: 'run', personalRecordCount: 0 }),
+    ).toBe('Run complete!');
+  });
+
+  test('an activity without a type says activity complete', () => {
+    expect(
+      describeFinishingCaption({ workoutKind: 'activity', classType: null, activityType: null, personalRecordCount: 0 }),
+    ).toBe('Activity complete!');
   });
 });
 
@@ -71,7 +88,7 @@ describe('stable choice by session id', () => {
   });
 
   test('the finishing screen and a later summary choose the same nuggie for a session', () => {
-    const classInput = { workoutKind: 'class', classType: 'spin', personalRecordCount: 0 } as const;
+    const classInput = { workoutKind: 'class', classType: 'spin', activityType: null, personalRecordCount: 0 } as const;
     for (const input of [individual, classInput]) {
       const onFinishing = chooseStableFinishingPresentation(42, input);
       const onLaterSummary = chooseStableFinishingPresentation(42, input);

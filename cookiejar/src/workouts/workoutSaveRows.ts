@@ -1,13 +1,20 @@
 import { imageUrlToStore } from '@/images/imageUrls';
+import type { ActivityType } from '@/types/ActivityType';
 import type { ClassType } from '@/types/ClassType';
 import type { TrackingType } from '@/types/TrackingType';
 import type { WorkoutKind } from '@/types/WorkoutKind';
-import { defaultClassDetails, type EditorItem, type WorkoutEditorState } from '@/workouts/workoutEditorReducer';
+import {
+  defaultActivityDetails,
+  defaultClassDetails,
+  type EditorItem,
+  type WorkoutEditorState,
+} from '@/workouts/workoutEditorReducer';
 
 export type WorkoutSaveRow = {
   name: string;
   kind: WorkoutKind;
   classType: ClassType | null;
+  activityType: ActivityType | null;
   durationMinutes: number | null;
   description: string | null;
   imageUrl: string | null;
@@ -69,9 +76,27 @@ export function toWorkoutSaveRows(state: WorkoutEditorState): WorkoutSaveRows {
         name,
         kind: 'class',
         classType: classDetails.classType,
+        activityType: null,
         durationMinutes: classDetails.durationMinutes,
         description: textToStore(classDetails.description),
         imageUrl: imageUrlToStore(classDetails.imageUrl),
+      },
+      items: [],
+    };
+  }
+
+  if (state.kind === 'activity') {
+    const activityDetails = state.activityDetails ?? defaultActivityDetails;
+    return {
+      workoutId: state.workoutId,
+      workout: {
+        name,
+        kind: 'activity',
+        classType: null,
+        activityType: activityDetails.activityType,
+        durationMinutes: null,
+        description: textToStore(activityDetails.description),
+        imageUrl: imageUrlToStore(activityDetails.imageUrl),
       },
       items: [],
     };
@@ -83,6 +108,7 @@ export function toWorkoutSaveRows(state: WorkoutEditorState): WorkoutSaveRows {
       name,
       kind: 'individual',
       classType: null,
+      activityType: null,
       durationMinutes: null,
       description: null,
       imageUrl: null,

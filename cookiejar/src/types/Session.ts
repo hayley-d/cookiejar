@@ -1,3 +1,4 @@
+import type { ActivityType } from '@/types/ActivityType';
 import type { ClassType } from '@/types/ClassType';
 import type { WorkoutKind } from '@/types/WorkoutKind';
 
@@ -8,6 +9,7 @@ export type Session = {
   workoutName: string;
   workoutKind: WorkoutKind;
   classType: ClassType | null;
+  activityType: ActivityType | null;
   scheduledDate: string;
   startedAt: string;
   finishedAt: string | null;

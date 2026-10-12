@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { addActivities } from '@/database/migrations/addActivities';
 import { addAssistedTrackingAndExerciseVideo } from '@/database/migrations/addAssistedTrackingAndExerciseVideo';
 import { addExerciseNotes } from '@/database/migrations/addExerciseNotes';
 import { addNotificationIdentifier } from '@/database/migrations/addNotificationIdentifier';
@@ -16,4 +17,5 @@ export const migrations: Migration[] = [
   addNotificationIdentifier,
   addExerciseNotes,
   addAssistedTrackingAndExerciseVideo,
+  addActivities,
 ];

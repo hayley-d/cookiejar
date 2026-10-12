@@ -29,6 +29,7 @@ function makeSession(): SessionWithExercises {
     workoutName: 'Push Day',
     workoutKind: 'individual',
     classType: null,
+    activityType: null,
     scheduledDate: '2026-10-05',
     startedAt: '2026-10-05T08:00:00Z',
     finishedAt: null,

@@ -2,7 +2,7 @@ import type { Plan } from '@/types/Plan';
 import type { PlanEntry } from '@/types/PlanEntry';
 import type { Workout } from '@/types/Workout';
 
-export type PlanEntryWorkout = Pick<Workout, 'id' | 'name' | 'kind' | 'classType' | 'durationMinutes' | 'imageUrl'> & {
+export type PlanEntryWorkout = Pick<Workout, 'id' | 'name' | 'kind' | 'classType' | 'activityType' | 'durationMinutes' | 'imageUrl'> & {
   exerciseCount: number;
   targetSetCount: number;
   targetRestSeconds: number;

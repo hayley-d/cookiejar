@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -144,6 +144,10 @@ export default function SessionLoggerScreen() {
           onAction={() => router.back()}
         />
       </Box>
+    );
+  } else if (sessionLookup.status === 'found' && sessionLookup.session.workoutKind === 'activity') {
+    content = (
+      <Redirect href={{ pathname: '/sessions/[sessionId]/summary', params: { sessionId: String(sessionId) } }} />
     );
   } else if (sessionLookup.status === 'found' && sessionLookup.session.workoutKind === 'class') {
     content = (

@@ -16,6 +16,7 @@ function scheduledWorkout(
       name: 'Push Day',
       kind: 'individual',
       classType: null,
+      activityType: null,
       durationMinutes: 45,
       imageUrl: null,
       exerciseCount: 4,

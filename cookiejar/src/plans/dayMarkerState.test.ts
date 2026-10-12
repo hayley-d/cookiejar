@@ -13,6 +13,7 @@ function scheduledWorkout(status: ScheduledWorkoutStatus, planEntryId: number | 
       name: 'Push Day',
       kind: 'individual',
       classType: null,
+      activityType: null,
       durationMinutes: null,
       imageUrl: null,
       exerciseCount: 0,

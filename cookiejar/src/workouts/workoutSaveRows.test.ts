@@ -27,6 +27,7 @@ describe('toWorkoutSaveRows', () => {
       name: 'Morning Pilates',
       kind: 'class',
       classType: 'pilates',
+      activityType: null,
       durationMinutes: 50,
       description: 'Reformer, core focus',
       imageUrl: 'https://example.com/pilates.jpg',
@@ -51,6 +52,38 @@ describe('toWorkoutSaveRows', () => {
     expect(rows.workout).toMatchObject({ classType: 'yoga', durationMinutes: 45 });
   });
 
+  test('an activity workout saves its trimmed name, activity type, description and image', () => {
+    const rows = toWorkoutSaveRows({
+      ...initialWorkoutEditorState,
+      workoutId: 3,
+      name: '  Table Mountain  ',
+      kind: 'activity',
+      activityDetails: {
+        activityType: 'hike',
+        description: '  Platteklip Gorge  ',
+        imageUrl: '  https://example.com/hike.jpg  ',
+      },
+    });
+    expect(rows).toEqual({
+      workoutId: 3,
+      workout: {
+        name: 'Table Mountain',
+        kind: 'activity',
+        classType: null,
+        activityType: 'hike',
+        durationMinutes: null,
+        description: 'Platteklip Gorge',
+        imageUrl: 'https://example.com/hike.jpg',
+      },
+      items: [],
+    });
+  });
+
+  test('an activity workout with empty text stores null and with no details saves a hike', () => {
+    const rows = toWorkoutSaveRows({ ...initialWorkoutEditorState, name: 'Walk', kind: 'activity' });
+    expect(rows.workout).toMatchObject({ activityType: 'hike', description: null, imageUrl: null });
+  });
+
   test('a new workout has no workout id and an existing one keeps its id', () => {
     expect(toWorkoutSaveRows(pilatesState).workoutId).toBeNull();
     expect(toWorkoutSaveRows({ ...pilatesState, workoutId: 12 }).workoutId).toBe(12);
@@ -62,6 +95,7 @@ describe('toWorkoutSaveRows', () => {
       name: 'Push Day',
       kind: 'individual',
       classType: null,
+      activityType: null,
       durationMinutes: null,
       description: null,
       imageUrl: null,

@@ -35,6 +35,7 @@ function makeScheduledWorkout(overrides: ScheduledWorkoutOverrides = {}): Schedu
       name: overrides.name ?? 'Push Day',
       kind: 'individual',
       classType: null,
+      activityType: null,
       durationMinutes: null,
       imageUrl: null,
       exerciseCount: 3,

@@ -1,11 +1,13 @@
 import { chooseNuggie } from '@/nuggies/chooseNuggie';
 import type { NuggieName } from '@/nuggies/NuggieName';
+import { activityTypeLabels, type ActivityType } from '@/types/ActivityType';
 import type { ClassType } from '@/types/ClassType';
 import type { WorkoutKind } from '@/types/WorkoutKind';
 
 export type FinishingPresentationInput = {
   workoutKind: WorkoutKind;
   classType: ClassType | null;
+  activityType: ActivityType | null;
   personalRecordCount: number;
 };
 
@@ -34,6 +36,9 @@ export function describeFinishingCaption(input: FinishingPresentationInput): str
   }
   if (input.workoutKind === 'individual') {
     return 'Workout complete!';
+  }
+  if (input.workoutKind === 'activity') {
+    return input.activityType === null ? 'Activity complete!' : `${activityTypeLabels[input.activityType]} complete!`;
   }
   return input.classType === 'yoga' ? 'Namaste — class complete!' : 'Class complete!';
 }

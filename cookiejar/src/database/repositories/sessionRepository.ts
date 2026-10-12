@@ -9,6 +9,7 @@ import type { SetValues } from '@/sessions/fillSetForTick';
 import { normaliseSessionExercises } from '@/sessions/normaliseSessionExercises';
 import { actualValuesAfterReplace, resolveReplacedExerciseId } from '@/sessions/replaceExercise';
 import type { ActiveSession } from '@/types/ActiveSession';
+import type { ActivityType } from '@/types/ActivityType';
 import type { ClassType } from '@/types/ClassType';
 import type { SessionSet } from '@/types/SessionSet';
 import type { SessionExerciseWithSets, SessionWithExercises } from '@/types/SessionWithExercises';
@@ -25,6 +26,7 @@ type WorkoutSnapshotRow = {
   name: string;
   kind: WorkoutKind;
   class_type: ClassType | null;
+  activity_type: ActivityType | null;
 };
 
 export class ActiveSessionExistsError extends Error {
@@ -74,6 +76,7 @@ type SessionRow = {
   workout_name: string;
   workout_kind: WorkoutKind;
   class_type: ClassType | null;
+  activity_type: ActivityType | null;
   scheduled_date: string;
   started_at: string;
   finished_at: string | null;
@@ -169,7 +172,7 @@ export async function startSession(database: SQLiteDatabase, request: SessionSta
     }
 
     const workout = await database.getFirstAsync<WorkoutSnapshotRow>(
-      'SELECT name, kind, class_type FROM workouts WHERE id = ?',
+      'SELECT name, kind, class_type, activity_type FROM workouts WHERE id = ?',
       request.workoutId,
     );
     if (workout === null) {
@@ -177,13 +180,15 @@ export async function startSession(database: SQLiteDatabase, request: SessionSta
     }
 
     const sessionResult = await database.runAsync(
-      `INSERT INTO sessions (workout_id, plan_entry_id, workout_name, workout_kind, class_type, scheduled_date, started_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO sessions
+        (workout_id, plan_entry_id, workout_name, workout_kind, class_type, activity_type, scheduled_date, started_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       request.workoutId,
       sessionStart.planEntryId,
       workout.name,
       workout.kind,
       workout.class_type,
+      workout.activity_type,
       request.scheduledDate,
       startedAt,
     );
@@ -231,7 +236,8 @@ export async function getSessionWithExercises(
 ): Promise<SessionWithExercises | null> {
   const sessionRow = await database.getFirstAsync<SessionRow>(
     `SELECT sessions.id, sessions.workout_id, sessions.plan_entry_id, sessions.workout_name, sessions.workout_kind,
-      sessions.class_type, sessions.scheduled_date, sessions.started_at, sessions.finished_at, sessions.notes,
+      sessions.class_type, sessions.activity_type, sessions.scheduled_date, sessions.started_at, sessions.finished_at,
+      sessions.notes,
       sessions.health_workout_uuid, sessions.health_average_heart_rate, sessions.health_maximum_heart_rate,
       sessions.health_active_kilocalories, sessions.health_duration_seconds,
       workouts.duration_minutes AS planned_duration_minutes
@@ -298,6 +304,7 @@ export async function getSessionWithExercises(
     workoutName: sessionRow.workout_name,
     workoutKind: sessionRow.workout_kind,
     classType: sessionRow.class_type,
+    activityType: sessionRow.activity_type,
     scheduledDate: sessionRow.scheduled_date,
     startedAt: sessionRow.started_at,
     finishedAt: sessionRow.finished_at,

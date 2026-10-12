@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import type { ActivityType } from '@/types/ActivityType';
 import type { BodyPart } from '@/types/BodyPart';
 import type { ClassType } from '@/types/ClassType';
 import type { TrackingType } from '@/types/TrackingType';
@@ -14,6 +15,7 @@ type WorkoutSummaryRow = {
   name: string;
   kind: WorkoutKind;
   class_type: ClassType | null;
+  activity_type: ActivityType | null;
   duration_minutes: number | null;
   description: string | null;
   image_url: string | null;
@@ -56,6 +58,7 @@ function toWorkoutSummary(row: WorkoutSummaryRow): WorkoutSummary {
     name: row.name,
     kind: row.kind,
     classType: row.class_type,
+    activityType: row.activity_type,
     durationMinutes: row.duration_minutes,
     description: row.description,
     imageUrl: row.image_url,
@@ -67,8 +70,8 @@ function toWorkoutSummary(row: WorkoutSummaryRow): WorkoutSummary {
 
 export async function listWorkouts(database: SQLiteDatabase): Promise<WorkoutSummary[]> {
   const rows = await database.getAllAsync<WorkoutSummaryRow>(
-    `SELECT workouts.id, workouts.name, workouts.kind, workouts.class_type, workouts.duration_minutes,
-      workouts.description, workouts.image_url, workouts.created_at, workouts.updated_at,
+    `SELECT workouts.id, workouts.name, workouts.kind, workouts.class_type, workouts.activity_type,
+      workouts.duration_minutes, workouts.description, workouts.image_url, workouts.created_at, workouts.updated_at,
       COUNT(workout_items.id) AS exercise_count
     FROM workouts
     LEFT JOIN workout_items ON workout_items.workout_id = workouts.id
@@ -86,11 +89,13 @@ export async function saveWorkout(database: SQLiteDatabase, editorState: Workout
   await database.withTransactionAsync(async () => {
     if (savedWorkoutId === null) {
       const result = await database.runAsync(
-        `INSERT INTO workouts (name, kind, class_type, duration_minutes, description, image_url, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO workouts
+          (name, kind, class_type, activity_type, duration_minutes, description, image_url, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         workout.name,
         workout.kind,
         workout.classType,
+        workout.activityType,
         workout.durationMinutes,
         workout.description,
         workout.imageUrl,
@@ -101,11 +106,13 @@ export async function saveWorkout(database: SQLiteDatabase, editorState: Workout
     } else {
       await database.runAsync(
         `UPDATE workouts
-        SET name = ?, kind = ?, class_type = ?, duration_minutes = ?, description = ?, image_url = ?, updated_at = ?
+        SET name = ?, kind = ?, class_type = ?, activity_type = ?, duration_minutes = ?, description = ?, image_url = ?,
+          updated_at = ?
         WHERE id = ?`,
         workout.name,
         workout.kind,
         workout.classType,
+        workout.activityType,
         workout.durationMinutes,
         workout.description,
         workout.imageUrl,
@@ -153,7 +160,7 @@ export async function getWorkoutWithItems(
   workoutId: number,
 ): Promise<WorkoutWithItems | null> {
   const workoutRow = await database.getFirstAsync<WorkoutRow>(
-    `SELECT id, name, kind, class_type, duration_minutes, description, image_url, created_at, updated_at
+    `SELECT id, name, kind, class_type, activity_type, duration_minutes, description, image_url, created_at, updated_at
     FROM workouts WHERE id = ?`,
     workoutId,
   );
@@ -219,6 +226,7 @@ export async function getWorkoutWithItems(
     name: workoutRow.name,
     kind: workoutRow.kind,
     classType: workoutRow.class_type,
+    activityType: workoutRow.activity_type,
     durationMinutes: workoutRow.duration_minutes,
     description: workoutRow.description,
     imageUrl: workoutRow.image_url,
@@ -234,8 +242,9 @@ export async function duplicateWorkout(database: SQLiteDatabase, workoutId: numb
 
   await database.withTransactionAsync(async () => {
     const workoutResult = await database.runAsync(
-      `INSERT INTO workouts (name, kind, class_type, duration_minutes, description, image_url, created_at, updated_at)
-      SELECT name || ' (copy)', kind, class_type, duration_minutes, description, image_url, ?, ?
+      `INSERT INTO workouts
+        (name, kind, class_type, activity_type, duration_minutes, description, image_url, created_at, updated_at)
+      SELECT name || ' (copy)', kind, class_type, activity_type, duration_minutes, description, image_url, ?, ?
       FROM workouts WHERE id = ?`,
       now,
       now,

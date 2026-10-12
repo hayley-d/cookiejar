@@ -23,6 +23,7 @@ export default function FinishingScreen() {
       ? chooseStableFinishingPresentation(sessionId, {
           workoutKind: lookup.session.workoutKind,
           classType: lookup.session.classType,
+          activityType: lookup.session.activityType,
           personalRecordCount: countExercisesWithRecords(lookup.personalRecords),
         })
       : null;
