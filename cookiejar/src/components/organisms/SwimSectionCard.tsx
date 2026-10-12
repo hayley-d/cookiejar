@@ -100,20 +100,9 @@ export function SwimSectionCard({
           return (
             <Stack key={block.key} gap="small">
               {isGroupedBlock ? (
-                <Stack gap="small">
-                  <Typography variant="label" color="accent">
-                    {roundsText ?? 'Block'}
-                  </Typography>
-                  <Stepper
-                    value={block.rounds}
-                    step={1}
-                    minimum={1}
-                    maximum={maximumRounds}
-                    accessibilityLabel="rounds"
-                    formatValue={(value) => `${value} ${value === 1 ? 'round' : 'rounds'}`}
-                    onChangeValue={(rounds) => onChangeRounds(block.key, rounds)}
-                  />
-                </Stack>
+                <Typography variant="label" color="accent">
+                  {roundsText ?? 'Block'}
+                </Typography>
               ) : null}
               {block.sets.map((set) => (
                 <Touchable
@@ -140,6 +129,15 @@ export function SwimSectionCard({
                   onChangeSeconds={(restAfterSeconds) => onChangeBlockRest(block.key, restAfterSeconds)}
                 />
               ) : null}
+              <Stepper
+                value={block.rounds}
+                step={1}
+                minimum={1}
+                maximum={maximumRounds}
+                accessibilityLabel="rounds"
+                formatValue={(value) => `${value} ${value === 1 ? 'round' : 'rounds'}`}
+                onChangeValue={(rounds) => onChangeRounds(block.key, rounds)}
+              />
               <Box direction="row">
                 <TextButton
                   label="Add set to block"

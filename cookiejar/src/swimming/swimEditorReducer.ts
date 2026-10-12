@@ -135,6 +135,15 @@ function mapBlocks(details: SwimDetails, update: (block: EditorSwimBlock) => Edi
   };
 }
 
+function normalizeRestAfterSeconds(restAfterSeconds: number | null): number | null {
+  return restAfterSeconds === null || restAfterSeconds <= 0 ? null : restAfterSeconds;
+}
+
+function withoutStaleBlockRest(block: EditorSwimBlock): EditorSwimBlock {
+  const isPlainBlock = block.rounds === 1 && block.sets.length <= 1;
+  return isPlainBlock ? { ...block, restAfterSeconds: null } : block;
+}
+
 function hasBlock(details: SwimDetails, blockKey: string): boolean {
   return details.sections.some((section) => section.blocks.some((block) => block.key === blockKey));
 }
@@ -227,17 +236,25 @@ export function createSwimEditorReducer(createKey: CreateSwimKey) {
         );
       case 'blockRoundsChanged':
         return mapBlocks(details, (block) =>
-          block.key === action.blockKey ? { ...block, rounds: Math.max(1, Math.floor(action.rounds)) } : block,
+          block.key === action.blockKey
+            ? withoutStaleBlockRest({ ...block, rounds: Math.max(1, Math.floor(action.rounds)) })
+            : block,
         );
       case 'blockRestChanged':
         return mapBlocks(details, (block) =>
-          block.key === action.blockKey ? { ...block, restAfterSeconds: action.restAfterSeconds } : block,
+          block.key === action.blockKey ? { ...block, restAfterSeconds: normalizeRestAfterSeconds(action.restAfterSeconds) } : block,
         );
       case 'setChanged':
         if (findSwimSet(details, action.setKey) === null) {
           return details;
         }
-        return mapSets(details, (set) => (set.key === action.setKey ? { ...set, ...action.changes } : set));
+        return mapSets(details, (set) => {
+          if (set.key !== action.setKey) {
+            return set;
+          }
+          const changedSet = { ...set, ...action.changes };
+          return { ...changedSet, restAfterSeconds: normalizeRestAfterSeconds(changedSet.restAfterSeconds) };
+        });
       case 'setRemoved':
         if (findSwimSet(details, action.setKey) === null) {
           return details;
@@ -247,15 +264,7 @@ export function createSwimEditorReducer(createKey: CreateSwimKey) {
           sections: details.sections.map((section) => ({
             ...section,
             blocks: section.blocks
-              .map((block) => {
-                const remainingSets = block.sets.filter((set) => set.key !== action.setKey);
-                const isPlainBlock = block.rounds === 1 && remainingSets.length <= 1;
-                return {
-                  ...block,
-                  restAfterSeconds: isPlainBlock ? null : block.restAfterSeconds,
-                  sets: remainingSets,
-                };
-              })
+              .map((block) => withoutStaleBlockRest({ ...block, sets: block.sets.filter((set) => set.key !== action.setKey) }))
               .filter((block) => block.sets.length > 0),
           })),
         };

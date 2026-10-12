@@ -284,3 +284,40 @@ describe('the phase document example workout', () => {
     expect(describeSwimRounds(sections[1].blocks[0].rounds)).toBe('3 rounds');
   });
 });
+
+describe('rest normalisation', () => {
+  function singleSetDetails() {
+    const { createKey, reduce } = createReducer();
+    const initialDetails = createDefaultSwimDetails(createKey);
+    const details = reduce(initialDetails, { type: 'setAdded', sectionKey: initialDetails.sections[1].key, stroke: freestyle });
+    return { reduce, details, block: details.sections[1].blocks[0] };
+  }
+
+  test('stepping a one set block back to one round clears its block rest', () => {
+    const { reduce, details, block } = singleSetDetails();
+    const twoRounds = reduce(details, { type: 'blockRoundsChanged', blockKey: block.key, rounds: 2 });
+    const withRest = reduce(twoRounds, { type: 'blockRestChanged', blockKey: block.key, restAfterSeconds: 60 });
+    expect(withRest.sections[1].blocks[0].restAfterSeconds).toBe(60);
+    const backToOne = reduce(withRest, { type: 'blockRoundsChanged', blockKey: block.key, rounds: 1 });
+    expect(backToOne.sections[1].blocks[0].restAfterSeconds).toBeNull();
+  });
+
+  test('rounds can be raised on a single set block', () => {
+    const { reduce, details, block } = singleSetDetails();
+    const next = reduce(details, { type: 'blockRoundsChanged', blockKey: block.key, rounds: 4 });
+    expect(next.sections[1].blocks[0].rounds).toBe(4);
+    expect(next.sections[1].blocks[0].sets).toHaveLength(1);
+  });
+
+  test('a zero rest after is stored as no rest', () => {
+    const { reduce, details, block } = singleSetDetails();
+    const twoRounds = reduce(details, { type: 'blockRoundsChanged', blockKey: block.key, rounds: 2 });
+    const zeroBlockRest = reduce(twoRounds, { type: 'blockRestChanged', blockKey: block.key, restAfterSeconds: 0 });
+    expect(zeroBlockRest.sections[1].blocks[0].restAfterSeconds).toBeNull();
+    const setKey = block.sets[0].key;
+    const zeroSetRest = reduce(details, { type: 'setChanged', setKey, changes: { restAfterSeconds: 0 } });
+    expect(findSwimSet(zeroSetRest, setKey)?.restAfterSeconds).toBeNull();
+    const positiveSetRest = reduce(details, { type: 'setChanged', setKey, changes: { restAfterSeconds: 45 } });
+    expect(findSwimSet(positiveSetRest, setKey)?.restAfterSeconds).toBe(45);
+  });
+});
