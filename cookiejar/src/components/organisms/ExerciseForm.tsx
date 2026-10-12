@@ -16,6 +16,7 @@ type ExerciseFormProperties = {
   errors: ExerciseFormErrors;
   onChangeValues: (values: ExerciseFormValues) => void;
   footer?: ReactNode;
+  isFixedExercise?: boolean;
 };
 
 const bodyPartOptions = gymBodyParts.map((bodyPart) => ({ value: bodyPart, label: bodyPartLabels[bodyPart] }));
@@ -25,11 +26,12 @@ const trackingTypeSegments = trackingTypes.map((trackingType) => ({
   label: trackingTypeLabels[trackingType],
 }));
 
-export function ExerciseForm({ values, errors, onChangeValues, footer }: ExerciseFormProperties) {
+export function ExerciseForm({ values, errors, onChangeValues, footer, isFixedExercise = false }: ExerciseFormProperties) {
   return (
     <ScrollBox gap="large" automaticallyAdjustKeyboardInsets>
       <FormField label="Name" error={errors.name}>
         <TextField
+          editable={!isFixedExercise}
           value={values.name}
           onChangeText={(name) => onChangeValues({ ...values, name })}
           placeholder="e.g. Hip Thrust"
@@ -50,11 +52,15 @@ export function ExerciseForm({ values, errors, onChangeValues, footer }: Exercis
         )}
       </FormField>
       <FormField label="Usually measured by" error={errors.defaultTrackingType}>
-        <SegmentedControl
-          segments={trackingTypeSegments}
-          selectedValue={values.defaultTrackingType}
-          onSelect={(defaultTrackingType) => onChangeValues({ ...values, defaultTrackingType })}
-        />
+        {isFixedExercise && values.defaultTrackingType !== null ? (
+          <Typography>{trackingTypeLabels[values.defaultTrackingType]}</Typography>
+        ) : (
+          <SegmentedControl
+            segments={trackingTypeSegments}
+            selectedValue={values.defaultTrackingType}
+            onSelect={(defaultTrackingType) => onChangeValues({ ...values, defaultTrackingType })}
+          />
+        )}
       </FormField>
       <ImageUrlField
         imageUrl={values.imageUrl}

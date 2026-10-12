@@ -8,6 +8,7 @@ import { Typography } from '@/components/primitives/Typography';
 import { describeSwimBlockRest, describeSwimRounds, describeSwimSet } from '@/swimming/describeSwimSet';
 import { formatSwimDistance, swimSectionDistance, swimWorkoutDistance } from '@/swimming/swimDistance';
 import { useTheme } from '@/theme/useTheme';
+import { defaultSwimPoolLength } from '@/types/SwimPoolLength';
 import type { WorkoutWithItems } from '@/types/WorkoutWithItems';
 
 type SwimWorkoutDetailProperties = {
@@ -27,7 +28,7 @@ export function SwimWorkoutDetail({ workout, onStart }: SwimWorkoutDetailPropert
         <Box gap="small">
           <Typography variant="display">{workout.name}</Typography>
           <Box direction="row" gap="small" align="center">
-            <Badge label={`${workout.swim?.poolLengthMeters ?? 25} M POOL`} />
+            <Badge label={`${workout.swim?.poolLengthMeters ?? defaultSwimPoolLength} M POOL`} />
             <Typography color="textSecondary">{formatSwimDistance(swimWorkoutDistance(sections))}</Typography>
           </Box>
         </Box>

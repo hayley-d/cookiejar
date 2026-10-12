@@ -9,9 +9,7 @@ import { ExerciseProgressSection } from '@/components/organisms/ExerciseProgress
 import { SwimStatisticsCard } from '@/components/organisms/SwimStatisticsCard';
 import { RecentRecordsSection } from '@/components/organisms/RecentRecordsSection';
 import { ProgressOverview } from '@/components/organisms/ProgressOverview';
-import { Box } from '@/components/primitives/Box';
 import { ScrollBox } from '@/components/primitives/ScrollBox';
-import { Typography } from '@/components/primitives/Typography';
 import { exerciseVideoHref } from '@/exercises/exerciseVideo';
 import { useActivityStatistics } from '@/hooks/useActivityStatistics';
 import { useClassStatistics } from '@/hooks/useClassStatistics';
@@ -93,10 +91,7 @@ export default function ProgressScreen() {
         <ClassCountSection statistics={classStatistics ?? []} onOpenStatistics={openClassStatistics} />
         <ActivityCountSection statistics={activityStatistics ?? []} onOpenStatistics={openActivityStatistics} />
         {swimStatistics === null ? null : (
-          <Box gap="small">
-            <Typography variant="heading">Swimming</Typography>
-            <SwimStatisticsCard statistics={swimStatistics} />
-          </Box>
+          <SwimStatisticsCard statistics={swimStatistics} />
         )}
         <ExerciseProgressSection
           exercises={exercises ?? []}

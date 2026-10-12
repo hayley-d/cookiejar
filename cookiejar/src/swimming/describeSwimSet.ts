@@ -19,7 +19,7 @@ export function describeSwimSet(set: DescribedSwimSet): string {
   const sendOffText =
     set.restMode === 'send_off' && set.sendOffSeconds !== null ? ` @ ${formatSwimTime(set.sendOffSeconds)}` : '';
   const parts = [`${set.repetitions}×${set.distanceMeters} m ${set.exerciseName}${sendOffText}`];
-  if (set.restMode === 'fixed' && set.restSeconds !== null) {
+  if (set.restMode === 'fixed' && set.restSeconds !== null && set.restSeconds > 0) {
     parts.push(`rest ${formatSwimTime(set.restSeconds)}`);
   }
   if (set.equipment.length > 0) {

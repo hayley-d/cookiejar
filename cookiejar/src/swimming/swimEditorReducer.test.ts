@@ -317,6 +317,8 @@ describe('rest normalisation', () => {
     const setKey = block.sets[0].key;
     const zeroSetRest = reduce(details, { type: 'setChanged', setKey, changes: { restAfterSeconds: 0 } });
     expect(findSwimSet(zeroSetRest, setKey)?.restAfterSeconds).toBeNull();
+    const zeroFixedRest = reduce(details, { type: 'setChanged', setKey, changes: { restMode: 'fixed', restSeconds: 0 } });
+    expect(findSwimSet(zeroFixedRest, setKey)?.restSeconds).toBeNull();
     const positiveSetRest = reduce(details, { type: 'setChanged', setKey, changes: { restAfterSeconds: 45 } });
     expect(findSwimSet(positiveSetRest, setKey)?.restAfterSeconds).toBe(45);
   });

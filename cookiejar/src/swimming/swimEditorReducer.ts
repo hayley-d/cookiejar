@@ -253,7 +253,11 @@ export function createSwimEditorReducer(createKey: CreateSwimKey) {
             return set;
           }
           const changedSet = { ...set, ...action.changes };
-          return { ...changedSet, restAfterSeconds: normalizeRestAfterSeconds(changedSet.restAfterSeconds) };
+          return {
+            ...changedSet,
+            restSeconds: normalizeRestAfterSeconds(changedSet.restSeconds),
+            restAfterSeconds: normalizeRestAfterSeconds(changedSet.restAfterSeconds),
+          };
         });
       case 'setRemoved':
         if (findSwimSet(details, action.setKey) === null) {

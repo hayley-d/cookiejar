@@ -84,6 +84,10 @@ describe('describeSwimSet', () => {
     expect(describeSwimSet({ ...baseSet, notes: '   ' })).toBe('2×50 m Freestyle');
   });
 
+  test('a fixed rest of zero shows no rest text', () => {
+    expect(describeSwimSet({ ...baseSet, restSeconds: 0 })).toBe('2×50 m Freestyle');
+  });
+
   test('a fixed rest set ignores a stale send-off value', () => {
     expect(describeSwimSet({ ...baseSet, sendOffSeconds: 90 })).toBe('2×50 m Freestyle');
   });
