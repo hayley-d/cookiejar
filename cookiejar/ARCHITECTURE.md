@@ -1069,6 +1069,36 @@ These import no React Native, expo-sqlite, Skia, victory-native or HealthKit cod
 
 Elsewhere: `src/stats/healthChartPoints.ts` (`healthChartPoints`, `healthChartUnits`, `averageOfPoints`), `src/health/describeHealthAccessStatus.ts` (caption, headline and detail for the three access states) and `src/dates/formatDayMonth.ts`. New shared types are `ChartPoint`, `ClassStatistics`, `ExerciseHistory` (with `ExerciseWithHistory`), `FinishedSessionSet` and `TrainingTotals`; `BodyMeasurement.ts` gains `BodyMeasurementInput` and `WeightMeasurement`.
 
+## Activities
+
+An activity is a workout with `kind` `activity` and an `activity_type` of hike, run or walk. It has no exercises: it is logged after the fact, not run in the session logger. Hike shows the hiking nuggie, Run the workout nuggie and Walk the good job nuggie. Migration v7 converted the old hiking classes into Hike activities.
+
+### Routes
+
+| Route | Presentation | Purpose |
+| --- | --- | --- |
+| `/workouts/activity-details` | Stack push | Builder step 2 for an activity workout (see Workout Builder) |
+| `/activities/log` | Form sheet | `ActivityLogForm`: type chips, date, start time, hours and minutes, distance, elevation, kcal, heart rate, a live pace line and notes. Params `workoutId`, `date` and `planEntryId` create a session. Param `sessionId` edits one, prefilled from the session, and saves with `updateActivitySession` without touching the Health link. A planned activity opened from the calendar routes here through `resolveScheduledWorkoutRoute`, and the activity workout detail has LOG ACTIVITY. With a `planEntryId` the date is locked to the plan entry date (a future planned date is allowed), so calendar completion stays linked. Saving opens the summary |
+| `/progress/activities` | Push | One `ActivityStatisticsCard` per activity type that has logs |
+
+### Session Activity Metrics
+
+`insertActivitySession` writes one finished activity session in a transaction: `started_at` and `finished_at` from the start time and duration, plus `distance_meters`, `elevation_gain_meters`, `active_kilocalories` and `average_heart_rate`, all nullable. These columns are the user's own numbers and stay separate from the `health_*` columns, which only hold a linked Garmin workout. `ActivitySummary` shows distance, duration, pace, elevation, kcal and heart rate tiles. Pace is not stored: `derivePace` computes seconds per km from distance and duration, and is `null` for missing or zero distance.
+
+### Health Auto-fill
+
+The log form lists the chosen day's Hiking, Running and Walking Apple Health workouts (activity codes 24, 37 and 52) with a Garmin badge, refreshed when the date changes and hidden without Health access. `readDayActivityWorkouts` reads them, and `useDayActivityWorkouts` exposes them. `readHealthWorkouts.ts` reads each workout's total distance and the `HKElevationAscended` metadata value, both in metres, and `healthAuthorization.ts` requests distance read access. Picking a workout fills the form through `activityMetricsFromHealthWorkout` and links it through the existing Health link when saving, for create and edit. Whether Garmin supplies elevation is confirmed on the device.
+
+### Statistics and Bests
+
+Both modules are pure and covered by `bun test`:
+
+- `src/progress/buildActivityStatistics.ts`: per type session count, distance and elevation for this month and all time, plus the bests (longest distance, most elevation, fastest pace)
+- `src/progress/detectActivityBests.ts`: compares a log with the earlier logs of the same type. A first log and a tie are not bests
+- `src/progress/activityBestRules.ts`: pace counts as a best only for distances of at least 1 km (`minimumPaceDistanceMeters`), so a short walk cannot set a record
+
+`listFinishedActivityLogs` in `progressRepository` returns the raw finished logs with optional type and started-before filters, and `useActivityStatistics` builds the statistics. The Progress hub shows an Activities section. The activity summary shows a NEW BEST badge naming each best, and the finishing caption mentions it with the record nuggie.
+
 ## Coach Nuggie
 
 Phase 09a replaces the placeholder coach modal with a rule-based coach. It adds no migration and makes no network calls. Notifications are Phase 09b (see Notifications).
