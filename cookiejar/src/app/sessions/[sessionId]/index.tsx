@@ -7,13 +7,16 @@ import { EmptyState } from '@/components/molecules/EmptyState';
 import { ClassSessionView } from '@/components/organisms/ClassSessionView';
 import { NuggieLoadingScreen } from '@/components/organisms/NuggieLoadingScreen';
 import { SessionLogger } from '@/components/organisms/SessionLogger';
+import { SwimSessionLogger } from '@/components/organisms/SwimSessionLogger';
 import { Box } from '@/components/primitives/Box';
 import { exerciseVideoHref } from '@/exercises/exerciseVideo';
 import { useSession } from '@/hooks/useSession';
 import { useSessionExercisePicks } from '@/hooks/useSessionExercisePicks';
+import { useSwimSession } from '@/hooks/useSwimSession';
 import { chooseNuggie } from '@/nuggies/chooseNuggie';
 import type { NuggieName } from '@/nuggies/NuggieName';
 import { describeUntickedSets, resolveFinishPrompt } from '@/sessions/finishPrompt';
+import type { SwimSessionDetail } from '@/swimming/swimSessionTypes';
 
 type SessionLoggerParameters = {
   sessionId: string;
@@ -30,6 +33,78 @@ const startingCaptions: Partial<Record<NuggieName, string>> = {
 function chooseStartingNuggie() {
   const now = new Date();
   return chooseNuggie({ kind: 'sessionStarting', startsAt: now }, now);
+}
+
+type SwimSessionScreenContentProperties = {
+  sessionId: number;
+  workoutName: string;
+  startedAt: string;
+  swim: SwimSessionDetail;
+};
+
+function SwimSessionScreenContent({ sessionId, workoutName, startedAt, swim }: SwimSessionScreenContentProperties) {
+  const { sections, toggleRepetition, markAllDone, finish, discard } = useSwimSession(
+    sessionId,
+    startedAt,
+    swim.sections,
+  );
+  const [isFinishing, setIsFinishing] = useState(false);
+  const isCompletingReference = useRef(false);
+
+  const completeFinish = async (durationSeconds: number) => {
+    if (isCompletingReference.current) {
+      return;
+    }
+    isCompletingReference.current = true;
+    setIsFinishing(true);
+    try {
+      await finish(durationSeconds);
+      router.replace({ pathname: '/sessions/[sessionId]/finishing', params: { sessionId: String(sessionId) } });
+    } catch {
+      isCompletingReference.current = false;
+      setIsFinishing(false);
+      Alert.alert('Could not finish the swim', 'Something went wrong. Please try again.');
+    }
+  };
+
+  const completeDiscard = async () => {
+    if (isCompletingReference.current) {
+      return;
+    }
+    isCompletingReference.current = true;
+    setIsFinishing(true);
+    try {
+      await discard();
+      router.back();
+    } catch {
+      isCompletingReference.current = false;
+      setIsFinishing(false);
+      Alert.alert('Could not discard the swim', 'Something went wrong. Please try again.');
+    }
+  };
+
+  const requestDiscard = () => {
+    if (isFinishing) {
+      return;
+    }
+    Alert.alert('Discard this swim?', 'Everything logged in it will be deleted.', [
+      { text: 'Keep going', style: 'cancel' },
+      { text: 'Discard', style: 'destructive', onPress: () => void completeDiscard() },
+    ]);
+  };
+
+  return (
+    <SwimSessionLogger
+      workoutName={workoutName}
+      startedAt={startedAt}
+      sections={sections}
+      isFinishing={isFinishing}
+      onToggleRepetition={toggleRepetition}
+      onMarkAllDone={markAllDone}
+      onFinish={(durationSeconds) => void completeFinish(durationSeconds)}
+      onDiscard={requestDiscard}
+    />
+  );
 }
 
 export default function SessionLoggerScreen() {
@@ -148,6 +223,20 @@ export default function SessionLoggerScreen() {
   } else if (sessionLookup.status === 'found' && sessionLookup.session.workoutKind === 'activity') {
     content = (
       <Redirect href={{ pathname: '/sessions/[sessionId]/summary', params: { sessionId: String(sessionId) } }} />
+    );
+  } else if (
+    sessionLookup.status === 'found' &&
+    sessionLookup.session.workoutKind === 'swim' &&
+    sessionLookup.session.swim !== null
+  ) {
+    content = (
+      <SwimSessionScreenContent
+        key={sessionId}
+        sessionId={sessionId}
+        workoutName={sessionLookup.session.workoutName}
+        startedAt={sessionLookup.session.startedAt}
+        swim={sessionLookup.session.swim}
+      />
     );
   } else if (sessionLookup.status === 'found' && sessionLookup.session.workoutKind === 'class') {
     content = (

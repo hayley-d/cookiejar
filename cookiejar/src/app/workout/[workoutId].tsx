@@ -84,7 +84,7 @@ export default function WorkoutDetailScreen() {
         />
       ) : null}
       {workout.kind === 'class' ? <ClassWorkoutDetail workout={workout} onStart={startWorkout} /> : null}
-      {workout.kind === 'swim' ? <SwimWorkoutDetail workout={workout} /> : null}
+      {workout.kind === 'swim' ? <SwimWorkoutDetail workout={workout} onStart={startWorkout} /> : null}
       {workout.kind === 'activity' ? (
         <ActivityWorkoutDetail
           workout={workout}

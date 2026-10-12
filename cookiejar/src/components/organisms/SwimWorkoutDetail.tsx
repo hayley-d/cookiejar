@@ -12,11 +12,10 @@ import type { WorkoutWithItems } from '@/types/WorkoutWithItems';
 
 type SwimWorkoutDetailProperties = {
   workout: WorkoutWithItems;
+  onStart: () => void;
 };
 
-const inertStartPress = () => undefined;
-
-export function SwimWorkoutDetail({ workout }: SwimWorkoutDetailProperties) {
+export function SwimWorkoutDetail({ workout, onStart }: SwimWorkoutDetailProperties) {
   const theme = useTheme();
   const sections = workout.swim?.sections ?? [];
   const hasDescription = workout.description !== null && workout.description.trim().length > 0;
@@ -78,7 +77,7 @@ export function SwimWorkoutDetail({ workout }: SwimWorkoutDetailProperties) {
         background="background"
         style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}
       >
-        <Button label="START SWIM" onPress={inertStartPress} disabled />
+        <Button label="START SWIM" onPress={onStart} />
       </Box>
     </Box>
   );

@@ -63,6 +63,7 @@ function makeSession(exercises: SessionExerciseWithSets[]): SessionWithExercises
     activeKilocalories: null,
     averageHeartRate: null,
     plannedDurationMinutes: null,
+    swim: null,
     exercises,
   };
 }

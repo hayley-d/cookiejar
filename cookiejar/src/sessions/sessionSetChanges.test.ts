@@ -44,6 +44,7 @@ function makeSession(): SessionWithExercises {
     activeKilocalories: null,
     averageHeartRate: null,
     plannedDurationMinutes: null,
+    swim: null,
     exercises: [10, 20].map((sessionExerciseId) => ({
       id: sessionExerciseId,
       sessionId: 1,

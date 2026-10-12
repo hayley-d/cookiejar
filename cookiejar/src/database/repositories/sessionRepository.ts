@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { getSwimSessionDetail, snapshotSwimWorkout } from '@/database/repositories/swimSessionRepository';
 import { isRequestForActiveSession } from '@/sessions/resolveStartAgainstActiveSession';
 import { resolveSessionStart, type ExistingPlanEntrySession } from '@/sessions/resolveSessionStart';
 import type { CompletedSet } from '@/progress/detectPersonalRecords';
@@ -27,6 +28,7 @@ type WorkoutSnapshotRow = {
   kind: WorkoutKind;
   class_type: ClassType | null;
   activity_type: ActivityType | null;
+  pool_length_meters: number | null;
 };
 
 export class ActiveSessionExistsError extends Error {
@@ -77,6 +79,7 @@ type SessionRow = {
   workout_kind: WorkoutKind;
   class_type: ClassType | null;
   activity_type: ActivityType | null;
+  pool_length_meters: number | null;
   scheduled_date: string;
   started_at: string;
   finished_at: string | null;
@@ -176,7 +179,7 @@ export async function startSession(database: SQLiteDatabase, request: SessionSta
     }
 
     const workout = await database.getFirstAsync<WorkoutSnapshotRow>(
-      'SELECT name, kind, class_type, activity_type FROM workouts WHERE id = ?',
+      'SELECT name, kind, class_type, activity_type, pool_length_meters FROM workouts WHERE id = ?',
       request.workoutId,
     );
     if (workout === null) {
@@ -185,19 +188,26 @@ export async function startSession(database: SQLiteDatabase, request: SessionSta
 
     const sessionResult = await database.runAsync(
       `INSERT INTO sessions
-        (workout_id, plan_entry_id, workout_name, workout_kind, class_type, activity_type, scheduled_date, started_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        (workout_id, plan_entry_id, workout_name, workout_kind, class_type, activity_type, pool_length_meters,
+          scheduled_date, started_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       request.workoutId,
       sessionStart.planEntryId,
       workout.name,
       workout.kind,
       workout.class_type,
       workout.activity_type,
+      workout.pool_length_meters,
       request.scheduledDate,
       startedAt,
     );
     const newSessionId = sessionResult.lastInsertRowId;
     sessionId = newSessionId;
+
+    if (workout.kind === 'swim') {
+      await snapshotSwimWorkout(database, newSessionId, request.workoutId, workout.pool_length_meters);
+      return;
+    }
 
     if (workout.kind !== 'individual') {
       return;
@@ -349,8 +359,8 @@ export async function getSessionWithExercises(
 ): Promise<SessionWithExercises | null> {
   const sessionRow = await database.getFirstAsync<SessionRow>(
     `SELECT sessions.id, sessions.workout_id, sessions.plan_entry_id, sessions.workout_name, sessions.workout_kind,
-      sessions.class_type, sessions.activity_type, sessions.scheduled_date, sessions.started_at, sessions.finished_at,
-      sessions.notes,
+      sessions.class_type, sessions.activity_type, sessions.pool_length_meters, sessions.scheduled_date,
+      sessions.started_at, sessions.finished_at, sessions.notes,
       sessions.health_workout_uuid, sessions.health_average_heart_rate, sessions.health_maximum_heart_rate,
       sessions.health_active_kilocalories, sessions.health_duration_seconds,
       sessions.distance_meters, sessions.elevation_gain_meters, sessions.active_kilocalories,
@@ -434,6 +444,10 @@ export async function getSessionWithExercises(
     activeKilocalories: sessionRow.active_kilocalories,
     averageHeartRate: sessionRow.average_heart_rate,
     plannedDurationMinutes: sessionRow.planned_duration_minutes,
+    swim:
+      sessionRow.workout_kind === 'swim'
+        ? await getSwimSessionDetail(database, sessionRow.id, sessionRow.pool_length_meters)
+        : null,
     exercises,
   };
 }

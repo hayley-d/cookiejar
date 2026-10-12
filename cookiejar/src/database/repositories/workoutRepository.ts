@@ -231,7 +231,7 @@ export async function saveWorkout(database: SQLiteDatabase, editorState: Workout
   return savedWorkoutId;
 }
 
-async function getSwimWorkoutDetail(
+export async function getSwimWorkoutDetail(
   database: SQLiteDatabase,
   workoutId: number,
   poolLengthMeters: number | null,
