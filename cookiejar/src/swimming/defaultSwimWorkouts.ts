@@ -33,6 +33,11 @@ export type DefaultSwimWorkout = Omit<SwimWorkoutDetail, 'sections'> & {
 export type SwimLevel = 'beginner' | 'intermediate' | 'advanced';
 export type SwimSession = 'a' | 'b';
 
+type SwimRestOptions = {
+  restSeconds?: number;
+  sendOffSeconds?: number;
+};
+
 type SwimSetOptions = {
   restSeconds?: number;
   sendOffSeconds?: number;
@@ -139,16 +144,32 @@ function drillSetsInMedleyOrder(count: number, distanceMeters: number, options: 
 }
 
 function drillAndSwimSetsInMedleyOrder(count: number, distanceMeters: number, options: SwimSetOptions = {}) {
-  const halfOptions: SwimSetOptions =
-    options.sendOffSeconds === undefined ? options : { ...options, sendOffSeconds: options.sendOffSeconds / 2 };
+  const halfDistanceMeters = distanceMeters / 2;
   return cycleStrokes(medleyStrokeNames, count, (strokeName) => [
-    swimSet(strokeName, 1, distanceMeters / 2, { ...halfOptions, notes: drillNotes[strokeName] }),
-    swimSet(strokeName, 1, distanceMeters / 2, { ...halfOptions, notes: 'swim' }),
+    swimSet(strokeName, 1, distanceMeters, {
+      ...options,
+      notes: `${halfDistanceMeters} ${drillNotes[strokeName]} / ${halfDistanceMeters} swim`,
+    }),
   ]);
 }
 
 function swimSetsInMedleyOrder(count: number, distanceMeters: number, options: SwimSetOptions = {}) {
   return cycleStrokes(medleyStrokeNames, count, (strokeName) => [swimSet(strokeName, 1, distanceMeters, options)]);
+}
+
+export function repeatOf(parts: DefaultSwimSet[], finalRest: SwimRestOptions = {}): DefaultSwimSet[] {
+  const finalRestFields = swimSet('Freestyle', 1, 25, finalRest);
+  const lastIndex = parts.length - 1;
+  return parts.map((part, index) =>
+    index === lastIndex
+      ? {
+          ...part,
+          restMode: finalRestFields.restMode,
+          restSeconds: finalRestFields.restSeconds,
+          sendOffSeconds: finalRestFields.sendOffSeconds,
+        }
+      : { ...part, restMode: 'fixed', restSeconds: 0, sendOffSeconds: null },
+  );
 }
 
 function kickSetsInMedleyOrder(count: number, distanceMeters: number, options: SwimSetOptions = {}) {
@@ -161,10 +182,10 @@ function kickSetsInMedleyOrder(count: number, distanceMeters: number, options: S
 }
 
 function easyMixedSets(totalDistanceMeters: number): DefaultSwimSet[] {
-  return [
+  return repeatOf([
     swimSet('Freestyle', 1, totalDistanceMeters / 2, { notes: 'easy' }),
     swimSet('Backstroke', 1, totalDistanceMeters / 2, { notes: 'easy' }),
-  ];
+  ]);
 }
 
 const continuousOptions: SwimSetOptions = {
@@ -197,6 +218,9 @@ const beginnerWarmUpMini = () =>
     swimSet('Freestyle', 2, 25, { notes: 'easy, RPE 2' }),
     swimSet('Freestyle Kick', 2, 25, { equipment: ['kickboard'] }),
   ]);
+
+const kickBoardSets = (strokeNames: SwimStrokeName[], distanceMeters: number) =>
+  strokeNames.map((strokeName) => swimSet(strokeName, 1, distanceMeters, { equipment: ['kickboard'] }));
 
 const finsKickSets = (strokeNames: SwimStrokeName[]) =>
   strokeNames.map((strokeName) => swimSet(strokeName, 1, 25, { equipment: ['fins'] }));
@@ -249,7 +273,7 @@ const beginnerDefinitions: WorkoutDefinition[] = [
     purpose: 'Endurance',
     sections: [
       beginnerWarmUpStandard(),
-      kick(kickSetsInMedleyOrder(4, 25)),
+      kick(kickBoardSets(['Freestyle Kick', 'Backstroke Kick', 'Breaststroke Kick', 'Butterfly Kick'], 25)),
       main([
         block(
           [swimSet('Freestyle', 1, 100, { restSeconds: 30 }), swimSet('Backstroke', 1, 100, { restSeconds: 30 })],
@@ -287,20 +311,18 @@ const beginnerDefinitions: WorkoutDefinition[] = [
       beginnerWarmUpStandard(),
       section('Kick', [
         block(
-          [
+          repeatOf([
             swimSet('Breaststroke Kick', 1, 25, { equipment: ['kickboard'] }),
             swimSet('Freestyle Kick', 1, 25, { equipment: ['kickboard'] }),
-          ],
+          ]),
           4,
         ),
       ]),
       main([
         block(
-          [
-            swimSet('Freestyle', 1, 100, { restSeconds: 45 }),
-            swimSet('Backstroke', 1, 50, { restSeconds: 45 }),
-            swimSet('Breaststroke', 1, 50, { restSeconds: 45 }),
-          ],
+          repeatOf([swimSet('Freestyle', 1, 100), swimSet('Backstroke', 1, 50), swimSet('Breaststroke', 1, 50)], {
+            restSeconds: 45,
+          }),
           2,
         ),
       ]),
@@ -316,7 +338,7 @@ const beginnerDefinitions: WorkoutDefinition[] = [
       beginnerWarmUpShort(),
       drill(drillSetsInMedleyOrder(4, 25)),
       main([
-        block([swimSet('Backstroke', 1, 25), swimSet('Breaststroke', 1, 25), swimSet('Freestyle', 1, 25)], 6),
+        block(repeatOf([swimSet('Backstroke', 1, 25), swimSet('Breaststroke', 1, 25), swimSet('Freestyle', 1, 25)]), 6),
         block([
           swimSet('Butterfly Kick', 4, 25, {
             equipment: ['fins'],
@@ -389,7 +411,10 @@ const beginnerDefinitions: WorkoutDefinition[] = [
       main([
         block([swimSet('Freestyle', 1, 100), swimSet('Pull', 1, 100, { equipment: ['pull_buoy'] })], 2),
         block(
-          [swimSet('Butterfly', 1, 25, { equipment: ['fins'] }), swimSet('Freestyle', 1, 25, { equipment: ['fins'] })],
+          repeatOf([
+            swimSet('Butterfly', 1, 25, { equipment: ['fins'] }),
+            swimSet('Freestyle', 1, 25, { equipment: ['fins'] }),
+          ]),
           4,
         ),
       ]),
@@ -516,11 +541,11 @@ const intermediateDefinitions: WorkoutDefinition[] = [
       drill(drillAndSwimSetsInMedleyOrder(6, 50)),
       main([
         block(
-          [
+          repeatOf([
             swimSet('Freestyle', 1, 100, { notes: 'RPE 5' }),
             swimSet('Backstroke', 1, 100, { notes: 'RPE 5' }),
             swimSet('Breaststroke', 1, 100, { notes: 'RPE 5' }),
-          ],
+          ]),
           3,
         ),
       ]),
@@ -543,10 +568,10 @@ const intermediateDefinitions: WorkoutDefinition[] = [
       intermediateWarmUp300(),
       drill(drillAndSwimSetsInMedleyOrder(6, 50)),
       main([
-        block([swimSet('Freestyle', 1, 200), swimSet('Backstroke', 1, 100)]),
-        block([swimSet('Freestyle', 1, 200), swimSet('Breaststroke', 1, 100)]),
-        block([swimSet('Freestyle', 1, 200), swimSet('Backstroke', 1, 100)]),
-        block([swimSet('Freestyle', 1, 200), swimSet('Butterfly', 1, 50), swimSet('Freestyle', 1, 50)]),
+        block(repeatOf([swimSet('Freestyle', 1, 200), swimSet('Backstroke', 1, 100)])),
+        block(repeatOf([swimSet('Freestyle', 1, 200), swimSet('Breaststroke', 1, 100)])),
+        block(repeatOf([swimSet('Freestyle', 1, 200), swimSet('Backstroke', 1, 100)])),
+        block(repeatOf([swimSet('Freestyle', 1, 200), swimSet('Butterfly', 1, 50), swimSet('Freestyle', 1, 50)])),
       ]),
       coolDown([swimSet('Backstroke', 1, 200, { notes: 'easy' })]),
     ],
@@ -664,12 +689,15 @@ const intermediateDefinitions: WorkoutDefinition[] = [
       drill(drillAndSwimSetsInMedleyOrder(6, 50)),
       main([
         block(
-          [
-            swimSet('Freestyle', 1, 200, { restSeconds: 30 }),
-            swimSet('Backstroke', 1, 100, { restSeconds: 30 }),
-            swimSet('Freestyle', 1, 200, { restSeconds: 30 }),
-            swimSet('Breaststroke', 1, 100, { restSeconds: 30 }),
-          ],
+          repeatOf(
+            [
+              swimSet('Freestyle', 1, 200),
+              swimSet('Backstroke', 1, 100),
+              swimSet('Freestyle', 1, 200),
+              swimSet('Breaststroke', 1, 100),
+            ],
+            { restSeconds: 30 },
+          ),
           2,
         ),
         block(kickSetsInMedleyOrder(6, 50)),
@@ -750,7 +778,13 @@ const advancedDefinitions: WorkoutDefinition[] = [
       advancedWarmUp600(),
       drill(drillAndSwimSetsInMedleyOrder(8, 50, { sendOffSeconds: 50 })),
       main([
-        block([swimSet('Freestyle', 1, 300, { notes: 'RPE 5' }), swimSet('Backstroke', 1, 200, { notes: 'RPE 5' })], 3),
+        block(
+          repeatOf([
+            swimSet('Freestyle', 1, 300, { notes: 'RPE 5' }),
+            swimSet('Backstroke', 1, 200, { notes: 'RPE 5' }),
+          ]),
+          3,
+        ),
         block([swimSet('Butterfly Kick', 4, 50, { equipment: ['fins'] })]),
       ]),
       coolDown(easyMixedSets(300)),
@@ -828,10 +862,9 @@ const advancedDefinitions: WorkoutDefinition[] = [
       drill(drillAndSwimSetsInMedleyOrder(8, 50)),
       main([
         block(
-          [
-            swimSet('Freestyle', 1, 400, { restSeconds: 30, notes: 'RPE 5' }),
-            swimSet('Medley', 1, 400, { restSeconds: 30, notes: 'RPE 5' }),
-          ],
+          repeatOf([swimSet('Freestyle', 1, 400, { notes: 'RPE 5' }), swimSet('Medley', 1, 400, { notes: 'RPE 5' })], {
+            restSeconds: 30,
+          }),
           3,
         ),
       ]),
@@ -924,12 +957,15 @@ const advancedDefinitions: WorkoutDefinition[] = [
       drill(drillAndSwimSetsInMedleyOrder(8, 50, { sendOffSeconds: 50 })),
       main([
         block(
-          [
-            swimSet('Freestyle', 1, 400, { restSeconds: 45 }),
-            swimSet('Backstroke', 1, 200, { restSeconds: 45 }),
-            swimSet('Breaststroke', 1, 200, { restSeconds: 45 }),
-            swimSet('Freestyle', 1, 200, { restSeconds: 45 }),
-          ],
+          repeatOf(
+            [
+              swimSet('Freestyle', 1, 400),
+              swimSet('Backstroke', 1, 200),
+              swimSet('Breaststroke', 1, 200),
+              swimSet('Freestyle', 1, 200),
+            ],
+            { restSeconds: 45 },
+          ),
           2,
         ),
         block(kickSetsInMedleyOrder(6, 50)),

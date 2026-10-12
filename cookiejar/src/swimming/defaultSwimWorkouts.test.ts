@@ -4,6 +4,7 @@ import { defaultExercises } from '@/exercises/defaultExercises';
 import {
   defaultSwimWorkoutLibraryVersion,
   defaultSwimWorkouts,
+  repeatOf,
   swimBuiltInKey,
   type DefaultSwimSet,
   type DefaultSwimWorkout,
@@ -188,20 +189,112 @@ describe('defaultSwimWorkouts', () => {
     }
   });
 
-  test('drill and swim pairs with a send-off add up to the table send-off', () => {
-    const advancedKeys = ['swim-advanced-week-1-a', 'swim-advanced-week-5-a'];
-    for (const key of advancedKeys) {
-      const workout = defaultSwimWorkouts.find((candidate) => candidate.builtInKey === key)!;
+  test('each drill/swim is a single 50 m set carrying the table rest or send-off', () => {
+    const drillAndSwimKeys: Record<string, { restSeconds: number | null; sendOffSeconds: number | null }> = {
+      'swim-beginner-week-6-a': { restSeconds: 20, sendOffSeconds: null },
+      'swim-intermediate-week-1-a': { restSeconds: 20, sendOffSeconds: null },
+      'swim-intermediate-week-2-a': { restSeconds: 20, sendOffSeconds: null },
+      'swim-intermediate-week-3-a': { restSeconds: 20, sendOffSeconds: null },
+      'swim-intermediate-week-4-a': { restSeconds: 20, sendOffSeconds: null },
+      'swim-intermediate-week-5-a': { restSeconds: 20, sendOffSeconds: null },
+      'swim-intermediate-recovery': { restSeconds: 20, sendOffSeconds: null },
+      'swim-advanced-week-1-a': { restSeconds: null, sendOffSeconds: 50 },
+      'swim-advanced-week-3-a': { restSeconds: 20, sendOffSeconds: null },
+      'swim-advanced-week-4-a': { restSeconds: 20, sendOffSeconds: null },
+      'swim-advanced-week-4-b': { restSeconds: 20, sendOffSeconds: null },
+      'swim-advanced-week-5-a': { restSeconds: null, sendOffSeconds: 50 },
+      'swim-advanced-recovery': { restSeconds: 20, sendOffSeconds: null },
+    };
+    for (const [builtInKey, expectedRest] of Object.entries(drillAndSwimKeys)) {
+      const workout = defaultSwimWorkouts.find((candidate) => candidate.builtInKey === builtInKey)!;
       const drillSets = workout.sections[1].blocks[0].sets;
-      expect(drillSets).toHaveLength(16);
-      for (let pairIndex = 0; pairIndex < drillSets.length; pairIndex += 2) {
-        const drillHalf = drillSets[pairIndex];
-        const swimHalf = drillSets[pairIndex + 1];
-        expect(drillHalf.strokeName).toBe(swimHalf.strokeName);
-        expect(drillHalf.distanceMeters + swimHalf.distanceMeters).toBe(50);
-        expect((drillHalf.sendOffSeconds ?? 0) + (swimHalf.sendOffSeconds ?? 0)).toBe(50);
+      expect(workout.sections[1].name).toBe('Drill');
+      expect(drillSets.length).toBeGreaterThanOrEqual(4);
+      for (const drillSet of drillSets) {
+        expect(drillSet.repetitions).toBe(1);
+        expect(drillSet.distanceMeters).toBe(50);
+        expect(drillSet.notes).toMatch(/^25 .+ \/ 25 swim$/);
+        expect(drillSet.restSeconds).toBe(expectedRest.restSeconds);
+        expect(drillSet.sendOffSeconds).toBe(expectedRest.sendOffSeconds);
       }
     }
+  });
+
+  test('repeatOf puts rest only on the last part', () => {
+    const template = mainSets(defaultSwimWorkouts[0])[0];
+    const parts = repeatOf(
+      [
+        { ...template, strokeName: 'Freestyle' },
+        { ...template, strokeName: 'Backstroke' },
+        { ...template, strokeName: 'Breaststroke' },
+      ],
+      { restSeconds: 45 },
+    );
+    expect(parts.map((part) => part.restSeconds)).toEqual([0, 0, 45]);
+    expect(parts.map((part) => part.restMode)).toEqual(['fixed', 'fixed', 'fixed']);
+
+    const sendOffParts = repeatOf(parts, { sendOffSeconds: 90 });
+    expect(sendOffParts.map((part) => part.restSeconds)).toEqual([0, 0, null]);
+    expect(sendOffParts.map((part) => part.sendOffSeconds)).toEqual([null, null, 90]);
+    expect(sendOffParts[2].restMode).toBe('send_off');
+  });
+
+  test('every multi-part single-repeat block has rest only on its last set', () => {
+    const singleRepeatBlocks: { builtInKey: string; sectionName: string; blockIndex: number; lastRest: number }[] = [
+      { builtInKey: 'swim-beginner-week-2-b', sectionName: 'Kick', blockIndex: 0, lastRest: 20 },
+      { builtInKey: 'swim-beginner-week-2-b', sectionName: 'Main', blockIndex: 0, lastRest: 45 },
+      { builtInKey: 'swim-beginner-week-3-a', sectionName: 'Main', blockIndex: 0, lastRest: 20 },
+      { builtInKey: 'swim-beginner-week-5-a', sectionName: 'Main', blockIndex: 1, lastRest: 20 },
+      { builtInKey: 'swim-intermediate-week-1-a', sectionName: 'Main', blockIndex: 0, lastRest: 20 },
+      { builtInKey: 'swim-intermediate-week-2-a', sectionName: 'Main', blockIndex: 0, lastRest: 20 },
+      { builtInKey: 'swim-intermediate-week-2-a', sectionName: 'Main', blockIndex: 1, lastRest: 20 },
+      { builtInKey: 'swim-intermediate-week-2-a', sectionName: 'Main', blockIndex: 2, lastRest: 20 },
+      { builtInKey: 'swim-intermediate-week-2-a', sectionName: 'Main', blockIndex: 3, lastRest: 20 },
+      { builtInKey: 'swim-intermediate-week-5-a', sectionName: 'Main', blockIndex: 0, lastRest: 30 },
+      { builtInKey: 'swim-advanced-week-1-a', sectionName: 'Main', blockIndex: 0, lastRest: 20 },
+      { builtInKey: 'swim-advanced-week-3-a', sectionName: 'Main', blockIndex: 0, lastRest: 30 },
+      { builtInKey: 'swim-advanced-week-5-a', sectionName: 'Main', blockIndex: 0, lastRest: 45 },
+    ];
+    for (const { builtInKey, sectionName, blockIndex, lastRest } of singleRepeatBlocks) {
+      const workout = defaultSwimWorkouts.find((candidate) => candidate.builtInKey === builtInKey)!;
+      const section = workout.sections.find((candidate) => candidate.name === sectionName)!;
+      const sets = section.blocks[blockIndex].sets;
+      expect(sets.length).toBeGreaterThan(1);
+      sets.forEach((set, setIndex) => {
+        expect({ builtInKey, blockIndex, setIndex, restSeconds: set.restSeconds }).toEqual({
+          builtInKey,
+          blockIndex,
+          setIndex,
+          restSeconds: setIndex === sets.length - 1 ? lastRest : 0,
+        });
+        expect(set.repetitions).toBe(1);
+      });
+    }
+  });
+
+  test('every mixed-stroke easy cool down swims straight through', () => {
+    for (const workout of defaultSwimWorkouts) {
+      const coolDownSets = workout.sections[3].blocks[0].sets;
+      const isEasyFreestyleAndBackstrokeSplit =
+        coolDownSets.length === 2 &&
+        coolDownSets[0].strokeName === 'Freestyle' &&
+        coolDownSets[1].strokeName === 'Backstroke' &&
+        coolDownSets.every((set) => set.notes === 'easy' && set.repetitions === 1) &&
+        coolDownSets[0].distanceMeters === coolDownSets[1].distanceMeters;
+      if (isEasyFreestyleAndBackstrokeSplit) {
+        expect(coolDownSets[0].restSeconds).toBe(0);
+      }
+    }
+  });
+
+  test('beginner week 1 B kick runs Free, Back, Breast, Fly', () => {
+    const workout = defaultSwimWorkouts.find((candidate) => candidate.builtInKey === 'swim-beginner-week-1-b')!;
+    expect(workout.sections[1].blocks[0].sets.map((set) => set.strokeName)).toEqual([
+      'Freestyle Kick',
+      'Backstroke Kick',
+      'Breaststroke Kick',
+      'Butterfly Kick',
+    ]);
   });
 
   test('library version is a hash', () => {
