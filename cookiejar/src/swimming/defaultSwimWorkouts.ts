@@ -30,8 +30,8 @@ export type DefaultSwimWorkout = Omit<SwimWorkoutDetail, 'sections'> & {
   sections: DefaultSwimSection[];
 };
 
-type SwimLevel = 'beginner' | 'intermediate' | 'advanced';
-type SwimSession = 'a' | 'b';
+export type SwimLevel = 'beginner' | 'intermediate' | 'advanced';
+export type SwimSession = 'a' | 'b';
 
 type SwimSetOptions = {
   restSeconds?: number;
@@ -63,6 +63,27 @@ export function swimBuiltInKey(level: SwimLevel, week: number | null, session: S
     return `swim-${level}-recovery`;
   }
   return `swim-${level}-week-${week}-${session}`;
+}
+
+export type ParsedSwimBuiltInKey = {
+  level: SwimLevel;
+  week: number | null;
+  session: SwimSession | null;
+};
+
+const swimBuiltInKeyPattern = /^swim-(beginner|intermediate|advanced)-(?:recovery|week-([1-9]\d*)-([ab]))$/;
+
+export function parseSwimBuiltInKey(builtInKey: string): ParsedSwimBuiltInKey | null {
+  const match = swimBuiltInKeyPattern.exec(builtInKey);
+  if (match === null) {
+    return null;
+  }
+  const [, level, week, session] = match;
+  return {
+    level: level as SwimLevel,
+    week: week === undefined ? null : Number(week),
+    session: session === undefined ? null : (session as SwimSession),
+  };
 }
 
 function swimSet(

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { ActionSheetIOS } from 'react-native';
 
 import { Toast } from '@/components/atoms/Toast';
@@ -7,7 +8,7 @@ import { ScreenHeader } from '@/components/molecules/ScreenHeader';
 import { WorkoutRow } from '@/components/molecules/WorkoutRow';
 import { Box } from '@/components/primitives/Box';
 import { Icon } from '@/components/primitives/Icon';
-import { List } from '@/components/primitives/List';
+import { SectionedList } from '@/components/primitives/SectionedList';
 import { Stack } from '@/components/primitives/Stack';
 import { Touchable } from '@/components/primitives/Touchable';
 import { Typography } from '@/components/primitives/Typography';
@@ -16,6 +17,7 @@ import { useTheme } from '@/theme/useTheme';
 import type { PlanSummary } from '@/types/PlanSummary';
 import type { WorkoutSummary } from '@/types/WorkoutSummary';
 import { describeWorkout } from '@/workouts/describeWorkout';
+import { groupWorkoutsByLibrary } from '@/workouts/groupWorkoutsByLibrary';
 import { workoutNuggie } from '@/workouts/workoutNuggie';
 import { workoutTypeLabel } from '@/workouts/workoutTypeLabel';
 
@@ -114,13 +116,19 @@ export function CreateHub({
   onToastDismissed,
 }: CreateHubProperties) {
   const theme = useTheme();
+  const workoutGroups = useMemo(() => groupWorkoutsByLibrary(workouts ?? [], ''), [workouts]);
 
   return (
     <Box flex={1}>
       <ScreenHeader title="Create" />
-      <List
-        data={workouts ?? []}
+      <SectionedList
+        sections={workoutGroups}
         keyExtractor={(workout) => String(workout.id)}
+        renderSectionHeader={({ section }) => (
+          <Box background="background" paddingVertical="extraSmall">
+            <Typography variant="heading">{section.title}</Typography>
+          </Box>
+        )}
         renderItem={({ item: workout }) =>
           renderWorkout(workout, { onEditWorkout, onDuplicateWorkout, onDeleteWorkout })
         }
@@ -130,7 +138,6 @@ export function CreateHub({
             <ActionCard title="New plan" icon="calendar.badge.plus" onPress={onNewPlan} />
             <Typography variant="heading">My plans</Typography>
             {renderPlans(plans, onOpenPlan)}
-            <Typography variant="heading">My workouts</Typography>
           </Stack>
         }
         ListEmptyComponent={
