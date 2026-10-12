@@ -1,8 +1,13 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import type { SwimSection, SwimSet, SwimWorkoutDetail } from '@/swimming/swimTypes';
 import type { ActivityType } from '@/types/ActivityType';
 import type { BodyPart } from '@/types/BodyPart';
 import type { ClassType } from '@/types/ClassType';
+import type { SwimEquipment } from '@/types/SwimEquipment';
+import { swimEquipmentList } from '@/types/SwimEquipment';
+import { defaultSwimPoolLength, isSwimPoolLength } from '@/types/SwimPoolLength';
+import type { SwimRestMode } from '@/types/SwimRestMode';
 import type { TrackingType } from '@/types/TrackingType';
 import type { WorkoutKind } from '@/types/WorkoutKind';
 import type { WorkoutSummary } from '@/types/WorkoutSummary';
@@ -24,7 +29,27 @@ type WorkoutSummaryRow = {
   exercise_count: number;
 };
 
-type WorkoutRow = Omit<WorkoutSummaryRow, 'exercise_count'>;
+type WorkoutRow = Omit<WorkoutSummaryRow, 'exercise_count'> & { pool_length_meters: number | null };
+
+type SwimSectionRow = { id: number; name: string };
+
+type SwimBlockRow = { id: number; section_id: number; rounds: number; rest_after_seconds: number | null };
+
+type SwimSetRow = {
+  id: number;
+  block_id: number;
+  exercise_id: number;
+  exercise_name: string;
+  repetitions: number;
+  distance_meters: number;
+  rest_mode: SwimRestMode;
+  rest_seconds: number | null;
+  send_off_seconds: number | null;
+  rest_after_seconds: number | null;
+  notes: string | null;
+};
+
+type SwimEquipmentRow = { swim_set_id: number; equipment: SwimEquipment };
 
 type WorkoutItemRow = {
   id: number;
@@ -81,8 +106,53 @@ export async function listWorkouts(database: SQLiteDatabase): Promise<WorkoutSum
   return rows.map(toWorkoutSummary);
 }
 
+async function insertSwimSections(database: SQLiteDatabase, workoutId: number, sections: SwimSection[]) {
+  for (const [sectionPosition, section] of sections.entries()) {
+    const sectionResult = await database.runAsync(
+      'INSERT INTO swim_sections (workout_id, position, name) VALUES (?, ?, ?)',
+      workoutId,
+      sectionPosition,
+      section.name,
+    );
+    for (const [blockPosition, block] of section.blocks.entries()) {
+      const blockResult = await database.runAsync(
+        'INSERT INTO swim_blocks (section_id, position, rounds, rest_after_seconds) VALUES (?, ?, ?, ?)',
+        sectionResult.lastInsertRowId,
+        blockPosition,
+        block.rounds,
+        block.restAfterSeconds,
+      );
+      for (const [setPosition, set] of block.sets.entries()) {
+        const setResult = await database.runAsync(
+          `INSERT INTO swim_sets
+            (block_id, position, exercise_id, repetitions, distance_meters, rest_mode, rest_seconds, send_off_seconds,
+              rest_after_seconds, notes)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          blockResult.lastInsertRowId,
+          setPosition,
+          set.exerciseId,
+          set.repetitions,
+          set.distanceMeters,
+          set.restMode,
+          set.restMode === 'fixed' ? set.restSeconds : null,
+          set.restMode === 'send_off' ? set.sendOffSeconds : null,
+          set.restAfterSeconds,
+          set.notes,
+        );
+        for (const equipment of set.equipment) {
+          await database.runAsync(
+            'INSERT INTO swim_set_equipment (swim_set_id, equipment) VALUES (?, ?)',
+            setResult.lastInsertRowId,
+            equipment,
+          );
+        }
+      }
+    }
+  }
+}
+
 export async function saveWorkout(database: SQLiteDatabase, editorState: WorkoutEditorState): Promise<number> {
-  const { workoutId, workout, items } = toWorkoutSaveRows(editorState);
+  const { workoutId, workout, items, swimSections } = toWorkoutSaveRows(editorState);
   const now = new Date().toISOString();
   let savedWorkoutId = workoutId;
 
@@ -90,13 +160,15 @@ export async function saveWorkout(database: SQLiteDatabase, editorState: Workout
     if (savedWorkoutId === null) {
       const result = await database.runAsync(
         `INSERT INTO workouts
-          (name, kind, class_type, activity_type, duration_minutes, description, image_url, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          (name, kind, class_type, activity_type, duration_minutes, pool_length_meters, description, image_url,
+            created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         workout.name,
         workout.kind,
         workout.classType,
         workout.activityType,
         workout.durationMinutes,
+        workout.poolLengthMeters,
         workout.description,
         workout.imageUrl,
         now,
@@ -106,21 +178,25 @@ export async function saveWorkout(database: SQLiteDatabase, editorState: Workout
     } else {
       await database.runAsync(
         `UPDATE workouts
-        SET name = ?, kind = ?, class_type = ?, activity_type = ?, duration_minutes = ?, description = ?, image_url = ?,
-          updated_at = ?
+        SET name = ?, kind = ?, class_type = ?, activity_type = ?, duration_minutes = ?, pool_length_meters = ?,
+          description = ?, image_url = ?, updated_at = ?
         WHERE id = ?`,
         workout.name,
         workout.kind,
         workout.classType,
         workout.activityType,
         workout.durationMinutes,
+        workout.poolLengthMeters,
         workout.description,
         workout.imageUrl,
         now,
         savedWorkoutId,
       );
       await database.runAsync('DELETE FROM workout_items WHERE workout_id = ?', savedWorkoutId);
+      await database.runAsync('DELETE FROM swim_sections WHERE workout_id = ?', savedWorkoutId);
     }
+
+    await insertSwimSections(database, savedWorkoutId, swimSections);
 
     for (const item of items) {
       const itemResult = await database.runAsync(
@@ -155,12 +231,88 @@ export async function saveWorkout(database: SQLiteDatabase, editorState: Workout
   return savedWorkoutId;
 }
 
+async function getSwimWorkoutDetail(
+  database: SQLiteDatabase,
+  workoutId: number,
+  poolLengthMeters: number | null,
+): Promise<SwimWorkoutDetail> {
+  const sectionRows = await database.getAllAsync<SwimSectionRow>(
+    'SELECT id, name FROM swim_sections WHERE workout_id = ? ORDER BY position',
+    workoutId,
+  );
+  const blockRows = await database.getAllAsync<SwimBlockRow>(
+    `SELECT swim_blocks.id, swim_blocks.section_id, swim_blocks.rounds, swim_blocks.rest_after_seconds
+    FROM swim_blocks
+    JOIN swim_sections ON swim_sections.id = swim_blocks.section_id
+    WHERE swim_sections.workout_id = ?
+    ORDER BY swim_blocks.section_id, swim_blocks.position`,
+    workoutId,
+  );
+  const setRows = await database.getAllAsync<SwimSetRow>(
+    `SELECT swim_sets.id, swim_sets.block_id, swim_sets.exercise_id, exercises.name AS exercise_name,
+      swim_sets.repetitions, swim_sets.distance_meters, swim_sets.rest_mode, swim_sets.rest_seconds,
+      swim_sets.send_off_seconds, swim_sets.rest_after_seconds, swim_sets.notes
+    FROM swim_sets
+    JOIN exercises ON exercises.id = swim_sets.exercise_id
+    JOIN swim_blocks ON swim_blocks.id = swim_sets.block_id
+    JOIN swim_sections ON swim_sections.id = swim_blocks.section_id
+    WHERE swim_sections.workout_id = ?
+    ORDER BY swim_sets.block_id, swim_sets.position`,
+    workoutId,
+  );
+  const equipmentRows = await database.getAllAsync<SwimEquipmentRow>(
+    `SELECT swim_set_equipment.swim_set_id, swim_set_equipment.equipment
+    FROM swim_set_equipment
+    JOIN swim_sets ON swim_sets.id = swim_set_equipment.swim_set_id
+    JOIN swim_blocks ON swim_blocks.id = swim_sets.block_id
+    JOIN swim_sections ON swim_sections.id = swim_blocks.section_id
+    WHERE swim_sections.workout_id = ?`,
+    workoutId,
+  );
+
+  const toSwimSet = (setRow: SwimSetRow): SwimSet => {
+    const equipmentOfSet = equipmentRows
+      .filter((equipmentRow) => equipmentRow.swim_set_id === setRow.id)
+      .map((equipmentRow) => equipmentRow.equipment);
+    return {
+      exerciseId: setRow.exercise_id,
+      exerciseName: setRow.exercise_name,
+      repetitions: setRow.repetitions,
+      distanceMeters: setRow.distance_meters,
+      restMode: setRow.rest_mode,
+      restSeconds: setRow.rest_seconds,
+      sendOffSeconds: setRow.send_off_seconds,
+      restAfterSeconds: setRow.rest_after_seconds,
+      equipment: swimEquipmentList.filter((equipment) => equipmentOfSet.includes(equipment)),
+      notes: setRow.notes,
+    };
+  };
+
+  const sections: SwimSection[] = sectionRows.map((sectionRow) => ({
+    name: sectionRow.name,
+    blocks: blockRows
+      .filter((blockRow) => blockRow.section_id === sectionRow.id)
+      .map((blockRow) => ({
+        rounds: blockRow.rounds,
+        restAfterSeconds: blockRow.rest_after_seconds,
+        sets: setRows.filter((setRow) => setRow.block_id === blockRow.id).map(toSwimSet),
+      })),
+  }));
+
+  return {
+    poolLengthMeters:
+      poolLengthMeters !== null && isSwimPoolLength(poolLengthMeters) ? poolLengthMeters : defaultSwimPoolLength,
+    sections,
+  };
+}
+
 export async function getWorkoutWithItems(
   database: SQLiteDatabase,
   workoutId: number,
 ): Promise<WorkoutWithItems | null> {
   const workoutRow = await database.getFirstAsync<WorkoutRow>(
-    `SELECT id, name, kind, class_type, activity_type, duration_minutes, description, image_url, created_at, updated_at
+    `SELECT id, name, kind, class_type, activity_type, duration_minutes, pool_length_meters, description, image_url,
+      created_at, updated_at
     FROM workouts WHERE id = ?`,
     workoutId,
   );
@@ -221,6 +373,11 @@ export async function getWorkoutWithItems(
       })),
   }));
 
+  const swim =
+    workoutRow.kind === 'swim'
+      ? await getSwimWorkoutDetail(database, workoutId, workoutRow.pool_length_meters)
+      : null;
+
   return {
     id: workoutRow.id,
     name: workoutRow.name,
@@ -232,6 +389,7 @@ export async function getWorkoutWithItems(
     imageUrl: workoutRow.image_url,
     createdAt: workoutRow.created_at,
     updatedAt: workoutRow.updated_at,
+    swim,
     items,
   };
 }
@@ -243,8 +401,10 @@ export async function duplicateWorkout(database: SQLiteDatabase, workoutId: numb
   await database.withTransactionAsync(async () => {
     const workoutResult = await database.runAsync(
       `INSERT INTO workouts
-        (name, kind, class_type, activity_type, duration_minutes, description, image_url, created_at, updated_at)
-      SELECT name || ' (copy)', kind, class_type, activity_type, duration_minutes, description, image_url, ?, ?
+        (name, kind, class_type, activity_type, duration_minutes, pool_length_meters, description, image_url,
+          created_at, updated_at)
+      SELECT name || ' (copy)', kind, class_type, activity_type, duration_minutes, pool_length_meters, description,
+        image_url, ?, ?
       FROM workouts WHERE id = ?`,
       now,
       now,
@@ -277,6 +437,9 @@ export async function duplicateWorkout(database: SQLiteDatabase, workoutId: numb
         itemRow.id,
       );
     }
+
+    const swimDetail = await getSwimWorkoutDetail(database, workoutId, null);
+    await insertSwimSections(database, newWorkoutId, swimDetail.sections);
   });
 
   if (duplicatedWorkoutId === null) {

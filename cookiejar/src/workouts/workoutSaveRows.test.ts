@@ -29,6 +29,7 @@ describe('toWorkoutSaveRows', () => {
       classType: 'pilates',
       activityType: null,
       durationMinutes: 50,
+      poolLengthMeters: null,
       description: 'Reformer, core focus',
       imageUrl: 'https://example.com/pilates.jpg',
     });
@@ -72,16 +73,61 @@ describe('toWorkoutSaveRows', () => {
         classType: null,
         activityType: 'hike',
         durationMinutes: null,
+        poolLengthMeters: null,
         description: 'Platteklip Gorge',
         imageUrl: 'https://example.com/hike.jpg',
       },
       items: [],
+      swimSections: [],
     });
   });
 
   test('an activity workout with empty text stores null and with no details saves a hike', () => {
     const rows = toWorkoutSaveRows({ ...initialWorkoutEditorState, name: 'Walk', kind: 'activity' });
     expect(rows.workout).toMatchObject({ activityType: 'hike', description: null, imageUrl: null });
+  });
+
+  test('a swim workout saves its pool length, trimmed text and structure', () => {
+    const reducer = createWorkoutEditorReducer(createKeyCounter('test'));
+    let state = reducer({ ...initialWorkoutEditorState, name: ' Tuesday Swim ' }, { type: 'kindChosen', kind: 'swim' });
+    state = reducer(state, { type: 'swimChanged', action: { type: 'detailsChanged', changes: { poolLengthMeters: 50, description: '  Easy  ' } } });
+    state = reducer(state, {
+      type: 'swimChanged',
+      action: { type: 'setAdded', sectionKey: state.swimDetails?.sections[1].key ?? '', stroke: { id: 2, name: 'Freestyle' } },
+    });
+    const rows = toWorkoutSaveRows(state);
+    expect(rows.workout).toEqual({
+      name: 'Tuesday Swim',
+      kind: 'swim',
+      classType: null,
+      activityType: null,
+      durationMinutes: null,
+      poolLengthMeters: 50,
+      description: 'Easy',
+      imageUrl: null,
+    });
+    expect(rows.items).toEqual([]);
+    expect(rows.swimSections.map((section) => section.name)).toEqual(['Warm up', 'Main', 'Cool down']);
+    expect(rows.swimSections[1].blocks).toEqual([
+      {
+        rounds: 1,
+        restAfterSeconds: null,
+        sets: [
+          {
+            exerciseId: 2,
+            exerciseName: 'Freestyle',
+            repetitions: 1,
+            distanceMeters: 100,
+            restMode: 'fixed',
+            restSeconds: null,
+            sendOffSeconds: null,
+            restAfterSeconds: null,
+            equipment: [],
+            notes: null,
+          },
+        ],
+      },
+    ]);
   });
 
   test('a new workout has no workout id and an existing one keeps its id', () => {
@@ -97,6 +143,7 @@ describe('toWorkoutSaveRows', () => {
       classType: null,
       activityType: null,
       durationMinutes: null,
+      poolLengthMeters: null,
       description: null,
       imageUrl: null,
     });

@@ -1,6 +1,14 @@
 import type { ActivityType } from '@/types/ActivityType';
 import type { ClassType } from '@/types/ClassType';
 import type { Exercise } from '@/types/Exercise';
+import {
+  createDefaultSwimDetails,
+  createSwimEditorReducer,
+  loadSwimDetails,
+  type LoadedSwimDetails,
+  type SwimDetails,
+  type SwimEditorAction,
+} from '@/swimming/swimEditorReducer';
 import type { TrackingType } from '@/types/TrackingType';
 import type { WorkoutKind } from '@/types/WorkoutKind';
 import { applyBlockOrder } from '@/workouts/groupIntoBlocks';
@@ -36,6 +44,7 @@ export type WorkoutEditorState = {
   kind: WorkoutKind;
   classDetails: ClassDetails | null;
   activityDetails: ActivityDetails | null;
+  swimDetails: SwimDetails | null;
   items: EditorItem[];
   hasUnsavedChanges: boolean;
 };
@@ -50,6 +59,7 @@ export type LoadedWorkout = {
   kind: WorkoutKind;
   classDetails: ClassDetails | null;
   activityDetails: ActivityDetails | null;
+  swimDetails: LoadedSwimDetails | null;
   items: LoadedItem[];
 };
 
@@ -58,6 +68,7 @@ export type WorkoutEditorAction =
   | { type: 'kindChosen'; kind: WorkoutKind }
   | { type: 'classDetailsChanged'; changes: Partial<ClassDetails> }
   | { type: 'activityDetailsChanged'; changes: Partial<ActivityDetails> }
+  | { type: 'swimChanged'; action: SwimEditorAction }
   | { type: 'exercisesAdded'; exercises: EditorExercise[]; asSuperset: boolean }
   | { type: 'itemRemoved'; itemKey: string }
   | { type: 'supersetCreated'; itemKey: string }
@@ -92,6 +103,7 @@ export const initialWorkoutEditorState: WorkoutEditorState = {
   kind: 'individual',
   classDetails: null,
   activityDetails: null,
+  swimDetails: null,
   items: [],
   hasUnsavedChanges: false,
 };
@@ -126,6 +138,8 @@ function toEditorExercise(exercise: EditorExercise): EditorExercise {
 }
 
 export function createWorkoutEditorReducer(createKey: CreateKey) {
+  const swimEditorReducer = createSwimEditorReducer(createKey);
+
   function loadItem(loadedItem: LoadedItem): EditorItem {
     return {
       ...loadedItem,
@@ -159,6 +173,7 @@ export function createWorkoutEditorReducer(createKey: CreateKey) {
           kind: action.kind,
           classDetails: action.kind === 'class' ? (state.classDetails ?? defaultClassDetails) : null,
           activityDetails: action.kind === 'activity' ? (state.activityDetails ?? defaultActivityDetails) : null,
+          swimDetails: action.kind === 'swim' ? (state.swimDetails ?? createDefaultSwimDetails(createKey)) : null,
           hasUnsavedChanges: true,
         };
       case 'classDetailsChanged':
@@ -173,6 +188,15 @@ export function createWorkoutEditorReducer(createKey: CreateKey) {
           activityDetails: { ...(state.activityDetails ?? defaultActivityDetails), ...action.changes },
           hasUnsavedChanges: true,
         };
+      case 'swimChanged': {
+        if (state.swimDetails === null) {
+          return state;
+        }
+        const nextSwimDetails = swimEditorReducer(state.swimDetails, action.action);
+        return nextSwimDetails === state.swimDetails
+          ? state
+          : { ...state, swimDetails: nextSwimDetails, hasUnsavedChanges: true };
+      }
       case 'exercisesAdded': {
         if (action.exercises.length === 0) {
           return state;
@@ -285,6 +309,8 @@ export function createWorkoutEditorReducer(createKey: CreateKey) {
           kind: action.workout.kind,
           classDetails: action.workout.classDetails,
           activityDetails: action.workout.activityDetails,
+          swimDetails:
+            action.workout.swimDetails === null ? null : loadSwimDetails(action.workout.swimDetails, createKey),
           items: action.workout.items.map(loadItem),
           hasUnsavedChanges: false,
         };

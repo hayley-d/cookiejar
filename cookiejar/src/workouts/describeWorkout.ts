@@ -3,6 +3,9 @@ import type { WorkoutSummary } from '@/types/WorkoutSummary';
 type DescribedWorkout = Pick<WorkoutSummary, 'kind' | 'durationMinutes' | 'exerciseCount'>;
 
 export function describeWorkout({ kind, durationMinutes, exerciseCount }: DescribedWorkout) {
+  if (kind === 'swim') {
+    return 'Swim';
+  }
   if (kind === 'activity') {
     return 'Activity';
   }

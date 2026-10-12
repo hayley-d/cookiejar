@@ -35,6 +35,10 @@ describe('describeWorkout', () => {
     expect(describeWorkout({ kind: 'activity', durationMinutes: null, exerciseCount: 0 })).toBe('Activity');
   });
 
+  test('a swim shows Swim', () => {
+    expect(describeWorkout({ kind: 'swim', durationMinutes: null, exerciseCount: 0 })).toBe('Swim');
+  });
+
   test('an individual workout counts its exercises', () => {
     expect(describeWorkout({ kind: 'individual', durationMinutes: null, exerciseCount: 6 })).toBe(
       'Individual · 6 exercises',
