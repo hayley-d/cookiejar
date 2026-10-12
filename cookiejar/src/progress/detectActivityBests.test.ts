@@ -53,6 +53,23 @@ describe('detectActivityBests', () => {
     expect(detectActivityBests(buildLog(), [buildLog()])).toEqual([]);
   });
 
+  test('earlier logs without metrics do not make the first measured log a best', () => {
+    expect(
+      detectActivityBests(buildLog(), [
+        buildLog({ distanceMeters: null, elevationGainMeters: null }),
+        buildLog({ distanceMeters: null, elevationGainMeters: null }),
+      ]),
+    ).toEqual([]);
+  });
+
+  test('a metric only compares against earlier logs that recorded it', () => {
+    expect(
+      detectActivityBests(buildLog({ distanceMeters: 9000, elevationGainMeters: 100, durationSeconds: 9000 }), [
+        buildLog({ distanceMeters: null, elevationGainMeters: 50, durationSeconds: 3600 }),
+      ]),
+    ).toEqual(['mostElevation']);
+  });
+
   test('can set several bests at once', () => {
     expect(
       detectActivityBests(buildLog({ distanceMeters: 9000, elevationGainMeters: 900, durationSeconds: 3000 }), [

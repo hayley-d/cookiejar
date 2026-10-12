@@ -1094,7 +1094,7 @@ The log form lists the chosen day's Hiking, Running and Walking Apple Health wor
 Both modules are pure and covered by `bun test`:
 
 - `src/progress/buildActivityStatistics.ts`: per type session count, distance and elevation for this month and all time, plus the bests (longest distance, most elevation, fastest pace)
-- `src/progress/detectActivityBests.ts`: compares a log with the earlier logs of the same type. A first log and a tie are not bests
+- `src/progress/detectActivityBests.ts`: compares a log with the earlier logs of the same type. A metric is a best only when at least one earlier log of the same type recorded it and the new value strictly beats every earlier recorded value. Earlier logs without the metric, a first log and a tie are not bests. Pace only counts earlier logs of at least 1 km
 - `src/progress/activityBestRules.ts`: pace counts as a best only for distances of at least 1 km (`minimumPaceDistanceMeters`), so a short walk cannot set a record
 
 `listFinishedActivityLogs` in `progressRepository` returns the raw finished logs with optional type and started-before filters, and `useActivityStatistics` builds the statistics. The Progress hub shows an Activities section. The activity summary shows a NEW BEST badge naming each best, and the finishing caption mentions it with the record nuggie.

@@ -1,19 +1,24 @@
-import { Button } from '@/components/atoms/Button';
-import { Card } from '@/components/atoms/Card';
-import { Box } from '@/components/primitives/Box';
-import { ScrollBox } from '@/components/primitives/ScrollBox';
-import { Typography } from '@/components/primitives/Typography';
-import { describeHealthAccessStatus } from '@/health/describeHealthAccessStatus';
-import { useHealthAuthorization } from '@/hooks/useHealthAuthorization';
+import { Button } from "@/components/atoms/Button";
+import { Card } from "@/components/atoms/Card";
+import { Box } from "@/components/primitives/Box";
+import { ScrollBox } from "@/components/primitives/ScrollBox";
+import { Typography } from "@/components/primitives/Typography";
+import { describeHealthAccessStatus } from "@/health/describeHealthAccessStatus";
+import { useHealthAuthorization } from "@/hooks/useHealthAuthorization";
 
 const garminSteps = [
-  'Open Garmin Connect on your phone.',
-  'Open settings, then Connected Apps, then Apple Health.',
-  'Turn on the data types: steps, sleep, resting heart rate and workouts.',
+  "Open Garmin Connect on your phone.",
+  "Open settings, then Connected Apps, then Apple Health.",
+  "Turn on the data types: steps, sleep, resting heart rate and workouts.",
 ];
 
 export default function AppleHealthScreen() {
-  const { hasRequestedAuthorization, isRequesting, requestAuthorization } = useHealthAuthorization();
+  const {
+    hasRequestedAuthorization,
+    needsReadTypesRequest,
+    isRequesting,
+    requestAuthorization,
+  } = useHealthAuthorization();
   const description = describeHealthAccessStatus(hasRequestedAuthorization);
 
   return (
@@ -27,9 +32,11 @@ export default function AppleHealthScreen() {
                 {description.detail}
               </Typography>
             ) : null}
-            {hasRequestedAuthorization === false ? (
+            {hasRequestedAuthorization === false || needsReadTypesRequest ? (
               <Button
-                label="Request access"
+                label={
+                  needsReadTypesRequest ? "Update access" : "Request access"
+                }
                 onPress={() => {
                   void requestAuthorization();
                 }}
@@ -40,9 +47,12 @@ export default function AppleHealthScreen() {
         </Card>
         <Card>
           <Box gap="small">
-            <Typography variant="label">Get Garmin data into Nuggie&apos;s Gym</Typography>
+            <Typography variant="label">
+              Get Garmin data into Nuggie&apos;s Gym
+            </Typography>
             <Typography variant="body" color="textSecondary">
-              Garmin Connect shares your data through Apple Health, and Nuggie&apos;s Gym reads it from there.
+              Garmin Connect shares your data through Apple Health, and
+              Nuggie&apos;s Gym reads it from there.
             </Typography>
             {garminSteps.map((step, stepIndex) => (
               <Typography key={step} variant="body" color="textSecondary">

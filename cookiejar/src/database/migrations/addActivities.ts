@@ -61,7 +61,7 @@ export async function addActivities(database: SQLiteDatabase) {
     INSERT INTO sessions_rebuilt
       (id, workout_id, plan_entry_id, workout_name, workout_kind, class_type, activity_type, scheduled_date, started_at,
         finished_at, notes, health_workout_uuid, health_average_heart_rate, health_maximum_heart_rate,
-        health_active_kilocalories, health_duration_seconds)
+        health_active_kilocalories, health_duration_seconds, active_kilocalories, average_heart_rate)
     SELECT
       id,
       workout_id,
@@ -78,7 +78,9 @@ export async function addActivities(database: SQLiteDatabase) {
       health_average_heart_rate,
       health_maximum_heart_rate,
       health_active_kilocalories,
-      health_duration_seconds
+      health_duration_seconds,
+      CASE WHEN class_type = 'hiking' THEN health_active_kilocalories ELSE NULL END,
+      CASE WHEN class_type = 'hiking' THEN health_average_heart_rate ELSE NULL END
     FROM sessions;
 
     DROP TABLE sessions;

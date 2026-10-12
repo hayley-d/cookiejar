@@ -252,20 +252,37 @@ export async function insertActivitySession(database: SQLiteDatabase, log: Activ
   let sessionId: number | null = null;
 
   await database.withTransactionAsync(async () => {
-    const workout = await database.getFirstAsync<{ name: string }>(
-      'SELECT name FROM workouts WHERE id = ?',
+    const workout = await database.getFirstAsync<{ name: string; kind: string }>(
+      'SELECT name, kind FROM workouts WHERE id = ?',
       log.workoutId,
     );
     if (workout === null) {
       throw new Error('The workout to log no longer exists');
     }
+    if (workout.kind !== 'activity') {
+      throw new Error('The workout to log is not an activity');
+    }
+    const existingSessions: ExistingPlanEntrySession[] =
+      log.planEntryId === null
+        ? []
+        : (
+            await database.getAllAsync<ExistingSessionRow>(
+              `SELECT id, finished_at FROM sessions
+              WHERE scheduled_date = ? AND plan_entry_id = ?
+              ORDER BY started_at, id`,
+              log.scheduledDate,
+              log.planEntryId,
+            )
+          ).map((row) => ({ id: row.id, finishedAt: row.finished_at }));
+    const sessionStart = resolveSessionStart(log.planEntryId, existingSessions);
+    const resolvedPlanEntryId = sessionStart.kind === 'create' ? sessionStart.planEntryId : null;
     const result = await database.runAsync(
       `INSERT INTO sessions
         (workout_id, plan_entry_id, workout_name, workout_kind, activity_type, scheduled_date, started_at,
           finished_at, distance_meters, elevation_gain_meters, active_kilocalories, average_heart_rate, notes)
       VALUES (?, ?, ?, 'activity', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       log.workoutId,
-      log.planEntryId,
+      resolvedPlanEntryId,
       workout.name,
       log.activityType,
       log.scheduledDate,

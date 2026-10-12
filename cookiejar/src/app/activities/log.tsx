@@ -155,7 +155,9 @@ function NewActivityLogScreen({
     return null;
   }
 
-  const date = dateParameter ?? toLocalDateString(new Date());
+  const today = toLocalDateString(new Date());
+  const requestedDate = dateParameter ?? today;
+  const date = planEntryId === null && requestedDate > today ? today : requestedDate;
 
   return (
     <ActivityLogSheet

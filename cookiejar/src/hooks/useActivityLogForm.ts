@@ -144,7 +144,7 @@ export function useActivityLogForm({ workoutId, sessionId, planEntryId, initialV
       try {
         await linkPickedHealthWorkout(insertedSessionId);
       } catch {
-        Alert.alert('Activity logged', 'The Apple Health workout could not be linked. You can link it from the summary.');
+        Alert.alert('Activity logged', 'The Apple Health workout could not be linked. You can link it by tapping Edit on the summary.');
       }
       bumpDataVersion();
       router.replace({
