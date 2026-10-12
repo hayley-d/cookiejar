@@ -1,4 +1,5 @@
 import { NumberInput } from '@/components/atoms/NumberInput';
+import { ActivityHealthWorkoutRow } from '@/components/molecules/ActivityHealthWorkoutRow';
 import { ChipGroup } from '@/components/molecules/ChipGroup';
 import { FormField } from '@/components/molecules/FormField';
 import { Box } from '@/components/primitives/Box';
@@ -13,6 +14,7 @@ import {
   type ActivityLogFormErrors,
   type ActivityLogFormValues,
 } from '@/activities/validateActivityLogForm';
+import type { HealthWorkout } from '@/health/HealthTypes';
 import { parseLocalDateString } from '@/dates/parseLocalDateString';
 import { toLocalDateString } from '@/dates/toLocalDateString';
 import { activityTypeLabels, activityTypes } from '@/types/ActivityType';
@@ -22,7 +24,10 @@ type ActivityLogFormProperties = {
   values: ActivityLogFormValues;
   errors: ActivityLogFormErrors;
   lockedDate: string | null;
+  healthWorkouts: HealthWorkout[];
+  pickedHealthWorkoutUuid: string | null;
   onChangeValues: (values: ActivityLogFormValues) => void;
+  onPickHealthWorkout: (workout: HealthWorkout) => void;
 };
 
 const activityTypeOptions = activityTypes.map((activityType) => ({
@@ -33,11 +38,33 @@ const activityTypeOptions = activityTypes.map((activityType) => ({
 
 const notesMinimumHeight = 96;
 
-export function ActivityLogForm({ values, errors, lockedDate, onChangeValues }: ActivityLogFormProperties) {
+export function ActivityLogForm({
+  values,
+  errors,
+  lockedDate,
+  healthWorkouts,
+  pickedHealthWorkoutUuid,
+  onChangeValues,
+  onPickHealthWorkout,
+}: ActivityLogFormProperties) {
   const pace = describePace(activityLogDistanceMeters(values), activityLogDurationSeconds(values));
 
   return (
     <ScrollBox gap="large">
+      {healthWorkouts.length === 0 ? null : (
+        <FormField label="From Apple Health">
+          <Box gap="small">
+            {healthWorkouts.map((workout) => (
+              <ActivityHealthWorkoutRow
+                key={workout.uuid}
+                workout={workout}
+                isSelected={workout.uuid === pickedHealthWorkoutUuid}
+                onPress={() => onPickHealthWorkout(workout)}
+              />
+            ))}
+          </Box>
+        </FormField>
+      )}
       <FormField label="Activity type">
         <ChipGroup
           options={activityTypeOptions}

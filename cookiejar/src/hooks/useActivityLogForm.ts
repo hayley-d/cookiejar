@@ -3,6 +3,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useRef, useState } from 'react';
 import { Alert } from 'react-native';
 
+import { activityMetricsFromHealthWorkout } from '@/activities/activityMetricsFromHealthWorkout';
 import { buildActivityTimes } from '@/activities/buildActivityTimes';
 import {
   activityLogDistanceMeters,
@@ -11,8 +12,21 @@ import {
   type ActivityLogFormErrors,
   type ActivityLogFormValues,
 } from '@/activities/validateActivityLogForm';
-import { insertActivitySession, updateActivitySession } from '@/database/repositories/sessionRepository';
+import {
+  insertActivitySession,
+  linkHealthWorkout,
+  updateActivitySession,
+} from '@/database/repositories/sessionRepository';
+import type { HealthWorkout, WorkoutHeartRate } from '@/health/HealthTypes';
+import { readWorkoutHeartRate } from '@/health/readHealthWorkouts';
 import { bumpDataVersion } from '@/stores/dataVersionStore';
+
+type PickedHealthWorkout = {
+  workout: HealthWorkout;
+  heartRate: WorkoutHeartRate;
+};
+
+const missingHeartRate: WorkoutHeartRate = { averageHeartRate: null, maximumHeartRate: null };
 
 type ActivityLogFormOptions = {
   workoutId: number | null;
@@ -26,10 +40,57 @@ export function useActivityLogForm({ workoutId, sessionId, planEntryId, initialV
   const [values, setValues] = useState<ActivityLogFormValues>(initialValues);
   const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [pickedHealthWorkout, setPickedHealthWorkout] = useState<PickedHealthWorkout | null>(null);
   const isSaveInFlight = useRef(false);
+  const isPickInFlight = useRef(false);
 
   const validationErrors = validateActivityLogForm(values);
   const errors: ActivityLogFormErrors = hasAttemptedSave ? validationErrors : {};
+
+  function changeValues(nextValues: ActivityLogFormValues) {
+    if (nextValues.date !== values.date) {
+      setPickedHealthWorkout(null);
+    }
+    setValues(nextValues);
+  }
+
+  async function pickHealthWorkout(workout: HealthWorkout) {
+    if (isPickInFlight.current) {
+      return;
+    }
+    isPickInFlight.current = true;
+    try {
+      const heartRate = await readWorkoutHeartRate(workout.startDate, workout.endDate).catch(() => missingHeartRate);
+      const metrics = activityMetricsFromHealthWorkout(workout, heartRate.averageHeartRate);
+      setPickedHealthWorkout({ workout, heartRate });
+      setValues((currentValues) => ({
+        ...currentValues,
+        activityType: metrics.activityType ?? currentValues.activityType,
+        startTime: metrics.startTime,
+        hours: metrics.hours,
+        minutes: metrics.minutes,
+        distanceKilometers: metrics.distanceKilometers,
+        elevationGainMeters: metrics.elevationGainMeters,
+        activeKilocalories: metrics.activeKilocalories,
+        averageHeartRate: metrics.averageHeartRate,
+      }));
+    } finally {
+      isPickInFlight.current = false;
+    }
+  }
+
+  async function linkPickedHealthWorkout(targetSessionId: number) {
+    if (pickedHealthWorkout === null) {
+      return;
+    }
+    await linkHealthWorkout(database, targetSessionId, {
+      healthWorkoutUuid: pickedHealthWorkout.workout.uuid,
+      healthAverageHeartRate: pickedHealthWorkout.heartRate.averageHeartRate,
+      healthMaximumHeartRate: pickedHealthWorkout.heartRate.maximumHeartRate,
+      healthActiveKilocalories: pickedHealthWorkout.workout.activeKilocalories,
+      healthDurationSeconds: pickedHealthWorkout.workout.durationSeconds,
+    });
+  }
 
   async function save() {
     setHasAttemptedSave(true);
@@ -59,6 +120,7 @@ export function useActivityLogForm({ workoutId, sessionId, planEntryId, initialV
           averageHeartRate: values.averageHeartRate,
           notes,
         });
+        await linkPickedHealthWorkout(sessionId);
         bumpDataVersion();
         router.back();
         return;
@@ -79,6 +141,11 @@ export function useActivityLogForm({ workoutId, sessionId, planEntryId, initialV
         averageHeartRate: values.averageHeartRate,
         notes,
       });
+      try {
+        await linkPickedHealthWorkout(insertedSessionId);
+      } catch {
+        Alert.alert('Activity logged', 'The Apple Health workout could not be linked. You can link it from the summary.');
+      }
       bumpDataVersion();
       router.replace({
         pathname: '/sessions/[sessionId]/summary',
@@ -87,9 +154,20 @@ export function useActivityLogForm({ workoutId, sessionId, planEntryId, initialV
     } catch {
       isSaveInFlight.current = false;
       setIsSaving(false);
-      Alert.alert('Could not log the activity', 'Something went wrong. Please try again.');
+      Alert.alert(
+        sessionId === null ? 'Could not log the activity' : 'Could not save the activity',
+        'Something went wrong. Please try again.',
+      );
     }
   }
 
-  return { values, errors, isSaving, changeValues: setValues, save };
+  return {
+    values,
+    errors,
+    isSaving,
+    pickedHealthWorkoutUuid: pickedHealthWorkout === null ? null : pickedHealthWorkout.workout.uuid,
+    changeValues,
+    pickHealthWorkout,
+    save,
+  };
 }

@@ -7,6 +7,7 @@ import { splitDurationSeconds } from '@/activities/splitDurationSeconds';
 import type { ActivityLogFormValues } from '@/activities/validateActivityLogForm';
 import { toLocalDateString } from '@/dates/toLocalDateString';
 import { useActivityLogForm } from '@/hooks/useActivityLogForm';
+import { useDayActivityWorkouts } from '@/hooks/useDayActivityWorkouts';
 import { useFinishedSession } from '@/hooks/useFinishedSession';
 import { useWorkoutWithItems } from '@/hooks/useWorkoutWithItems';
 import type { ActivityType } from '@/types/ActivityType';
@@ -46,6 +47,8 @@ function ActivityLogSheet(properties: ActivityLogSheetProperties) {
     initialValues: properties.initialValues,
   });
 
+  const healthWorkouts = useDayActivityWorkouts(activityLogForm.values.date);
+
   return (
     <>
       <Stack.Screen
@@ -60,7 +63,10 @@ function ActivityLogSheet(properties: ActivityLogSheetProperties) {
         values={activityLogForm.values}
         errors={activityLogForm.errors}
         lockedDate={properties.lockedDate}
+        healthWorkouts={healthWorkouts}
+        pickedHealthWorkoutUuid={activityLogForm.pickedHealthWorkoutUuid}
         onChangeValues={activityLogForm.changeValues}
+        onPickHealthWorkout={activityLogForm.pickHealthWorkout}
       />
     </>
   );

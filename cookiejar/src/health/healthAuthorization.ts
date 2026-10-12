@@ -7,6 +7,8 @@ const healthReadTypes = [
   'HKCategoryTypeIdentifierSleepAnalysis',
   'HKQuantityTypeIdentifierRestingHeartRate',
   'HKQuantityTypeIdentifierHeartRate',
+  'HKQuantityTypeIdentifierDistanceWalkingRunning',
+  'HKQuantityTypeIdentifierDistanceCycling',
   'HKWorkoutTypeIdentifier',
 ] as const;
 
