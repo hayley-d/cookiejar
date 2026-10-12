@@ -6,6 +6,8 @@ import type { TrackingType } from '@/types/TrackingType';
 import type { ExerciseHistorySet, ExerciseWithHistory } from '@/types/ExerciseHistory';
 import type { FinishedSessionSet } from '@/types/FinishedSessionSet';
 import type { ClassStatistics } from '@/types/ClassStatistics';
+import type { ActivityLog } from '@/types/ActivityLog';
+import type { ActivityType } from '@/types/ActivityType';
 import type { ClassType } from '@/types/ClassType';
 import type { TrainingTotals, TrainingTotalsRange } from '@/types/TrainingTotals';
 import { sortClassStatistics } from '@/progress/sortClassStatistics';
@@ -200,4 +202,43 @@ export async function listClassStatistics(
       lastStartedAt: row.last_started_at,
     })),
   );
+}
+
+type ActivityLogRow = {
+  activity_type: ActivityType;
+  started_at: string;
+  duration_seconds: number;
+  distance_meters: number | null;
+  elevation_gain_meters: number | null;
+};
+
+export type ActivityLogFilter = {
+  activityType?: ActivityType;
+  startedBefore?: string;
+};
+
+export async function listFinishedActivityLogs(
+  database: SQLiteDatabase,
+  filter: ActivityLogFilter = {},
+): Promise<ActivityLog[]> {
+  const rows = await database.getAllAsync<ActivityLogRow>(
+    `SELECT activity_type, started_at, distance_meters, elevation_gain_meters,
+      MAX(0, ${sessionDurationSecondsExpression}) AS duration_seconds
+    FROM sessions
+    WHERE workout_kind = 'activity' AND activity_type IS NOT NULL AND finished_at IS NOT NULL
+      AND (? IS NULL OR activity_type = ?)
+      AND (? IS NULL OR started_at < ?)
+    ORDER BY started_at`,
+    filter.activityType ?? null,
+    filter.activityType ?? null,
+    filter.startedBefore ?? null,
+    filter.startedBefore ?? null,
+  );
+  return rows.map((row) => ({
+    activityType: row.activity_type,
+    startedAt: row.started_at,
+    durationSeconds: row.duration_seconds,
+    distanceMeters: row.distance_meters,
+    elevationGainMeters: row.elevation_gain_meters,
+  }));
 }

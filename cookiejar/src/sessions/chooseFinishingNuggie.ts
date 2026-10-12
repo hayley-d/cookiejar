@@ -9,6 +9,7 @@ export type FinishingPresentationInput = {
   classType: ClassType | null;
   activityType: ActivityType | null;
   personalRecordCount: number;
+  newBestLabels: readonly string[];
 };
 
 export type FinishingPresentation = {
@@ -31,6 +32,9 @@ export function randomFromSessionId(sessionId: number): () => number {
 }
 
 export function describeFinishingCaption(input: FinishingPresentationInput): string {
+  if (input.newBestLabels.length > 0) {
+    return `New best: ${input.newBestLabels.join(', ')}!`;
+  }
   if (input.personalRecordCount > 0) {
     return 'New personal record!';
   }
@@ -49,7 +53,7 @@ export function chooseFinishingPresentation(
 ): FinishingPresentation {
   return {
     nuggie: chooseNuggie(
-      { kind: 'sessionFinished', workoutKind: input.workoutKind, personalRecordCount: input.personalRecordCount },
+      { kind: 'sessionFinished', workoutKind: input.workoutKind, personalRecordCount: input.personalRecordCount + input.newBestLabels.length },
       new Date(),
       random,
     ),

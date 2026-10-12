@@ -1,3 +1,4 @@
+import { Badge } from '@/components/atoms/Badge';
 import { NuggieImage } from '@/components/atoms/NuggieImage';
 import { Button } from '@/components/atoms/Button';
 import { LinkedHealthWorkoutRow } from '@/components/molecules/LinkedHealthWorkoutRow';
@@ -24,6 +25,7 @@ const tilesPerRow = 3;
 type ActivitySummaryProperties = {
   session: Session;
   nuggie: NuggieName;
+  newBestLabels: readonly string[];
   now: Date;
   onDone: () => void;
   onEdit: () => void;
@@ -62,7 +64,7 @@ function chunkTiles(tiles: ActivityTile[]): ActivityTile[][] {
   return rows;
 }
 
-export function ActivitySummary({ session, nuggie, now, onDone, onEdit, onUnlinkGarmin }: ActivitySummaryProperties) {
+export function ActivitySummary({ session, nuggie, newBestLabels, now, onDone, onEdit, onUnlinkGarmin }: ActivitySummaryProperties) {
   const endedAt = session.finishedAt === null ? now : new Date(session.finishedAt);
   const durationSeconds = elapsedSecondsBetween(session.startedAt, endedAt);
   const tileRows = chunkTiles(buildActivityTiles(session, durationSeconds));
@@ -75,6 +77,9 @@ export function ActivitySummary({ session, nuggie, now, onDone, onEdit, onUnlink
         <Typography variant="label" color="textSecondary" align="center">
           {`${session.workoutName.toUpperCase()} · ${formatFullDate(session.scheduledDate)}`}
         </Typography>
+        {newBestLabels.map((label) => (
+          <Badge key={label} label={`NEW BEST · ${label}`} />
+        ))}
       </Box>
       {tileRows.map((tileRow) => (
         <Box key={tileRow[0].label} direction="row" gap="small">

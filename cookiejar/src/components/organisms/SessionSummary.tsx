@@ -26,6 +26,7 @@ type SessionSummaryProperties = {
   session: SessionWithExercises;
   personalRecords: readonly PersonalRecord[];
   nuggie: NuggieName;
+  newBestLabels: readonly string[];
   now: Date;
   onDone: () => void;
   onEditActivity: () => void;
@@ -40,6 +41,7 @@ export function SessionSummary({
   session,
   personalRecords,
   nuggie,
+  newBestLabels,
   now,
   onDone,
   onEditActivity,
@@ -54,6 +56,7 @@ export function SessionSummary({
       <ActivitySummary
         session={session}
         nuggie={nuggie}
+        newBestLabels={newBestLabels}
         now={now}
         onDone={onDone}
         onEdit={onEditActivity}
