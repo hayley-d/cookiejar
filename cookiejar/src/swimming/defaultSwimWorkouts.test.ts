@@ -188,6 +188,22 @@ describe('defaultSwimWorkouts', () => {
     }
   });
 
+  test('drill and swim pairs with a send-off add up to the table send-off', () => {
+    const advancedKeys = ['swim-advanced-week-1-a', 'swim-advanced-week-5-a'];
+    for (const key of advancedKeys) {
+      const workout = defaultSwimWorkouts.find((candidate) => candidate.builtInKey === key)!;
+      const drillSets = workout.sections[1].blocks[0].sets;
+      expect(drillSets).toHaveLength(16);
+      for (let pairIndex = 0; pairIndex < drillSets.length; pairIndex += 2) {
+        const drillHalf = drillSets[pairIndex];
+        const swimHalf = drillSets[pairIndex + 1];
+        expect(drillHalf.strokeName).toBe(swimHalf.strokeName);
+        expect(drillHalf.distanceMeters + swimHalf.distanceMeters).toBe(50);
+        expect((drillHalf.sendOffSeconds ?? 0) + (swimHalf.sendOffSeconds ?? 0)).toBe(50);
+      }
+    }
+  });
+
   test('library version is a hash', () => {
     expect(defaultSwimWorkoutLibraryVersion).toMatch(/^[0-9a-f]{8}$/);
   });

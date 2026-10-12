@@ -118,12 +118,11 @@ function drillSetsInMedleyOrder(count: number, distanceMeters: number, options: 
 }
 
 function drillAndSwimSetsInMedleyOrder(count: number, distanceMeters: number, options: SwimSetOptions = {}) {
+  const halfOptions: SwimSetOptions =
+    options.sendOffSeconds === undefined ? options : { ...options, sendOffSeconds: options.sendOffSeconds / 2 };
   return cycleStrokes(medleyStrokeNames, count, (strokeName) => [
-    swimSet(strokeName, 1, distanceMeters / 2, {
-      ...options,
-      notes: drillNotes[strokeName],
-    }),
-    swimSet(strokeName, 1, distanceMeters / 2, { ...options, notes: 'swim' }),
+    swimSet(strokeName, 1, distanceMeters / 2, { ...halfOptions, notes: drillNotes[strokeName] }),
+    swimSet(strokeName, 1, distanceMeters / 2, { ...halfOptions, notes: 'swim' }),
   ]);
 }
 
