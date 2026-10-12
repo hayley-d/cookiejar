@@ -11,6 +11,7 @@ export type Workout = {
   durationMinutes: number | null;
   description: string | null;
   imageUrl: string | null;
+  builtInKey: string | null;
   createdAt: string;
   updatedAt: string;
 };

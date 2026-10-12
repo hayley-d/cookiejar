@@ -24,6 +24,7 @@ const individualWorkout: WorkoutWithItems = {
   durationMinutes: null,
   description: null,
   imageUrl: null,
+  builtInKey: null,
   swim: null,
   items: [
     {
@@ -92,6 +93,7 @@ const classWorkout: WorkoutWithItems = {
   durationMinutes: 60,
   description: null,
   imageUrl: 'https://example.com/yoga.jpg',
+  builtInKey: null,
   swim: null,
   items: [],
 };
@@ -106,6 +108,7 @@ const swimWorkout: WorkoutWithItems = {
   durationMinutes: null,
   description: 'Easy pool session',
   imageUrl: null,
+  builtInKey: null,
   swim: {
     poolLengthMeters: 50,
     sections: [
@@ -183,6 +186,7 @@ describe('toLoadedWorkout', () => {
       durationMinutes: null,
       description: 'Platteklip Gorge',
       imageUrl: null,
+      builtInKey: null,
       swim: null,
       items: [],
     });

@@ -1,5 +1,10 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { getSetting, setSetting } from '@/database/repositories/appSettingsRepository';
+import {
+  addDismissedBuiltInKey,
+  dismissedBuiltInKeysSettingKey,
+} from '@/swimming/dismissedBuiltInKeys';
 import type { SwimSection, SwimSet, SwimWorkoutDetail } from '@/swimming/swimTypes';
 import type { ActivityType } from '@/types/ActivityType';
 import type { BodyPart } from '@/types/BodyPart';
@@ -24,6 +29,7 @@ type WorkoutSummaryRow = {
   duration_minutes: number | null;
   description: string | null;
   image_url: string | null;
+  built_in_key: string | null;
   created_at: string;
   updated_at: string;
   exercise_count: number;
@@ -88,6 +94,7 @@ function toWorkoutSummary(row: WorkoutSummaryRow): WorkoutSummary {
     durationMinutes: row.duration_minutes,
     description: row.description,
     imageUrl: row.image_url,
+    builtInKey: row.built_in_key,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     exerciseCount: row.exercise_count,
@@ -98,7 +105,8 @@ function toWorkoutSummary(row: WorkoutSummaryRow): WorkoutSummary {
 export async function listWorkouts(database: SQLiteDatabase): Promise<WorkoutSummary[]> {
   const rows = await database.getAllAsync<WorkoutSummaryRow>(
     `SELECT workouts.id, workouts.name, workouts.kind, workouts.class_type, workouts.activity_type,
-      workouts.duration_minutes, workouts.description, workouts.image_url, workouts.created_at, workouts.updated_at,
+      workouts.duration_minutes, workouts.description, workouts.image_url, workouts.built_in_key,
+      workouts.created_at, workouts.updated_at,
       COUNT(workout_items.id) AS exercise_count,
       (SELECT COALESCE(SUM(swim_blocks.rounds * swim_sets.repetitions * swim_sets.distance_meters), 0)
         FROM swim_sections
@@ -113,7 +121,7 @@ export async function listWorkouts(database: SQLiteDatabase): Promise<WorkoutSum
   return rows.map(toWorkoutSummary);
 }
 
-async function insertSwimSections(database: SQLiteDatabase, workoutId: number, sections: SwimSection[]) {
+export async function insertSwimSections(database: SQLiteDatabase, workoutId: number, sections: SwimSection[]) {
   for (const [sectionPosition, section] of sections.entries()) {
     const sectionResult = await database.runAsync(
       'INSERT INTO swim_sections (workout_id, position, name) VALUES (?, ?, ?)',
@@ -319,7 +327,7 @@ export async function getWorkoutWithItems(
 ): Promise<WorkoutWithItems | null> {
   const workoutRow = await database.getFirstAsync<WorkoutRow>(
     `SELECT id, name, kind, class_type, activity_type, duration_minutes, pool_length_meters, description, image_url,
-      created_at, updated_at
+      built_in_key, created_at, updated_at
     FROM workouts WHERE id = ?`,
     workoutId,
   );
@@ -394,6 +402,7 @@ export async function getWorkoutWithItems(
     durationMinutes: workoutRow.duration_minutes,
     description: workoutRow.description,
     imageUrl: workoutRow.image_url,
+    builtInKey: workoutRow.built_in_key,
     createdAt: workoutRow.created_at,
     updatedAt: workoutRow.updated_at,
     swim,
@@ -456,7 +465,21 @@ export async function duplicateWorkout(database: SQLiteDatabase, workoutId: numb
 }
 
 export async function deleteWorkout(database: SQLiteDatabase, workoutId: number): Promise<void> {
-  await database.runAsync('DELETE FROM workouts WHERE id = ?', workoutId);
+  await database.withTransactionAsync(async () => {
+    const workoutRow = await database.getFirstAsync<{ built_in_key: string | null }>(
+      'SELECT built_in_key FROM workouts WHERE id = ?',
+      workoutId,
+    );
+    await database.runAsync('DELETE FROM workouts WHERE id = ?', workoutId);
+    if (workoutRow?.built_in_key) {
+      const storedDismissedKeys = await getSetting(database, dismissedBuiltInKeysSettingKey);
+      await setSetting(
+        database,
+        dismissedBuiltInKeysSettingKey,
+        addDismissedBuiltInKey(storedDismissedKeys, workoutRow.built_in_key),
+      );
+    }
+  });
 }
 
 export async function countPlansUsingWorkout(database: SQLiteDatabase, workoutId: number): Promise<number> {

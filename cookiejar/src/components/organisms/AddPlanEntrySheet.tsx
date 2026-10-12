@@ -1,14 +1,16 @@
+import { useMemo } from 'react';
+
 import { WorkoutRow } from '@/components/molecules/WorkoutRow';
 import { SearchBar } from '@/components/molecules/SearchBar';
 import { Box } from '@/components/primitives/Box';
-import { List } from '@/components/primitives/List';
+import { SectionedList } from '@/components/primitives/SectionedList';
 import { Stack } from '@/components/primitives/Stack';
 import { TimePickerBox } from '@/components/primitives/TimePickerBox';
 import { Typography } from '@/components/primitives/Typography';
 import { dateToTimeOfDay, timeOfDayToDate } from '@/plans/timeOfDay';
 import type { WorkoutSummary } from '@/types/WorkoutSummary';
 import { describeWorkout } from '@/workouts/describeWorkout';
-import { filterWorkouts } from '@/workouts/filterWorkouts';
+import { groupWorkoutsByLibrary } from '@/workouts/groupWorkoutsByLibrary';
 import { workoutNuggie } from '@/workouts/workoutNuggie';
 import { workoutTypeLabel } from '@/workouts/workoutTypeLabel';
 
@@ -43,14 +45,19 @@ export function AddPlanEntrySheet({
   onSelectWorkout,
   isAdding,
 }: AddPlanEntrySheetProperties) {
-  const visibleWorkouts = filterWorkouts(workouts ?? [], searchText);
+  const workoutGroups = useMemo(() => groupWorkoutsByLibrary(workouts ?? [], searchText), [workouts, searchText]);
   const message = emptyMessage(workouts, searchText);
 
   return (
-    <List
-      data={visibleWorkouts}
+    <SectionedList
+      sections={workoutGroups}
       keyExtractor={(workout) => String(workout.id)}
       keyboardShouldPersistTaps="handled"
+      renderSectionHeader={({ section }) => (
+        <Box background="background" paddingVertical="extraSmall">
+          <Typography variant="heading">{section.title}</Typography>
+        </Box>
+      )}
       renderItem={({ item: workout }) => (
         <WorkoutRow
           name={workout.name}

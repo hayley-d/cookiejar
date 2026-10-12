@@ -51,7 +51,7 @@ Read the versioned docs at https://docs.expo.dev/versions/v57.0.0/ before using 
 
 - The database is opened once through `SQLiteProvider` at the root layout. Components reach it with `useSQLiteContext`.
 - `PRAGMA journal_mode = WAL` is set on open. `PRAGMA foreign_keys` is `OFF` while migrations run, so a migration can rebuild a referenced table, and `ON` afterwards. Each migration runs `PRAGMA foreign_key_check` inside its transaction and throws (rolling back) if it left any violation.
-- Schema changes are versioned migrations driven by `PRAGMA user_version`. `prepareDatabase` (`src/database/prepareDatabase.ts`) is the provider's `onInit`: it runs the migrations, then seeds the default exercise library, before any screen renders. A migration is never edited after it has shipped to the phone; new changes go in a new migration.
+- Schema changes are versioned migrations driven by `PRAGMA user_version`. `prepareDatabase` (`src/database/prepareDatabase.ts`) is the provider's `onInit`: it runs the migrations, then seeds the default exercise library and the built-in swim workouts, before any screen renders. A migration is never edited after it has shipped to the phone; new changes go in a new migration.
 - Each entity has a repository module in `src/database/repositories` that holds all of its SQL. Screens and components call repository functions and never write SQL themselves.
 - Every query uses bound parameters, never string interpolation.
 
@@ -164,7 +164,7 @@ The profile form (see Profile and Progress) is the only writer.
 
 ### Migrations
 
-Migrations run in order through `src/database/migrations/migrations.ts` array: `[createInitialSchema, createTrainingSchema, addSessionExerciseRestSeconds, addNotificationIdentifier, addExerciseNotes, addAssistedTrackingAndExerciseVideo, addActivities, addSwimming]`. The `user_version` PRAGMA tracks which migrations have run.
+Migrations run in order through `src/database/migrations/migrations.ts` array: `[createInitialSchema, createTrainingSchema, addSessionExerciseRestSeconds, addNotificationIdentifier, addExerciseNotes, addAssistedTrackingAndExerciseVideo, addActivities, addSwimming, addWorkoutBuiltInKey]`. The `user_version` PRAGMA tracks which migrations have run.
 
 - **v1 (createInitialSchema)**: Draft schema with exercises, workouts, workout_exercises and sets tables. Never edited. Kept so the migration order stays the same on every device.
 - **v2 (createTrainingSchema)**: Drops draft tables and creates the full training schema for production use.
@@ -174,13 +174,14 @@ Migrations run in order through `src/database/migrations/migrations.ts` array: `
 - **v6 (addAssistedTrackingAndExerciseVideo)**: Rebuilds `exercises` (adding a nullable `video_url`) and `workout_items` so their tracking type `CHECK` constraints accept `repetitions_and_assistance`. SQLite can't alter a `CHECK`, so each table is created as `*_rebuilt`, its rows copied with their ids, the old table dropped and the new one renamed. The `workout_items` indexes are recreated. This relies on `foreign_keys` being `OFF` during migrations; otherwise dropping `workout_items` would cascade-delete `target_sets`.
 - **v7 (addActivities)**: Rebuilds `workouts` so `kind` accepts `activity`, adds `activity_type` (hike\|run\|walk), drops `hiking` from the class types and requires `class_type` exactly for classes and `activity_type` exactly for activities. Every hiking class becomes a Hike activity with no `duration_minutes`. Rebuilds `sessions` so `workout_kind` accepts `activity`, adds `activity_type`, `distance_meters`, `elevation_gain_meters`, `active_kilocalories` and `average_heart_rate`, and turns every hiking session into a Hike activity, keeping its times, notes and Health link. The `sessions` indexes are recreated.
 - **v8 (addSwimming)**: Rebuilds `exercises` so `body_part` accepts `swimming`. Rebuilds `workouts` so `kind` accepts `swim`, adds `pool_length_meters` (`CHECK` 25 or 50) and requires `pool_length_meters` exactly for swims, next to the existing `class_type` and `activity_type` rules. Rebuilds `sessions` so `workout_kind` accepts `swim` and adds `pool_length_meters` (25 or 50). The `sessions` indexes are recreated. Creates the workout tables `swim_sections`, `swim_blocks`, `swim_sets` and `swim_set_equipment`, and the session snapshot tables `session_swim_sections`, `session_swim_blocks`, `session_swim_sets`, `session_swim_set_equipment` and `session_swim_repetitions`, with their indexes. Set `rest_mode` is `fixed` or `send_off`, `rounds` and `repetitions` are at least 1, `distance_meters` is above 0 and equipment is `fins`, `paddles`, `pull_buoy` or `kickboard`. Existing rows keep their ids and `pool_length_meters` stays `NULL` for them. The 13 strokes are not inserted here: they are built-in defaults that the default exercise library seeds.
+- **v9 (addWorkoutBuiltInKey)**: Adds a nullable `built_in_key` column to `workouts` (`ALTER TABLE workouts ADD COLUMN built_in_key TEXT`) and the unique index `workouts_by_built_in_key` on it. As with v4, the uniqueness comes from the index. User workouts keep `NULL`, which the index does not treat as a duplicate. See Built-in Swim Workouts.
 
 ### Schema v2
 
 | Table | Purpose | Key Columns |
 | --- | --- | --- |
 | **exercises** | Exercise definitions | `id`, `name` (unique), `body_part`, `default_tracking_type`, `image_url`, `video_url` (nullable, added by v6), `created_at`, `notes` (nullable, added by v5) |
-| **workouts** | Workout templates | `id`, `name`, `kind` (individual\|class\|activity\|swim), `class_type` (yoga\|pilates\|spin\|barre\|other), `activity_type` (hike\|run\|walk, v7), `duration_minutes`, `pool_length_meters` (25\|50, v8), `created_at`, `updated_at` |
+| **workouts** | Workout templates | `id`, `name`, `kind` (individual\|class\|activity\|swim), `class_type` (yoga\|pilates\|spin\|barre\|other), `activity_type` (hike\|run\|walk, v7), `duration_minutes`, `pool_length_meters` (25\|50, v8), `built_in_key` (nullable, unique, v9), `created_at`, `updated_at` |
 | **workout_items** | Exercises in a workout template | `id`, `workout_id`, `exercise_id`, `position`, `superset_group`, `tracking_type`, `rest_seconds`, `notes` |
 | **target_sets** | Target reps/weight/duration for a workout_item | `id`, `workout_item_id`, `position`, `repetitions`, `weight_kilograms`, `duration_seconds`, `distance_meters` |
 | **plans** | Training plans | `id`, `name`, `is_active` (0\|1 unique), `starts_on`, `created_at` |
@@ -1188,6 +1189,71 @@ Swims are workouts with finished sessions, so they count wherever finished sessi
 
 Covered by `bun test`: `src/swimming/` (`swimDistance`, `swimDistancePresets`, `describeSwimSet`, `swimEditorReducer`, `expandSwimRepetitions`, `swimSessionTotals`, `swimSessionChanges`, `swimDuration`, `swimPace`), `src/progress/` (`buildSwimLogs`, `buildSwimStatistics`, `detectSwimBests`), plus the swim cases in `filterExercises`, `parseExerciseLibraryCsv`, `toLoadedWorkout`, `workoutSaveRows`, `workoutEditorReducer`, `chooseNuggie`, `planHelpers`, `resolveScheduledWorkoutRoute` and `calculateWeeklyStreak`. The migration, repositories, builder, logger and Progress card are checked in the simulator.
 
+## Built-in Swim Workouts
+
+The app ships 39 swim workouts, seeded on launch. A built-in is an ordinary swim workout row with a `built_in_key`. The key is its identity: the seeder matches stored rows by key, and it is what the app uses to mark a workout read-only.
+
+### Content Module
+
+`src/swimming/defaultSwimWorkouts.ts` holds `defaultSwimWorkouts`, a typed array of `DefaultSwimWorkout`. Each one has a `builtInKey`, a name, a pool length (25 m for all of them) and sections, blocks and sets in the same shape as a user swim. A set names its stroke with `strokeName`, a `SwimStrokeName`, and the seeder resolves it to an exercise by name.
+
+Keys are built by `swimBuiltInKey(level, week, session)`:
+
+- `swim-{level}-week-{week}-{a|b}` for a numbered week and session
+- `swim-{level}-recovery` when week or session is `null`
+
+`parseSwimBuiltInKey` reads a key back with one regular expression and returns `null` for anything else. The level is `beginner`, `intermediate` or `advanced`.
+
+`defaultSwimWorkoutLibraryVersion` is `hashText(JSON.stringify(defaultSwimWorkouts))`, the same `hashText` that the exercise library version uses. The version is derived from the content, so editing the content changes it with no constant to bump.
+
+### Built-in Key Migration
+
+Migration v9 (`addWorkoutBuiltInKey`) is listed under Migrations. Its column is nullable and the unique index allows user workouts to keep `NULL`. `Workout.builtInKey` carries the value out of `listWorkouts` and `getWorkoutWithItems`. `duplicateWorkout` does not copy the key, so a duplicate is an ordinary workout.
+
+### Launch Seeder
+
+`seedDefaultSwimWorkouts` (`src/database/seedDefaultSwimWorkouts.ts`) runs from `prepareDatabase` after `seedDefaultExercises`, because it needs the strokes to exist.
+
+1. The gate reads `app_settings.default_swim_workout_library_version`. When it equals `defaultSwimWorkoutLibraryVersion`, the seeder returns and does nothing.
+2. Otherwise it loads the stored built-ins (`id` and `built_in_key` from `workouts` where the key is not null) and the dismissed keys, then calls `planSwimWorkoutSeeding`. That function is pure and returns `inserts` and `updates`.
+3. In `planSwimWorkoutSeeding`, a content workout whose key is dismissed is skipped. A key with no stored row is an insert. A key with a stored row is an update of that row's id. A stored built-in whose key is no longer in the content is not touched.
+4. The writes run in one `withTransactionAsync`. An insert writes a `swim` row with `pool_length_meters`, `built_in_key` and matching `created_at` and `updated_at`, then its sections through `insertSwimSections`. An update sets `name`, `pool_length_meters` and `updated_at`, deletes the workout's `swim_sections` and inserts them again. The workout id stays the same, so plan entries that reference it still point at the workout. The version setting is written last, inside the same transaction.
+5. Stroke names are resolved to exercise ids from `exercises`. An unknown stroke throws inside the transaction, so the whole seed rolls back and the stored version stays unchanged. The next launch tries again.
+
+An update bumps `updated_at`, so a content change moves the workout in the library's recency order. Sessions are not affected because a session keeps its own snapshot of the workout.
+
+### Dismissed Keys
+
+Deleting a built-in is remembered. `deleteWorkout` runs in one transaction: it reads the workout's `built_in_key`, deletes the row and, when there was a key, appends it to the app setting `dismissed_built_in_swim_keys` through `addDismissedBuiltInKey`. Deleting a user workout does not touch the setting.
+
+The setting is a JSON array of strings. `src/swimming/dismissedBuiltInKeys.ts` holds the setting key and the pure helpers: `parseDismissedBuiltInKeys` returns an empty list for a missing, malformed or non-array value and drops non-string entries, and `serializeDismissedBuiltInKeys` removes duplicates. The seeder skips every dismissed key on each version change, so a deleted built-in is not inserted again.
+
+### Read-only Built-ins
+
+A workout with a `builtInKey` cannot be edited. The app enforces this in three places:
+
+- **Workout detail** (`/workout/[workoutId]`): the header shows a "Duplicate to edit" text button where the pencil would be for a user workout. It calls `duplicateWorkout` and pushes `/workouts/[workoutId]/edit` for the copy. A failure shows an alert.
+- **Edit route** (`/workouts/[workoutId]/edit`): a built-in shows an `EmptyState` ("Built-in workouts can't be edited", with Close) and the editor state is never loaded for it. This covers deep links.
+- **CreateHub long-press menu**: a built-in shows Duplicate, Delete and Cancel, with no Edit. A user workout keeps Edit, Duplicate, Delete and Cancel. The handler looks up the chosen option by its label, not its position.
+
+Deleting a built-in from the menu is allowed, and it is remembered through the dismissed keys.
+
+### Library Grouping
+
+`groupWorkoutsByLibrary(workouts, searchText)` in `src/workouts/groupWorkoutsByLibrary.ts` returns the `LibraryWorkoutGroup` list that `SectionedList` renders. It filters by name with `filterWorkouts` first. The groups are, in order:
+
+1. **My workouts**: workouts with no `builtInKey`
+2. **Beginner**, **Intermediate** and **Advanced**: built-ins whose key parses with `parseSwimBuiltInKey`, sorted by week (recovery last), then session `a` before `b`
+3. **Other built-in workouts**: built-ins whose key does not parse
+
+Empty groups are dropped, so **My workouts** is absent when the user has no workouts of their own. `CreateHub` groups with an empty search, and `AddPlanEntrySheet` groups with its search text. The static "My workouts" heading in CreateHub was removed, because the group header replaces it.
+
+### Pure Modules and Tests
+
+Pure modules: `src/swimming/defaultSwimWorkouts.ts` (content, key build and parse, library version), `src/swimming/planSwimWorkoutSeeding.ts` (insert, update or skip), `src/swimming/dismissedBuiltInKeys.ts` (setting key, parse, serialize, add) and `src/workouts/groupWorkoutsByLibrary.ts` (library groups).
+
+Covered by `bun test`: `defaultSwimWorkouts.test.ts` (39 workouts with unique keys that match the expected key list, spec totals, key format, unique names, every stroke a default swimming exercise, distances in multiples of 25, the library version is a hash), `planSwimWorkoutSeeding.test.ts`, `dismissedBuiltInKeys.test.ts` and `groupWorkoutsByLibrary.test.ts`. All four are pure. The seeder, the v9 migration and the remembered delete are not covered by `bun test`.
+
 ## Coach Nuggie
 
 Phase 09a replaces the placeholder coach modal with a rule-based coach. It adds no migration and makes no network calls. Notifications are Phase 09b (see Notifications).
@@ -1450,14 +1516,14 @@ src/
     molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField, PlanEntryRow, DaySectionHeader, PlanRow, RestDay, ActivePlanBanner, DayChip, ScheduledWorkoutCard, HeaderImageCard, WorkoutDetailExerciseRow, ActiveSessionBanner, PersonalRecordRow, RestTimerBar, SessionSetRow, SessionTopBar, StatTile, HealthPermissionCard, HealthWorkoutRow, LinkedHealthWorkoutRow, HealthSuggestionBanner, GreetingHeader, TodayWorkoutCard, NuggieActionCard, RestDayCard, NoPlanCard, WeeklyStreakTile, StatBarRow, ProfileSummaryHeader, SettingsRow, MeasurementRow, RangeSwitcher, ClassCountTile, StatisticLine, CoachMessageBubble, UserMessageBubble, PromptChip, NotificationBell, NotificationRow, ToggleRow, ChoiceRow
     organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter, PlanWeekEditor, AddPlanEntrySheet, ActivatePlanSheet, EntryTimeSheet, CopyDaySheet, WeekStrip, DayWorkoutList, IndividualWorkoutDetail, ClassWorkoutDetail, SessionLogger, ClassSessionView, SessionExerciseCard, SessionSummary, LinkHealthWorkoutSheet, TodayCarousel, StatTileGrid, StatBarList, HealthMetricBarList, StreakBarList, ProfileForm, MeasurementForm, ProgressOverview, RecentRecordsSection, PersonalRecordItemRow, ClassCountSection, ClassStatisticsCard, ExerciseProgressSection, ExerciseHistoryList, ProgressChartFrame, ProgressLineChart, ProgressBarChart, CoachConversation, PromptChipBar, NotificationList
   database/
-    migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2), addSessionExerciseRestSeconds (v3), addNotificationIdentifier (v4), addExerciseNotes (v5), addAssistedTrackingAndExerciseVideo (v6), addActivities (v7), addSwimming (v8)
+    migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2), addSessionExerciseRestSeconds (v3), addNotificationIdentifier (v4), addExerciseNotes (v5), addAssistedTrackingAndExerciseVideo (v6), addActivities (v7), addSwimming (v8), addWorkoutBuiltInKey (v9)
     repositories/           one file per entity: exerciseRepository, workoutRepository, planRepository, scheduleRepository, sessionRepository, appSettingsRepository, healthSnapshotRepository, profileRepository, bodyMeasurementRepository, progressRepository, notificationRepository, swimSessionRepository
   exercises/                pure exercise logic with tests: validation, A–Z grouping, filtering, selection, body part param parsing, notes trimming
   hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan, usePlanActions, useScheduledWorkouts, useWeekPages, useSelectedDate, useScheduledWeeks, useSession, useStartSession, useActiveSession, useFinishedSession, useRestTimer, useSessionExercisePicks, useHealthAuthorization, useDailyHealth, useOverlappingHealthWorkouts, useUnlinkHealthWorkout, useProfile, useWeeklyStreak, useHealthRange, useFocusReloadKey, useProfileForm, useBodyMeasurements, useMeasurementForm, useTrainingTotals, usePersonalRecords, useNewRecordCount, useExercisesWithHistory, useExerciseHistory, useClassStatistics, useCoachSnapshot, useCoachConversation, useTipOfTheDay, useNotifications, useUnreadNotificationCount, useNotificationSettings, useNotificationPermissionStatus, useNotificationReconciler, useNotificationTapRouting, useNotificationReceivedRefresh, useRestAlertScheduling, useNotificationPermissionSheet, useSwimSession, useSwimStatistics, useSwimStrokes, plus the plain loaders `reconcileNotifications` and `loadNotificationSettings`
   stores/                   exercisePickerStore, workoutSavedStore for returning values between screens; dataVersionStore, restTimerStore for module-level state; with tests
-  swimming/                 pure swim logic with tests: distance totals and presets, set text, editor reducer, rep expansion, session totals, tick changes, duration, pace (phase 13)
+  swimming/                 pure swim logic with tests: distance totals and presets, set text, editor reducer, rep expansion, session totals, tick changes, duration, pace (phase 13), built-in swim content, seeding plan and dismissed keys (phase 14)
   plans/                    pure plan logic with tests: build scheduled workouts, time of day, summaries, copy day, weekday grouping, day marker state, week cache
-  workouts/                 pure builder logic with tests: reducer, normalisation, grouping blocks, target set columns, save rows, drag maths, rest presets, class type nuggies, editor context and provider, duration estimation, target set descriptions
+  workouts/                 pure builder logic with tests: library grouping (phase 14), reducer, normalisation, grouping blocks, target set columns, save rows, drag maths, rest presets, class type nuggies, editor context and provider, duration estimation, target set descriptions
   sessions/                 pure session logic with tests: start and resume rules, fill and change operations, rest timer control, finishing and discard logic, personal record detection
   progress/                 personal record detection (record types, first-time rule, tie handling, superset and best-set logic), the weekly streak (phase 07), and totals, weight, records list, exercise series and chart helpers (phase 08)
   profile/                  pure profile logic with tests: form rules, validation, labels (phase 08)
