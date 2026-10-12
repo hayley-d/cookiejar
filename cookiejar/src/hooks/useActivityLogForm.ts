@@ -11,36 +11,19 @@ import {
   type ActivityLogFormErrors,
   type ActivityLogFormValues,
 } from '@/activities/validateActivityLogForm';
-import { insertActivitySession } from '@/database/repositories/sessionRepository';
+import { insertActivitySession, updateActivitySession } from '@/database/repositories/sessionRepository';
 import { bumpDataVersion } from '@/stores/dataVersionStore';
-import type { ActivityType } from '@/types/ActivityType';
 
 type ActivityLogFormOptions = {
-  workoutId: number;
+  workoutId: number | null;
+  sessionId: number | null;
   planEntryId: number | null;
-  initialActivityType: ActivityType;
-  initialDate: string;
+  initialValues: ActivityLogFormValues;
 };
 
-export function useActivityLogForm({
-  workoutId,
-  planEntryId,
-  initialActivityType,
-  initialDate,
-}: ActivityLogFormOptions) {
+export function useActivityLogForm({ workoutId, sessionId, planEntryId, initialValues }: ActivityLogFormOptions) {
   const database = useSQLiteContext();
-  const [values, setValues] = useState<ActivityLogFormValues>(() => ({
-    activityType: initialActivityType,
-    date: initialDate,
-    startTime: new Date(),
-    hours: null,
-    minutes: null,
-    distanceKilometers: null,
-    elevationGainMeters: null,
-    activeKilocalories: null,
-    averageHeartRate: null,
-    notes: '',
-  }));
+  const [values, setValues] = useState<ActivityLogFormValues>(initialValues);
   const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const isSaveInFlight = useRef(false);
@@ -62,21 +45,45 @@ export function useActivityLogForm({
         activityLogDurationSeconds(values),
       );
       const trimmedNotes = values.notes.trim();
-      const sessionId = await insertActivitySession(database, {
+      const notes = trimmedNotes.length === 0 ? null : trimmedNotes;
+      const distanceMeters = activityLogDistanceMeters(values);
+      if (sessionId !== null) {
+        await updateActivitySession(database, sessionId, {
+          activityType: values.activityType,
+          scheduledDate: values.date,
+          startedAt,
+          finishedAt,
+          distanceMeters,
+          elevationGainMeters: values.elevationGainMeters,
+          activeKilocalories: values.activeKilocalories,
+          averageHeartRate: values.averageHeartRate,
+          notes,
+        });
+        bumpDataVersion();
+        router.back();
+        return;
+      }
+      if (workoutId === null) {
+        throw new Error('A workout is required to log an activity');
+      }
+      const insertedSessionId = await insertActivitySession(database, {
         workoutId,
         planEntryId,
         activityType: values.activityType,
         scheduledDate: values.date,
         startedAt,
         finishedAt,
-        distanceMeters: activityLogDistanceMeters(values),
+        distanceMeters,
         elevationGainMeters: values.elevationGainMeters,
         activeKilocalories: values.activeKilocalories,
         averageHeartRate: values.averageHeartRate,
-        notes: trimmedNotes.length === 0 ? null : trimmedNotes,
+        notes,
       });
       bumpDataVersion();
-      router.replace({ pathname: '/sessions/[sessionId]/summary', params: { sessionId: String(sessionId) } });
+      router.replace({
+        pathname: '/sessions/[sessionId]/summary',
+        params: { sessionId: String(insertedSessionId) },
+      });
     } catch {
       isSaveInFlight.current = false;
       setIsSaving(false);

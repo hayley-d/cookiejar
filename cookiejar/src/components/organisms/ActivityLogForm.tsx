@@ -21,6 +21,7 @@ import { activityTypeNuggie } from '@/workouts/activityTypeNuggie';
 type ActivityLogFormProperties = {
   values: ActivityLogFormValues;
   errors: ActivityLogFormErrors;
+  lockedDate: string | null;
   onChangeValues: (values: ActivityLogFormValues) => void;
 };
 
@@ -32,7 +33,7 @@ const activityTypeOptions = activityTypes.map((activityType) => ({
 
 const notesMinimumHeight = 96;
 
-export function ActivityLogForm({ values, errors, onChangeValues }: ActivityLogFormProperties) {
+export function ActivityLogForm({ values, errors, lockedDate, onChangeValues }: ActivityLogFormProperties) {
   const pace = describePace(activityLogDistanceMeters(values), activityLogDurationSeconds(values));
 
   return (
@@ -48,7 +49,8 @@ export function ActivityLogForm({ values, errors, onChangeValues }: ActivityLogF
         <TimePickerBox
           mode="date"
           value={parseLocalDateString(values.date)}
-          maximumDate={new Date()}
+          minimumDate={lockedDate === null ? undefined : parseLocalDateString(lockedDate)}
+          maximumDate={lockedDate === null ? new Date() : parseLocalDateString(lockedDate)}
           accessibilityLabel="Activity date"
           onChangeValue={(selectedDate) => onChangeValues({ ...values, date: toLocalDateString(selectedDate) })}
         />

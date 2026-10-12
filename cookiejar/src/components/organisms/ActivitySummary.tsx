@@ -26,6 +26,7 @@ type ActivitySummaryProperties = {
   nuggie: NuggieName;
   now: Date;
   onDone: () => void;
+  onEdit: () => void;
   onUnlinkGarmin: () => void;
 };
 
@@ -61,7 +62,7 @@ function chunkTiles(tiles: ActivityTile[]): ActivityTile[][] {
   return rows;
 }
 
-export function ActivitySummary({ session, nuggie, now, onDone, onUnlinkGarmin }: ActivitySummaryProperties) {
+export function ActivitySummary({ session, nuggie, now, onDone, onEdit, onUnlinkGarmin }: ActivitySummaryProperties) {
   const endedAt = session.finishedAt === null ? now : new Date(session.finishedAt);
   const durationSeconds = elapsedSecondsBetween(session.startedAt, endedAt);
   const tileRows = chunkTiles(buildActivityTiles(session, durationSeconds));
@@ -100,7 +101,8 @@ export function ActivitySummary({ session, nuggie, now, onDone, onUnlinkGarmin }
           <Typography variant="body">{trimmedNotes}</Typography>
         </Box>
       )}
-      <Box align="center">
+      <Box align="center" gap="small">
+        <Button label="Edit" onPress={onEdit} variant="secondary" />
         <Button label="Done" onPress={onDone} />
       </Box>
     </ScrollBox>

@@ -286,6 +286,46 @@ export async function insertActivitySession(database: SQLiteDatabase, log: Activ
   return sessionId;
 }
 
+export type ActivityLogUpdate = {
+  activityType: ActivityType;
+  scheduledDate: string;
+  startedAt: string;
+  finishedAt: string;
+  distanceMeters: number | null;
+  elevationGainMeters: number | null;
+  activeKilocalories: number | null;
+  averageHeartRate: number | null;
+  notes: string | null;
+};
+
+export async function updateActivitySession(
+  database: SQLiteDatabase,
+  sessionId: number,
+  log: ActivityLogUpdate,
+): Promise<void> {
+  await database.withTransactionAsync(async () => {
+    const result = await database.runAsync(
+      `UPDATE sessions
+      SET activity_type = ?, scheduled_date = ?, started_at = ?, finished_at = ?, distance_meters = ?,
+        elevation_gain_meters = ?, active_kilocalories = ?, average_heart_rate = ?, notes = ?
+      WHERE id = ? AND workout_kind = 'activity'`,
+      log.activityType,
+      log.scheduledDate,
+      log.startedAt,
+      log.finishedAt,
+      log.distanceMeters,
+      log.elevationGainMeters,
+      log.activeKilocalories,
+      log.averageHeartRate,
+      log.notes,
+      sessionId,
+    );
+    if (result.changes === 0) {
+      throw new Error('The activity to update no longer exists');
+    }
+  });
+}
+
 export async function getSessionWithExercises(
   database: SQLiteDatabase,
   sessionId: number,

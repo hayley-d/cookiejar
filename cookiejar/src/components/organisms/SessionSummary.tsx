@@ -28,6 +28,7 @@ type SessionSummaryProperties = {
   nuggie: NuggieName;
   now: Date;
   onDone: () => void;
+  onEditActivity: () => void;
   suggestedWorkout: HealthWorkout | null;
   isLinkingSuggestedWorkout: boolean;
   onLinkSuggestedWorkout: () => void;
@@ -41,6 +42,7 @@ export function SessionSummary({
   nuggie,
   now,
   onDone,
+  onEditActivity,
   suggestedWorkout,
   isLinkingSuggestedWorkout,
   onLinkSuggestedWorkout,
@@ -48,7 +50,16 @@ export function SessionSummary({
   onUnlinkGarmin,
 }: SessionSummaryProperties) {
   if (session.workoutKind === 'activity') {
-    return <ActivitySummary session={session} nuggie={nuggie} now={now} onDone={onDone} onUnlinkGarmin={onUnlinkGarmin} />;
+    return (
+      <ActivitySummary
+        session={session}
+        nuggie={nuggie}
+        now={now}
+        onDone={onDone}
+        onEdit={onEditActivity}
+        onUnlinkGarmin={onUnlinkGarmin}
+      />
+    );
   }
 
   const totals = calculateSessionTotals(session, now);

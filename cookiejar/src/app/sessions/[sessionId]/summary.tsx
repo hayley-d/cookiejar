@@ -95,6 +95,9 @@ export default function SessionSummaryScreen() {
       nuggie={nuggie}
       now={openedAt}
       onDone={() => router.back()}
+      onEditActivity={() =>
+        router.push({ pathname: '/activities/log', params: { sessionId: String(sessionId) } })
+      }
       suggestedWorkout={suggestedWorkout}
       isLinkingSuggestedWorkout={healthWorkouts.isLinking}
       onLinkSuggestedWorkout={linkSuggestedWorkout}
