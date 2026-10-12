@@ -32,6 +32,9 @@ export type SwimEditorAction =
   | { type: 'sectionRemoved'; sectionKey: string }
   | { type: 'sectionMoved'; sectionKey: string; offset: -1 | 1 }
   | { type: 'setAdded'; sectionKey: string; stroke: SwimStroke }
+  | { type: 'setAddedToBlock'; blockKey: string }
+  | { type: 'blockRoundsChanged'; blockKey: string; rounds: number }
+  | { type: 'blockRestChanged'; blockKey: string; restAfterSeconds: number | null }
   | { type: 'setChanged'; setKey: string; changes: SwimSetChanges }
   | { type: 'setRemoved'; setKey: string };
 
@@ -71,9 +74,19 @@ export function loadSwimDetails(loadedDetails: LoadedSwimDetails, createKey: Cre
   };
 }
 
+export function normalizeSwimSectionName(name: string, sectionIndex: number): string {
+  const trimmedName = name.trim();
+  return trimmedName.length === 0 ? `Section ${sectionIndex + 1}` : trimmedName;
+}
+
+function normalizeSwimNotes(notes: string | null): string | null {
+  const trimmedNotes = notes?.trim() ?? '';
+  return trimmedNotes.length === 0 ? null : trimmedNotes;
+}
+
 export function stripSwimKeys(details: SwimDetails): SwimSection[] {
-  return details.sections.map((section) => ({
-    name: section.name,
+  return details.sections.map((section, sectionIndex) => ({
+    name: normalizeSwimSectionName(section.name, sectionIndex),
     blocks: section.blocks.map((block) => ({
       rounds: block.rounds,
       restAfterSeconds: block.restAfterSeconds,
@@ -87,7 +100,7 @@ export function stripSwimKeys(details: SwimDetails): SwimSection[] {
         sendOffSeconds: set.sendOffSeconds,
         restAfterSeconds: set.restAfterSeconds,
         equipment: [...set.equipment],
-        notes: set.notes,
+        notes: normalizeSwimNotes(set.notes),
       })),
     })),
   }));
@@ -115,11 +128,38 @@ function mapSets(details: SwimDetails, update: (set: EditorSwimSet) => EditorSwi
   };
 }
 
+function mapBlocks(details: SwimDetails, update: (block: EditorSwimBlock) => EditorSwimBlock): SwimDetails {
+  return {
+    ...details,
+    sections: details.sections.map((section) => ({ ...section, blocks: section.blocks.map(update) })),
+  };
+}
+
+function hasBlock(details: SwimDetails, blockKey: string): boolean {
+  return details.sections.some((section) => section.blocks.some((block) => block.key === blockKey));
+}
+
 function lastSetOf(section: EditorSwimSection): EditorSwimSet | undefined {
   return section.blocks.at(-1)?.sets.at(-1);
 }
 
 export function createSwimEditorReducer(createKey: CreateSwimKey) {
+  function createFollowingSet(previousSet: EditorSwimSet | undefined, stroke: SwimStroke): EditorSwimSet {
+    return {
+      key: createKey(),
+      exerciseId: previousSet?.exerciseId ?? stroke.id,
+      exerciseName: previousSet?.exerciseName ?? stroke.name,
+      repetitions: previousSet?.repetitions ?? defaultSwimSetValues.repetitions,
+      distanceMeters: previousSet?.distanceMeters ?? defaultSwimSetValues.distanceMeters,
+      restMode: previousSet?.restMode ?? 'fixed',
+      restSeconds: previousSet?.restSeconds ?? null,
+      sendOffSeconds: previousSet?.sendOffSeconds ?? null,
+      restAfterSeconds: null,
+      equipment: [],
+      notes: null,
+    };
+  }
+
   return function swimEditorReducer(details: SwimDetails, action: SwimEditorAction): SwimDetails {
     switch (action.type) {
       case 'detailsChanged':
@@ -161,20 +201,7 @@ export function createSwimEditorReducer(createKey: CreateSwimKey) {
         if (targetSection === undefined) {
           return details;
         }
-        const previousSet = lastSetOf(targetSection);
-        const newSet: EditorSwimSet = {
-          key: createKey(),
-          exerciseId: previousSet?.exerciseId ?? action.stroke.id,
-          exerciseName: previousSet?.exerciseName ?? action.stroke.name,
-          repetitions: previousSet?.repetitions ?? defaultSwimSetValues.repetitions,
-          distanceMeters: previousSet?.distanceMeters ?? defaultSwimSetValues.distanceMeters,
-          restMode: previousSet?.restMode ?? 'fixed',
-          restSeconds: previousSet?.restSeconds ?? null,
-          sendOffSeconds: previousSet?.sendOffSeconds ?? null,
-          restAfterSeconds: null,
-          equipment: [],
-          notes: null,
-        };
+        const newSet = createFollowingSet(lastSetOf(targetSection), action.stroke);
         const newBlock: EditorSwimBlock = { key: createKey(), rounds: 1, restAfterSeconds: null, sets: [newSet] };
         return {
           ...details,
@@ -183,6 +210,29 @@ export function createSwimEditorReducer(createKey: CreateSwimKey) {
           ),
         };
       }
+      case 'setAddedToBlock':
+        if (!hasBlock(details, action.blockKey)) {
+          return details;
+        }
+        return mapBlocks(details, (block) =>
+          block.key === action.blockKey && block.sets.length > 0
+            ? {
+                ...block,
+                sets: [
+                  ...block.sets,
+                  createFollowingSet(block.sets.at(-1), { id: block.sets[0].exerciseId, name: block.sets[0].exerciseName }),
+                ],
+              }
+            : block,
+        );
+      case 'blockRoundsChanged':
+        return mapBlocks(details, (block) =>
+          block.key === action.blockKey ? { ...block, rounds: Math.max(1, Math.floor(action.rounds)) } : block,
+        );
+      case 'blockRestChanged':
+        return mapBlocks(details, (block) =>
+          block.key === action.blockKey ? { ...block, restAfterSeconds: action.restAfterSeconds } : block,
+        );
       case 'setChanged':
         if (findSwimSet(details, action.setKey) === null) {
           return details;
@@ -197,7 +247,15 @@ export function createSwimEditorReducer(createKey: CreateSwimKey) {
           sections: details.sections.map((section) => ({
             ...section,
             blocks: section.blocks
-              .map((block) => ({ ...block, sets: block.sets.filter((set) => set.key !== action.setKey) }))
+              .map((block) => {
+                const remainingSets = block.sets.filter((set) => set.key !== action.setKey);
+                const isPlainBlock = block.rounds === 1 && remainingSets.length <= 1;
+                return {
+                  ...block,
+                  restAfterSeconds: isPlainBlock ? null : block.restAfterSeconds,
+                  sets: remainingSets,
+                };
+              })
               .filter((block) => block.sets.length > 0),
           })),
         };

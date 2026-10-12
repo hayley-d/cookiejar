@@ -1,18 +1,23 @@
 import { Button } from '@/components/atoms/Button';
 import { DurationInput } from '@/components/atoms/DurationInput';
 import { NumberInput } from '@/components/atoms/NumberInput';
+import { Chip } from '@/components/atoms/Chip';
 import { ChipGroup } from '@/components/molecules/ChipGroup';
 import { FormField } from '@/components/molecules/FormField';
 import { SegmentedControl } from '@/components/molecules/SegmentedControl';
 import { Stepper } from '@/components/molecules/Stepper';
+import { Stack } from '@/components/primitives/Stack';
 import { ScrollBox } from '@/components/primitives/ScrollBox';
+import { TextField } from '@/components/primitives/TextField';
 import { Typography } from '@/components/primitives/Typography';
 import { describeSwimSet } from '@/swimming/describeSwimSet';
 import { formatSwimDistance, swimSetDistance } from '@/swimming/swimDistance';
 import { swimDistancePresets } from '@/swimming/swimDistancePresets';
 import type { EditorSwimSet, SwimSetChanges, SwimStroke } from '@/swimming/swimEditorReducer';
 import type { SwimPoolLength } from '@/types/SwimPoolLength';
+import { swimEquipmentLabels, swimEquipmentList, type SwimEquipment } from '@/types/SwimEquipment';
 import { swimRestModeLabels, swimRestModes, type SwimRestMode } from '@/types/SwimRestMode';
+import { formatRestSeconds, restPresetSeconds } from '@/workouts/restPresets';
 
 type SwimSetFormProperties = {
   set: EditorSwimSet;
@@ -26,6 +31,13 @@ const maximumRepetitions = 99;
 const defaultSendOffSeconds = 90;
 
 const restModeSegments = swimRestModes.map((restMode) => ({ value: restMode, label: swimRestModeLabels[restMode] }));
+
+const noRestAfterValue = 'none';
+const restAfterOptions = [
+  { value: noRestAfterValue, label: 'None' },
+  ...restPresetSeconds.map((restSeconds) => ({ value: String(restSeconds), label: formatRestSeconds(restSeconds) })),
+];
+const notesMinimumHeight = 72;
 
 export function SwimSetForm({ set, poolLengthMeters, strokes, onChangeSet, onRemove }: SwimSetFormProperties) {
   const strokeOptions = strokes.map((stroke) => ({ value: String(stroke.id), label: stroke.name }));
@@ -48,6 +60,19 @@ export function SwimSetForm({ set, poolLengthMeters, strokes, onChangeSet, onRem
       sendOffSeconds: restMode === 'send_off' ? (set.sendOffSeconds ?? defaultSendOffSeconds) : set.sendOffSeconds,
     });
   };
+
+  const toggleEquipment = (equipment: SwimEquipment) => {
+    onChangeSet({
+      equipment: set.equipment.includes(equipment)
+        ? set.equipment.filter((selectedEquipment) => selectedEquipment !== equipment)
+        : swimEquipmentList.filter(
+            (candidate) => candidate === equipment || set.equipment.includes(candidate),
+          ),
+    });
+  };
+
+  const isPresetRestAfter = set.restAfterSeconds !== null && restPresetSeconds.includes(set.restAfterSeconds);
+  const selectedRestAfterValue = set.restAfterSeconds === null ? noRestAfterValue : isPresetRestAfter ? String(set.restAfterSeconds) : null;
 
   return (
     <ScrollBox gap="large" automaticallyAdjustKeyboardInsets>
@@ -110,6 +135,42 @@ export function SwimSetForm({ set, poolLengthMeters, strokes, onChangeSet, onRem
           />
         </FormField>
       )}
+      <FormField label="Equipment">
+        <Stack direction="horizontal" gap="small" style={{ flexWrap: 'wrap' }}>
+          {swimEquipmentList.map((equipment) => (
+            <Chip
+              key={equipment}
+              label={swimEquipmentLabels[equipment]}
+              isSelected={set.equipment.includes(equipment)}
+              onPress={() => toggleEquipment(equipment)}
+            />
+          ))}
+        </Stack>
+      </FormField>
+      <FormField label="Rest after this set">
+        <ChipGroup
+          options={restAfterOptions}
+          selectedValue={selectedRestAfterValue}
+          onSelect={(value) => onChangeSet({ restAfterSeconds: value === noRestAfterValue ? null : Number(value) })}
+        />
+        <DurationInput
+          seconds={set.restAfterSeconds}
+          accessibilityLabel="Rest after this set"
+          placeholder="None, e.g. 0:45"
+          onChangeSeconds={(restAfterSeconds) => onChangeSet({ restAfterSeconds })}
+        />
+      </FormField>
+      <FormField label="Note">
+        <TextField
+          value={set.notes ?? ''}
+          onChangeText={(notes) => onChangeSet({ notes: notes.length === 0 ? null : notes })}
+          placeholder="Optional, e.g. descend 1-4"
+          multiline
+          textAlignVertical="top"
+          accessibilityLabel="Note"
+          style={{ minHeight: notesMinimumHeight }}
+        />
+      </FormField>
       <Button label="Remove set" variant="secondary" onPress={onRemove} />
     </ScrollBox>
   );

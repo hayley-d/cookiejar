@@ -12,6 +12,7 @@ type DescribedSwimSet = Pick<
   | 'sendOffSeconds'
   | 'restAfterSeconds'
   | 'equipment'
+  | 'notes'
 >;
 
 export function describeSwimSet(set: DescribedSwimSet): string {
@@ -26,6 +27,10 @@ export function describeSwimSet(set: DescribedSwimSet): string {
   }
   if (set.restAfterSeconds !== null) {
     parts.push(`then rest ${formatSwimTime(set.restAfterSeconds)}`);
+  }
+  const trimmedNotes = set.notes?.trim() ?? '';
+  if (trimmedNotes.length > 0) {
+    parts.push(`"${trimmedNotes}"`);
   }
   return parts.join(' · ');
 }

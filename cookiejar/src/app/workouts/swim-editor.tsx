@@ -1,5 +1,4 @@
 import { router, Stack } from 'expo-router';
-import { useMemo } from 'react';
 
 import { WorkoutNameField } from '@/components/molecules/WorkoutNameField';
 import { FormField } from '@/components/molecules/FormField';
@@ -11,8 +10,8 @@ import { Box } from '@/components/primitives/Box';
 import { ScrollBox } from '@/components/primitives/ScrollBox';
 import { TextField } from '@/components/primitives/TextField';
 import { Button } from '@/components/atoms/Button';
-import { useExercises } from '@/hooks/useExercises';
 import { useSaveWorkout } from '@/hooks/useSaveWorkout';
+import { useSwimStrokes } from '@/hooks/useSwimStrokes';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useWorkoutEditor } from '@/hooks/useWorkoutEditor';
 import { imageUrlError } from '@/images/imageUrls';
@@ -32,14 +31,7 @@ export default function SwimEditorScreen() {
   const { state, dispatch } = useWorkoutEditor();
   const { isSaving, save: saveEditorState } = useSaveWorkout();
   useUnsavedChangesGuard(state.hasUnsavedChanges);
-  const exercises = useExercises();
-  const strokes = useMemo(
-    () =>
-      (exercises ?? [])
-        .filter((exercise) => exercise.bodyPart === 'swimming')
-        .map((exercise) => ({ id: exercise.id, name: exercise.name })),
-    [exercises],
-  );
+  const strokes = useSwimStrokes();
   const { swimDetails } = state;
 
   if (swimDetails === null) {
@@ -116,6 +108,11 @@ export default function SwimEditorScreen() {
                   changeSwim({ type: 'setAdded', sectionKey: section.key, stroke: defaultStroke });
                 }
               }}
+              onAddSetToBlock={(blockKey) => changeSwim({ type: 'setAddedToBlock', blockKey })}
+              onChangeRounds={(blockKey, rounds) => changeSwim({ type: 'blockRoundsChanged', blockKey, rounds })}
+              onChangeBlockRest={(blockKey, restAfterSeconds) =>
+                changeSwim({ type: 'blockRestChanged', blockKey, restAfterSeconds })
+              }
               onPressSet={(setKey) => router.push({ pathname: '/workouts/swim-set', params: { setKey } })}
             />
           ))}

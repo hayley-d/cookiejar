@@ -12,6 +12,7 @@ const baseSet = {
   sendOffSeconds: null,
   restAfterSeconds: null,
   equipment: [],
+  notes: null,
 };
 
 describe('formatSwimTime', () => {
@@ -71,6 +72,16 @@ describe('describeSwimSet', () => {
     expect(describeSwimSet({ ...baseSet, restSeconds: 30, restAfterSeconds: 60 })).toBe(
       '2×50 m Freestyle · rest 0:30 · then rest 1:00',
     );
+  });
+
+  test('a note closes the description in quotes', () => {
+    expect(describeSwimSet({ ...baseSet, equipment: ['fins'], restAfterSeconds: 60, notes: 'descend 1-4' })).toBe(
+      '2×50 m Freestyle · Fins · then rest 1:00 · "descend 1-4"',
+    );
+  });
+
+  test('a blank note is left out', () => {
+    expect(describeSwimSet({ ...baseSet, notes: '   ' })).toBe('2×50 m Freestyle');
   });
 
   test('a fixed rest set ignores a stale send-off value', () => {

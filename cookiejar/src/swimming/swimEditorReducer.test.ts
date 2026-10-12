@@ -7,7 +7,8 @@ import {
   loadSwimDetails,
   stripSwimKeys,
 } from '@/swimming/swimEditorReducer';
-import { swimWorkoutDistance } from '@/swimming/swimDistance';
+import { describeSwimRounds, describeSwimSet } from '@/swimming/describeSwimSet';
+import { swimSectionDistance, swimWorkoutDistance } from '@/swimming/swimDistance';
 import type { SwimSection } from '@/swimming/swimTypes';
 import { createKeyCounter } from '@/workouts/workoutEditorReducer';
 
@@ -146,5 +147,140 @@ describe('loading and stripping keys', () => {
     const details = loadSwimDetails({ poolLengthMeters: 25, description: '', imageUrl: '', sections }, createKeyCounter('swim'));
     const keys = [details.sections[0].key, details.sections[0].blocks[0].key, details.sections[0].blocks[0].sets[0].key];
     expect(new Set(keys).size).toBe(3);
+  });
+});
+
+describe('blocks, rounds and rest', () => {
+  function detailsWithOneSet() {
+    const { createKey, reduce } = createReducer();
+    const initialDetails = createDefaultSwimDetails(createKey);
+    const details = reduce(initialDetails, { type: 'setAdded', sectionKey: initialDetails.sections[1].key, stroke: freestyle });
+    return { reduce, details, block: details.sections[1].blocks[0] };
+  }
+
+  test('adding a set to a block groups it with the existing set and clears equipment and notes', () => {
+    const { reduce, details, block } = detailsWithOneSet();
+    const withEquipment = reduce(details, {
+      type: 'setChanged',
+      setKey: block.sets[0].key,
+      changes: { equipment: ['fins'], notes: 'easy', repetitions: 4 },
+    });
+    const next = reduce(withEquipment, { type: 'setAddedToBlock', blockKey: block.key });
+    const sets = next.sections[1].blocks[0].sets;
+    expect(next.sections[1].blocks).toHaveLength(1);
+    expect(sets).toHaveLength(2);
+    expect(sets[1]).toMatchObject({ exerciseName: 'Freestyle', repetitions: 4, equipment: [], notes: null });
+    expect(sets[1].key).not.toBe(sets[0].key);
+  });
+
+  test('rounds never drop below one and multiply the block distance', () => {
+    const { reduce, details, block } = detailsWithOneSet();
+    const threeRounds = reduce(details, { type: 'blockRoundsChanged', blockKey: block.key, rounds: 3 });
+    expect(threeRounds.sections[1].blocks[0].rounds).toBe(3);
+    expect(swimWorkoutDistance(threeRounds.sections)).toBe(300);
+    const clamped = reduce(details, { type: 'blockRoundsChanged', blockKey: block.key, rounds: 0 });
+    expect(clamped.sections[1].blocks[0].rounds).toBe(1);
+  });
+
+  test('a block rest can be set and cleared', () => {
+    const { reduce, details, block } = detailsWithOneSet();
+    const withRest = reduce(details, { type: 'blockRestChanged', blockKey: block.key, restAfterSeconds: 60 });
+    expect(withRest.sections[1].blocks[0].restAfterSeconds).toBe(60);
+    const cleared = reduce(withRest, { type: 'blockRestChanged', blockKey: block.key, restAfterSeconds: null });
+    expect(cleared.sections[1].blocks[0].restAfterSeconds).toBeNull();
+  });
+
+  test('a block that falls back to one round and one set loses its block rest', () => {
+    const { reduce, details, block } = detailsWithOneSet();
+    const grouped = reduce(details, { type: 'setAddedToBlock', blockKey: block.key });
+    const withRest = reduce(grouped, { type: 'blockRestChanged', blockKey: block.key, restAfterSeconds: 60 });
+    const secondSetKey = withRest.sections[1].blocks[0].sets[1].key;
+    const next = reduce(withRest, { type: 'setRemoved', setKey: secondSetKey });
+    expect(next.sections[1].blocks[0].sets).toHaveLength(1);
+    expect(next.sections[1].blocks[0].restAfterSeconds).toBeNull();
+  });
+
+  test('unknown block keys leave the details unchanged', () => {
+    const { reduce, details } = detailsWithOneSet();
+    expect(reduce(details, { type: 'setAddedToBlock', blockKey: 'missing' })).toBe(details);
+  });
+});
+
+describe('saving trims names and notes', () => {
+  test('a blank section name falls back to its position and names are trimmed', () => {
+    const { createKey, reduce } = createReducer();
+    let details = createDefaultSwimDetails(createKey);
+    details = reduce(details, { type: 'sectionRenamed', sectionKey: details.sections[0].key, name: '   ' });
+    details = reduce(details, { type: 'sectionRenamed', sectionKey: details.sections[1].key, name: '  Kick set ' });
+    expect(stripSwimKeys(details).map((section) => section.name)).toEqual(['Section 1', 'Kick set', 'Cool down']);
+  });
+
+  test('a blank note is saved as no note', () => {
+    const { createKey, reduce } = createReducer();
+    let details = createDefaultSwimDetails(createKey);
+    details = reduce(details, { type: 'setAdded', sectionKey: details.sections[0].key, stroke: freestyle });
+    const setKey = details.sections[0].blocks[0].sets[0].key;
+    details = reduce(details, { type: 'setChanged', setKey, changes: { notes: '  ' } });
+    expect(stripSwimKeys(details)[0].blocks[0].sets[0].notes).toBeNull();
+    details = reduce(details, { type: 'setChanged', setKey, changes: { notes: ' easy ' } });
+    expect(stripSwimKeys(details)[0].blocks[0].sets[0].notes).toBe('easy');
+  });
+});
+
+describe('the phase document example workout', () => {
+  test('totals 100 m, 1,500 m, 100 m and 1,700 m and describes each set', () => {
+    const { createKey, reduce } = createReducer();
+    const backstroke = { id: 2, name: 'Backstroke' };
+    const choice = { id: 3, name: 'Choice' };
+    let details = createDefaultSwimDetails(createKey);
+    const [warmUp, main, coolDown] = details.sections.map((section) => section.key);
+
+    details = reduce(details, { type: 'setAdded', sectionKey: warmUp, stroke: freestyle });
+    let setKey = details.sections[0].blocks[0].sets[0].key;
+    details = reduce(details, {
+      type: 'setChanged',
+      setKey,
+      changes: { repetitions: 2, distanceMeters: 50, restMode: 'fixed', restSeconds: 30 },
+    });
+
+    details = reduce(details, { type: 'setAdded', sectionKey: main, stroke: backstroke });
+    const mainBlockKey = details.sections[1].blocks[0].key;
+    setKey = details.sections[1].blocks[0].sets[0].key;
+    details = reduce(details, {
+      type: 'setChanged',
+      setKey,
+      changes: { repetitions: 4, distanceMeters: 100, restMode: 'send_off', sendOffSeconds: 105, equipment: ['fins'] },
+    });
+    details = reduce(details, { type: 'setAddedToBlock', blockKey: mainBlockKey });
+    setKey = details.sections[1].blocks[0].sets[1].key;
+    details = reduce(details, {
+      type: 'setChanged',
+      setKey,
+      changes: {
+        exerciseId: 1,
+        exerciseName: 'Freestyle Kick',
+        repetitions: 4,
+        distanceMeters: 25,
+        restMode: 'fixed',
+        restSeconds: null,
+        sendOffSeconds: null,
+        equipment: ['kickboard'],
+      },
+    });
+    details = reduce(details, { type: 'blockRoundsChanged', blockKey: mainBlockKey, rounds: 3 });
+
+    details = reduce(details, { type: 'setAdded', sectionKey: coolDown, stroke: choice });
+
+    const sections = stripSwimKeys(details);
+    expect(sections.map((section) => swimSectionDistance(section))).toEqual([100, 1500, 100]);
+    expect(swimWorkoutDistance(sections)).toBe(1700);
+    expect(sections[1].blocks).toHaveLength(1);
+    expect(sections[1].blocks[0].rounds).toBe(3);
+    expect(sections[1].blocks[0].sets.map((set) => describeSwimSet(set))).toEqual([
+      '4×100 m Backstroke @ 1:45 · Fins',
+      '4×25 m Freestyle Kick · Kickboard',
+    ]);
+    expect(describeSwimSet(sections[0].blocks[0].sets[0])).toBe('2×50 m Freestyle · rest 0:30');
+    expect(describeSwimRounds(sections[1].blocks[0].rounds)).toBe('3 rounds');
   });
 });

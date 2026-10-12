@@ -1,9 +1,8 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useMemo } from 'react';
 
 import { TextButton } from '@/components/atoms/TextButton';
 import { SwimSetForm } from '@/components/organisms/SwimSetForm';
-import { useExercises } from '@/hooks/useExercises';
+import { useSwimStrokes } from '@/hooks/useSwimStrokes';
 import { useWorkoutEditor } from '@/hooks/useWorkoutEditor';
 import { findSwimSet } from '@/swimming/swimEditorReducer';
 
@@ -12,14 +11,7 @@ type SwimSetParameters = { setKey?: string };
 export default function SwimSetScreen() {
   const { setKey } = useLocalSearchParams<SwimSetParameters>();
   const { state, dispatch } = useWorkoutEditor();
-  const exercises = useExercises();
-  const strokes = useMemo(
-    () =>
-      (exercises ?? [])
-        .filter((exercise) => exercise.bodyPart === 'swimming')
-        .map((exercise) => ({ id: exercise.id, name: exercise.name })),
-    [exercises],
-  );
+  const strokes = useSwimStrokes();
   const set = state.swimDetails === null || setKey === undefined ? null : findSwimSet(state.swimDetails, setKey);
 
   if (state.swimDetails === null || setKey === undefined || set === null) {

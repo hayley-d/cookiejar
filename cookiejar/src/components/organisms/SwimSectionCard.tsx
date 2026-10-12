@@ -3,15 +3,20 @@ import { Alert } from 'react-native';
 import { Card } from '@/components/atoms/Card';
 import { IconButton } from '@/components/atoms/IconButton';
 import { Button } from '@/components/atoms/Button';
+import { DurationInput } from '@/components/atoms/DurationInput';
+import { TextButton } from '@/components/atoms/TextButton';
+import { Stepper } from '@/components/molecules/Stepper';
 import { Box } from '@/components/primitives/Box';
 import { Stack } from '@/components/primitives/Stack';
 import { TextField } from '@/components/primitives/TextField';
 import { Touchable } from '@/components/primitives/Touchable';
 import { Typography } from '@/components/primitives/Typography';
-import { describeSwimBlockRest, describeSwimRounds, describeSwimSet } from '@/swimming/describeSwimSet';
+import { describeSwimRounds, describeSwimSet } from '@/swimming/describeSwimSet';
 import { formatSwimDistance, swimSectionDistance } from '@/swimming/swimDistance';
 import type { EditorSwimSection } from '@/swimming/swimEditorReducer';
 import { useTheme } from '@/theme/useTheme';
+
+const maximumRounds = 99;
 
 type SwimSectionCardProperties = {
   section: EditorSwimSection;
@@ -22,6 +27,9 @@ type SwimSectionCardProperties = {
   onMove: (offset: -1 | 1) => void;
   onRemove: () => void;
   onAddSet: () => void;
+  onAddSetToBlock: (blockKey: string) => void;
+  onChangeRounds: (blockKey: string, rounds: number) => void;
+  onChangeBlockRest: (blockKey: string, restAfterSeconds: number | null) => void;
   onPressSet: (setKey: string) => void;
 };
 
@@ -34,6 +42,9 @@ export function SwimSectionCard({
   onMove,
   onRemove,
   onAddSet,
+  onAddSetToBlock,
+  onChangeRounds,
+  onChangeBlockRest,
   onPressSet,
 }: SwimSectionCardProperties) {
   const theme = useTheme();
@@ -84,15 +95,26 @@ export function SwimSectionCard({
           {formatSwimDistance(swimSectionDistance(section))}
         </Typography>
         {section.blocks.map((block) => {
+          const isGroupedBlock = block.rounds > 1 || block.sets.length > 1;
           const roundsText = describeSwimRounds(block.rounds);
-          const restText = describeSwimBlockRest(block.restAfterSeconds);
           return (
             <Stack key={block.key} gap="small">
-              {roundsText === null ? null : (
-                <Typography variant="label" color="accent">
-                  {roundsText}
-                </Typography>
-              )}
+              {isGroupedBlock ? (
+                <Stack gap="small">
+                  <Typography variant="label" color="accent">
+                    {roundsText ?? 'Block'}
+                  </Typography>
+                  <Stepper
+                    value={block.rounds}
+                    step={1}
+                    minimum={1}
+                    maximum={maximumRounds}
+                    accessibilityLabel="rounds"
+                    formatValue={(value) => `${value} ${value === 1 ? 'round' : 'rounds'}`}
+                    onChangeValue={(rounds) => onChangeRounds(block.key, rounds)}
+                  />
+                </Stack>
+              ) : null}
               {block.sets.map((set) => (
                 <Touchable
                   key={set.key}
@@ -108,18 +130,23 @@ export function SwimSectionCard({
                   }}
                 >
                   <Typography>{describeSwimSet(set)}</Typography>
-                  {set.notes === null ? null : (
-                    <Typography variant="caption" color="textSecondary">
-                      {set.notes}
-                    </Typography>
-                  )}
                 </Touchable>
               ))}
-              {restText === null ? null : (
-                <Typography variant="caption" color="textSecondary">
-                  {restText}
-                </Typography>
-              )}
+              {isGroupedBlock ? (
+                <DurationInput
+                  seconds={block.restAfterSeconds}
+                  accessibilityLabel="Rest after block"
+                  placeholder="Rest after block, e.g. 1:00"
+                  onChangeSeconds={(restAfterSeconds) => onChangeBlockRest(block.key, restAfterSeconds)}
+                />
+              ) : null}
+              <Box direction="row">
+                <TextButton
+                  label="Add set to block"
+                  disabled={!canAddSet}
+                  onPress={() => onAddSetToBlock(block.key)}
+                />
+              </Box>
             </Stack>
           );
         })}

@@ -58,11 +58,6 @@ export function SwimWorkoutDetail({ workout }: SwimWorkoutDetailProperties) {
                     {block.sets.map((set, setIndex) => (
                       <Box key={setIndex}>
                         <Typography>{describeSwimSet(set)}</Typography>
-                        {set.notes === null ? null : (
-                          <Typography variant="caption" color="textSecondary">
-                            {set.notes}
-                          </Typography>
-                        )}
                       </Box>
                     ))}
                     {restText === null ? null : (
