@@ -164,7 +164,7 @@ The profile form (see Profile and Progress) is the only writer.
 
 ### Migrations
 
-Migrations run in order through `src/database/migrations/migrations.ts` array: `[createInitialSchema, createTrainingSchema, addSessionExerciseRestSeconds, addNotificationIdentifier, addExerciseNotes, addAssistedTrackingAndExerciseVideo, addActivities]`. The `user_version` PRAGMA tracks which migrations have run.
+Migrations run in order through `src/database/migrations/migrations.ts` array: `[createInitialSchema, createTrainingSchema, addSessionExerciseRestSeconds, addNotificationIdentifier, addExerciseNotes, addAssistedTrackingAndExerciseVideo, addActivities, addSwimming]`. The `user_version` PRAGMA tracks which migrations have run.
 
 - **v1 (createInitialSchema)**: Draft schema with exercises, workouts, workout_exercises and sets tables. Never edited. Kept so the migration order stays the same on every device.
 - **v2 (createTrainingSchema)**: Drops draft tables and creates the full training schema for production use.
@@ -173,20 +173,27 @@ Migrations run in order through `src/database/migrations/migrations.ts` array: `
 - **v5 (addExerciseNotes)**: Adds a nullable `notes` column to `exercises` (`ALTER TABLE exercises ADD COLUMN notes TEXT`). Existing exercises get `NULL`.
 - **v6 (addAssistedTrackingAndExerciseVideo)**: Rebuilds `exercises` (adding a nullable `video_url`) and `workout_items` so their tracking type `CHECK` constraints accept `repetitions_and_assistance`. SQLite can't alter a `CHECK`, so each table is created as `*_rebuilt`, its rows copied with their ids, the old table dropped and the new one renamed. The `workout_items` indexes are recreated. This relies on `foreign_keys` being `OFF` during migrations; otherwise dropping `workout_items` would cascade-delete `target_sets`.
 - **v7 (addActivities)**: Rebuilds `workouts` so `kind` accepts `activity`, adds `activity_type` (hike\|run\|walk), drops `hiking` from the class types and requires `class_type` exactly for classes and `activity_type` exactly for activities. Every hiking class becomes a Hike activity with no `duration_minutes`. Rebuilds `sessions` so `workout_kind` accepts `activity`, adds `activity_type`, `distance_meters`, `elevation_gain_meters`, `active_kilocalories` and `average_heart_rate`, and turns every hiking session into a Hike activity, keeping its times, notes and Health link. The `sessions` indexes are recreated.
+- **v8 (addSwimming)**: Rebuilds `exercises` so `body_part` accepts `swimming`. Rebuilds `workouts` so `kind` accepts `swim`, adds `pool_length_meters` (`CHECK` 25 or 50) and requires `pool_length_meters` exactly for swims, next to the existing `class_type` and `activity_type` rules. Rebuilds `sessions` so `workout_kind` accepts `swim` and adds `pool_length_meters` (25 or 50). The `sessions` indexes are recreated. Creates the workout tables `swim_sections`, `swim_blocks`, `swim_sets` and `swim_set_equipment`, and the session snapshot tables `session_swim_sections`, `session_swim_blocks`, `session_swim_sets`, `session_swim_set_equipment` and `session_swim_repetitions`, with their indexes. Set `rest_mode` is `fixed` or `send_off`, `rounds` and `repetitions` are at least 1, `distance_meters` is above 0 and equipment is `fins`, `paddles`, `pull_buoy` or `kickboard`. Existing rows keep their ids and `pool_length_meters` stays `NULL` for them. The 13 strokes are not inserted here: they are built-in defaults that the default exercise library seeds.
 
 ### Schema v2
 
 | Table | Purpose | Key Columns |
 | --- | --- | --- |
 | **exercises** | Exercise definitions | `id`, `name` (unique), `body_part`, `default_tracking_type`, `image_url`, `video_url` (nullable, added by v6), `created_at`, `notes` (nullable, added by v5) |
-| **workouts** | Workout templates | `id`, `name`, `kind` (individual\|class\|activity), `class_type` (yoga\|pilates\|spin\|barre\|other), `activity_type` (hike\|run\|walk, v7), `duration_minutes`, `created_at`, `updated_at` |
+| **workouts** | Workout templates | `id`, `name`, `kind` (individual\|class\|activity\|swim), `class_type` (yoga\|pilates\|spin\|barre\|other), `activity_type` (hike\|run\|walk, v7), `duration_minutes`, `pool_length_meters` (25\|50, v8), `created_at`, `updated_at` |
 | **workout_items** | Exercises in a workout template | `id`, `workout_id`, `exercise_id`, `position`, `superset_group`, `tracking_type`, `rest_seconds`, `notes` |
 | **target_sets** | Target reps/weight/duration for a workout_item | `id`, `workout_item_id`, `position`, `repetitions`, `weight_kilograms`, `duration_seconds`, `distance_meters` |
 | **plans** | Training plans | `id`, `name`, `is_active` (0\|1 unique), `starts_on`, `created_at` |
 | **plan_entries** | Workouts scheduled in a plan | `id`, `plan_id`, `workout_id`, `day_of_week`, `time_of_day` |
-| **sessions** | Started or finished workout sessions (copies workout_name/kind/class_type/activity_type at time of session) | `id`, `workout_id`, `workout_name`, `workout_kind`, `class_type`, `activity_type`, `scheduled_date`, `started_at`, `finished_at`, `health_*` fields, `notes`, activity metrics `distance_meters`, `elevation_gain_meters`, `active_kilocalories`, `average_heart_rate` (v7) |
+| **sessions** | Started or finished workout sessions (copies workout_name/kind/class_type/activity_type at time of session) | `id`, `workout_id`, `workout_name`, `workout_kind`, `class_type`, `activity_type`, `scheduled_date`, `started_at`, `finished_at`, `health_*` fields, `notes`, activity metrics `distance_meters`, `elevation_gain_meters`, `active_kilocalories`, `average_heart_rate` (v7), `pool_length_meters` (v8) |
 | **session_exercises** | Exercises in a session | `id`, `session_id`, `exercise_id`, `replaced_exercise_id`, `position`, `superset_group`, `tracking_type`, `rest_seconds` (added by v3) |
 | **session_sets** | Completed sets in a session | `id`, `session_exercise_id`, `position`, `target_*` columns, `repetitions`, `weight_kilograms`, `duration_seconds`, `distance_meters`, `completed_at` |
+| **swim_sections** | Named sections of a swim workout (v8) | `id`, `workout_id`, `position`, `name` |
+| **swim_blocks** | Blocks in a section | `id`, `section_id`, `position`, `rounds`, `rest_after_seconds` |
+| **swim_sets** | Sets in a block | `id`, `block_id`, `position`, `exercise_id` (the stroke), `repetitions`, `distance_meters`, `rest_mode` (fixed\|send_off), `rest_seconds`, `send_off_seconds`, `rest_after_seconds`, `notes` |
+| **swim_set_equipment** | Equipment on a set | `swim_set_id`, `equipment` (fins\|paddles\|pull_buoy\|kickboard), primary key on both |
+| **session_swim_sections**, **session_swim_blocks**, **session_swim_sets**, **session_swim_set_equipment** | The snapshot of the workout a swim session was started from. Same columns as the workout tables; `session_swim_sets` also keeps `exercise_name` and its `exercise_id` is nullable | `session_id` on sections, otherwise the parent id |
+| **session_swim_repetitions** | One row per rep to swim, created when the session starts | `id`, `session_swim_set_id`, `round_index`, `repetition_index`, `completed_at` (null until ticked), unique on the first three |
 | **profile** | Single user profile (id=1) | `id`, `display_name`, `birth_date`, `sex`, `height_centimetres`, `goal`, `weekly_workout_target`, `daily_step_goal`, `updated_at` |
 | **body_measurements** | Weight and body composition history | `id`, `measured_on`, `weight_kilograms`, `body_fat_percent`, waist/hip/chest measurements, `notes` |
 | **health_snapshots** | Apple Health data by date | `date`, `steps`, `sleep_minutes`, `resting_heart_rate`, `fetched_at` |
@@ -351,7 +358,7 @@ The exercise picker is opened from inside the builder by calling `beginExerciseP
 
 ### Swim Workouts
 
-A swim workout keeps `swimDetails` in the editor state (pool length, description, image URL and sections of blocks of sets), reduced by `createSwimEditorReducer` in `src/swimming/swimEditorReducer.ts` through the `swimChanged` action. Every set lives in a block; the Ticket 2 UI adds each set in its own block with one round and no rest after, while save and load already round-trip rounds, rest after, equipment and notes. `saveWorkout` writes the workout row (with `pool_length_meters`) and, in the same transaction, deletes and re-inserts `swim_sections`, `swim_blocks`, `swim_sets` and `swim_set_equipment`. `getWorkoutWithItems` returns a `swim` structure for swim workouts, and `duplicateWorkout` copies it. The pure `src/swimming/` modules (`swimDistance`, `swimDistancePresets`, `describeSwimSet`, `formatSwimTime`) are covered by `bun test`.
+Swim workouts are built with the swim editor and set screens, described in the Swimming section. The editor state holds `swimDetails` (pool length, description, image URL and sections of blocks of sets), reduced by `createSwimEditorReducer` in `src/swimming/swimEditorReducer.ts` through the `swimChanged` action.
 
 ### Pure Modules
 
@@ -472,7 +479,7 @@ These hold the plans logic, import no React Native, and are covered by `bun test
 - `src/plans/groupEntriesByWeekday.ts` and `src/plans/weekdays.ts`: Monday to Sunday sections in time order
 - `src/plans/describePlanEntryWorkout.ts`: the class type label or "n ex."
 - `src/plans/planNameError.ts`: plan name is required
-- `src/workouts/workoutNuggie.ts`: the `workout` nuggie, or the class nuggie for a class
+- `src/workouts/workoutNuggie.ts`: the `workout` nuggie, the class nuggie for a class, the activity nuggie for an activity or the `shark` nuggie for a swim
 - `src/workouts/filterWorkouts.ts`: workout search by name
 
 ## Calendar and Workout Detail
@@ -647,7 +654,7 @@ When Finish is tapped, `resolveFinishPrompt` counts unticked sets and returns on
 
 ### Finishing Nuggie and Caption
 
-The finishing nuggie and caption come from `chooseFinishingPresentation(input, random)`, which calls `chooseNuggie` with `kind: 'sessionFinished'`. Input includes `workoutKind`, `classType` and `personalRecordCount` (from `countExercisesWithRecords`, which counts exercises with at least one record). The nuggie rule: beast if `personalRecordCount > 0`; goodJob if `workoutKind` is class; otherwise a random celebrate variant. The caption is "New personal record!" if records exist, "Workout complete!" for individual workouts, or "Namaste — class complete!" for yoga or "Class complete!" for other classes. Both the finishing screen and the summary call `chooseStableFinishingPresentation(sessionId, input)`, which uses `randomFromSessionId(sessionId)` to seed a deterministic PRNG, so the finishing screen and every later summary show the same nuggie for a session. The summary route takes no nuggie param.
+The finishing nuggie and caption come from `chooseFinishingPresentation(input, random)`, which calls `chooseNuggie` with `kind: 'sessionFinished'`. Input includes `workoutKind`, `classType` and `personalRecordCount` (from `countExercisesWithRecords`, which counts exercises with at least one record). The nuggie rule: beast if `personalRecordCount > 0`; shark if `workoutKind` is swim; goodJob for the other non-individual kinds; otherwise a random celebrate variant. Personal records are strength records, so a swim never has any and always shows the shark. The caption is "New personal record!" if records exist, "Workout complete!" for individual workouts, "Swim complete!" for swims, or "Namaste — class complete!" for yoga or "Class complete!" for other classes. Both the finishing screen and the summary call `chooseStableFinishingPresentation(sessionId, input)`, which uses `randomFromSessionId(sessionId)` to seed a deterministic PRNG, so the finishing screen and every later summary show the same nuggie for a session. The summary route takes no nuggie param.
 
 ### Class Session View
 
@@ -1105,6 +1112,82 @@ Both modules are pure and covered by `bun test`:
 
 `listFinishedActivityLogs` in `progressRepository` returns the raw finished logs with optional type and started-before filters, and `useActivityStatistics` builds the statistics. The Progress hub shows an Activities section. The activity summary shows a NEW BEST badge naming each best, and the finishing caption mentions it with the record nuggie.
 
+## Swimming
+
+A swim is a workout with `kind` `swim`. It is a written workout of sections, blocks and sets that the logger turns into a checklist of reps. It is not an activity: activities are logged after the fact with no structure. A swim writes no `session_exercises` or `session_sets` rows. Its nuggie is the shark (`shark_nuggie.png`, under `src/nuggies/images/`), used for the workout, the finishing screen and the summary. Migration v8 adds the kind.
+
+### Routes
+
+| Route | Presentation | Purpose |
+| --- | --- | --- |
+| `/workouts/new` | Stack push | The fourth kind choice, Swim, opens `/workouts/swim-editor` |
+| `/workouts/swim-editor` | Stack push | Builder step 2 (see Workout Builder and the Builder section below) |
+| `/workouts/swim-set` | Stack push | Edits one set by `setKey` (see Builder) |
+| `/workout/[workoutId]` | Stack push | `SwimWorkoutDetail`: sections with their distance, sets as whiteboard text with block rounds, the total distance and START SWIM |
+| `/sessions/[sessionId]` | Full-screen modal | Renders `SwimSessionLogger` when `workoutKind` is `swim` |
+| `/sessions/[sessionId]/finishing` | Full-screen modal | The shark nuggie and "Swim complete!", or the best-themed caption |
+| `/sessions/[sessionId]/summary` | Stack push | `SwimSummary` |
+| `/progress` | Push | An inline Swimming card. There is no separate swimming screen |
+
+Scheduled swims route like individual workouts: `resolveScheduledWorkoutRoute` sends them to the workout detail with the date and plan entry, not to a log form.
+
+### Data Model
+
+Migration v8 holds the tables (see Schema v2). The workout side is `swim_sections` → `swim_blocks` → `swim_sets` → `swim_set_equipment`, the session side is the same four prefixed `session_swim_` plus `session_swim_repetitions`. The checks that matter:
+
+- `workouts.pool_length_meters` is 25 or 50 and is set exactly when `kind` is `swim`
+- `rounds` and `repetitions` are at least 1 and `distance_meters` is above 0
+- `rest_mode` is `fixed` or `send_off`; equipment is `fins`, `paddles`, `pull_buoy` or `kickboard`
+- deleting a workout, section, block or set cascades to its children, and the workout tables are unrelated to the session tables so history is untouched by later edits
+- `session_swim_sets.exercise_id` is nullable and the stroke name is copied to `exercise_name`
+
+### Strokes
+
+The 13 strokes (Freestyle, Breaststroke, Backstroke, Butterfly, the four Kick variants, Pull, Medley, Choice, Drill and Underwater Streamline) are built-in exercises with the body part `swimming` and the `distance` tracking type, generated into `defaultExercises.ts`. `assets/workouts.csv` is gitignored, so the rows live in git only through the generated file. `parseExerciseLibraryCsv` accepts the distance tracking text. They are hidden from the gym by `filterExercises`: with no body part chosen it drops every `swimming` exercise, so strokes show only under the Swimming filter and never in the all-exercises list, search or the gym exercise picker. `ExerciseForm` shows Swimming read-only for a stroke and cannot create a Swimming exercise, so the list stays fixed. Stroke notes stay editable. `useSwimStrokes` loads the strokes for the set screen.
+
+### Builder
+
+`swimDetails` in the editor state is reduced by `createSwimEditorReducer` (`swimEditorReducer.ts`) through the `swimChanged` action. A new swim starts with Warm up, Main and Cool down. Sections can be renamed, added, removed (with a confirmation when they hold sets) and moved; a blank name is saved as "Section N". A section holds blocks and a block holds sets; blocks cannot hold blocks. The Add set action copies the section's previous set, or Freestyle 1×100 when the section is empty, into its own block of one round. "Add set to block" adds to an existing block (copying the last set without equipment, note or rest after). Every block shows a rounds stepper; the "N rounds" heading and block rest appear only when the block has more than one round or more than one set. A one-set, one-round block loses its block rest, and a rest after of 0 is stored as none.
+
+A set has a stroke, repetitions, distance, equipment (any number), an optional note, an optional rest after the set and one rest mode: Fixed rest (`rest_seconds` after each rep) or Send-off (`send_off_seconds`, start each rep every m:ss). Distance presets come from `swimDistancePresets`: the pool length steps up to 100 m (25, 50, 75, 100 or 50, 100), then 200, 400 and 800, and any whole number of metres is allowed. Totals come from `swimDistance.ts`: set distance is repetitions times distance, a block multiplies its sets by its rounds, and sections and the workout sum those. They show per section and in the editor footer, and on the detail. `describeSwimSet` writes the whiteboard text, such as `4×100 m Backstroke @ 1:45 · Fins` or `2×50 m Freestyle · rest 0:30`, with the note in quotes; `formatSwimTime` formats seconds as m:ss.
+
+`saveWorkout` writes the workout row (with `pool_length_meters`) and, in the same transaction, deletes and re-inserts the four swim tables, using `workoutSaveRows`. `getWorkoutWithItems` returns a `swim` structure (`toLoadedWorkout` turns it into reducer input) and `duplicateWorkout` copies it. Describe helpers (`describeWorkout`, `describePlanEntryWorkout`, `describeScheduledWorkout`) label a swim "Swim"; the `WorkoutSummary` carries `swimDistanceMeters`, so the create hub and add-entry sheet show the distance (plan-entry and scheduled cards do not).
+
+### Starting a Swim
+
+The snapshot runs inside the existing `startSession` transaction, so the active-session, resume and plan-entry rules apply unchanged. `snapshotSwimWorkout` in `swimSessionRepository` reads the workout detail and copies the sections, blocks, sets, stroke names and equipment into the `session_swim_*` tables, then inserts one `session_swim_repetitions` row per rep, in the order `expandSwimRepetitions` returns: section, block, round, set, repetition. Editing or deleting the workout later cannot change the session. `getSessionWithExercises` returns the snapshot as `swim` (`getSwimSessionDetail`) for swim sessions.
+
+### Swim Logger
+
+`SwimSessionLogger` lists sections, then blocks laid out one round at a time ("Round 2 of 3"), then each set with one circle (`SwimRepetitionRow`) per rep and its rest or send-off as text. There is no rest timer and no send-off countdown, and no elapsed timer in the top bar; the pace clock is on the wall. A running swum-distance line shows at the top.
+
+`useSwimSession` keeps the sections in state and a ref, and a write queue like the strength logger. A tick flips `completed_at` locally at once and schedules a write debounced at `tickWriteDebounceMilliseconds` (400 ms) per repetition; the write reads the latest value from the ref, so rapid toggles collapse to one write. Pending writes are flushed on unmount and enqueued when the app goes to the background. MARK ALL DONE cancels pending tick writes, ticks every open rep locally and runs `completeOpenSwimRepetitions`, one `UPDATE` for the session. The pure `swimSessionChanges` module holds the state changes. A failed write shows a "Could not save" alert, and every successful write bumps `dataVersion`.
+
+FINISH opens the duration panel, defaulting to now minus the start (`defaultSwimDurationSeconds`). The panel's FINISH SWIM flushes pending ticks and calls `finishSwimSession`, which sets `finished_at` to `swimFinishedAt(startedAt, durationSeconds)`, so a late log can correct the duration. FINISH with no reps ticked offers to discard instead, like the strength logger. There is no Apple Health auto-fill for swims. Quit confirms and discards.
+
+### Pace
+
+Pace is derived, never stored. `deriveSecondsPerHundredMeters` returns duration over swum distance in hundreds of metres, or `null` for no distance or no duration, and `formatSwimPace` writes `m:ss /100 m` (`describeSwimPace` does both). It includes rest. Swum distance counts only ticked reps: `flattenSwimRepetitions`, `swumDistance` and `swumDistanceByStroke` in `swimSessionTotals.ts`. `SwimSummary` shows distance, duration and pace tiles, distance per stroke and a NEW BEST badge naming each best.
+
+### Statistics and Bests
+
+All pure and covered by `bun test`:
+
+- `src/progress/buildSwimLogs.ts`: turns one row per set with its ticked rep count into one `SwimLog` per swim (start, duration, swum distance, distance per stroke)
+- `src/progress/buildSwimStatistics.ts`: swim count and distance for this month and all time, the longest swim, the fastest pace and distance per stroke, or `null` with no logs
+- `src/progress/detectSwimBests.ts`: `longestSwim` and `fastestPace`, following the activity bests rules. A best needs at least one earlier log that recorded the metric and a value that strictly beats every earlier recorded value; a first swim and a tie are not bests (pace ties use float equality, as activity bests do)
+- `src/progress/swimBestRules.ts`: pace only counts for swims of at least 400 m (`minimumSwimPaceDistanceMeters`), so a short dip cannot set a record
+
+`listFinishedSwimLogs` in `progressRepository` joins the session snapshot tables to the ticked repetitions with an optional started-before filter. A finished swim with nothing ticked still counts towards swim totals but records no distance or pace. `useSwimStatistics` builds the statistics for `SwimStatisticsCard`, shown on the Progress hub. `useFinishedSession` finds a swim's bests against the earlier logs, and the finishing caption mentions a best with the record nuggie.
+
+### Counting Like Activities
+
+Swims are workouts with finished sessions, so they count wherever finished sessions count: plans, calendar completion, the Home streak and weekly session counts (all status based). They are excluded from volume, plateau, muscle balance, suggested weights and exercise records structurally: those read `session_exercises` and `session_sets`, and a swim never writes those rows, so no filter was added or is needed.
+
+### Pure Modules
+
+Covered by `bun test`: `src/swimming/` (`swimDistance`, `swimDistancePresets`, `describeSwimSet`, `swimEditorReducer`, `expandSwimRepetitions`, `swimSessionTotals`, `swimSessionChanges`, `swimDuration`, `swimPace`), `src/progress/` (`buildSwimLogs`, `buildSwimStatistics`, `detectSwimBests`), plus the swim cases in `filterExercises`, `parseExerciseLibraryCsv`, `toLoadedWorkout`, `workoutSaveRows`, `workoutEditorReducer`, `chooseNuggie`, `planHelpers`, `resolveScheduledWorkoutRoute` and `calculateWeeklyStreak`. The migration, repositories, builder, logger and Progress card are checked in the simulator.
+
 ## Coach Nuggie
 
 Phase 09a replaces the placeholder coach modal with a rule-based coach. It adds no migration and makes no network calls. Notifications are Phase 09b (see Notifications).
@@ -1353,7 +1436,7 @@ src/
     _layout.tsx             root: ThemeProvider → Suspense → SQLiteProvider → GestureHandlerRootView → Stack
     coach.tsx               Coach modal screen: conversation, prompt chips, action routing
     exercises/              library (index), new, [exerciseId] edit, picker
-    workouts/               builder: _layout with WorkoutEditorProvider, new, class-details, activity-details, editor, [workoutId]/edit, superset-info
+    workouts/               builder: _layout with WorkoutEditorProvider, new, class-details, activity-details, swim-editor, swim-set, editor, [workoutId]/edit, superset-info
     plans/                  new, [planId] editor, [planId]/add-entry, entry-time, activate, copy-day
     workout/                [workoutId] detail screen
     stats/                  [metric] 14-day detail screen with chart
@@ -1367,11 +1450,12 @@ src/
     molecules/              small grouped atoms: CoachFloatingButton, ScreenHeader, EmptyState, ChipGroup, SegmentedControl, SearchBar, AlphabetIndex, ExerciseRow, FormField, ImageUrlField, Stepper, KindChoiceCard, ActionCard, TargetSetRow, TargetSetTable, WorkoutRow, WorkoutNameField, PlanEntryRow, DaySectionHeader, PlanRow, RestDay, ActivePlanBanner, DayChip, ScheduledWorkoutCard, HeaderImageCard, WorkoutDetailExerciseRow, ActiveSessionBanner, PersonalRecordRow, RestTimerBar, SessionSetRow, SessionTopBar, StatTile, HealthPermissionCard, HealthWorkoutRow, LinkedHealthWorkoutRow, HealthSuggestionBanner, GreetingHeader, TodayWorkoutCard, NuggieActionCard, RestDayCard, NoPlanCard, WeeklyStreakTile, StatBarRow, ProfileSummaryHeader, SettingsRow, MeasurementRow, RangeSwitcher, ClassCountTile, StatisticLine, CoachMessageBubble, UserMessageBubble, PromptChip, NotificationBell, NotificationRow, ToggleRow, ChoiceRow
     organisms/              self-contained sections: NuggieLoadingScreen, ExerciseForm, ExercisePicker, ExerciseEditorCard, ReorderableExerciseList, ClassDetailsForm, CreateHub, WorkoutEditorFooter, PlanWeekEditor, AddPlanEntrySheet, ActivatePlanSheet, EntryTimeSheet, CopyDaySheet, WeekStrip, DayWorkoutList, IndividualWorkoutDetail, ClassWorkoutDetail, SessionLogger, ClassSessionView, SessionExerciseCard, SessionSummary, LinkHealthWorkoutSheet, TodayCarousel, StatTileGrid, StatBarList, HealthMetricBarList, StreakBarList, ProfileForm, MeasurementForm, ProgressOverview, RecentRecordsSection, PersonalRecordItemRow, ClassCountSection, ClassStatisticsCard, ExerciseProgressSection, ExerciseHistoryList, ProgressChartFrame, ProgressLineChart, ProgressBarChart, CoachConversation, PromptChipBar, NotificationList
   database/
-    migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2), addSessionExerciseRestSeconds (v3), addNotificationIdentifier (v4), addExerciseNotes (v5), addAssistedTrackingAndExerciseVideo (v6), addActivities (v7)
-    repositories/           one file per entity: exerciseRepository, workoutRepository, planRepository, scheduleRepository, sessionRepository, appSettingsRepository, healthSnapshotRepository, profileRepository, bodyMeasurementRepository, progressRepository, notificationRepository
+    migrations/             schema: createInitialSchema (v1 draft, unedited), createTrainingSchema (v2), addSessionExerciseRestSeconds (v3), addNotificationIdentifier (v4), addExerciseNotes (v5), addAssistedTrackingAndExerciseVideo (v6), addActivities (v7), addSwimming (v8)
+    repositories/           one file per entity: exerciseRepository, workoutRepository, planRepository, scheduleRepository, sessionRepository, appSettingsRepository, healthSnapshotRepository, profileRepository, bodyMeasurementRepository, progressRepository, notificationRepository, swimSessionRepository
   exercises/                pure exercise logic with tests: validation, A–Z grouping, filtering, selection, body part param parsing, notes trimming
-  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan, usePlanActions, useScheduledWorkouts, useWeekPages, useSelectedDate, useScheduledWeeks, useSession, useStartSession, useActiveSession, useFinishedSession, useRestTimer, useSessionExercisePicks, useHealthAuthorization, useDailyHealth, useOverlappingHealthWorkouts, useUnlinkHealthWorkout, useProfile, useWeeklyStreak, useHealthRange, useFocusReloadKey, useProfileForm, useBodyMeasurements, useMeasurementForm, useTrainingTotals, usePersonalRecords, useNewRecordCount, useExercisesWithHistory, useExerciseHistory, useClassStatistics, useCoachSnapshot, useCoachConversation, useTipOfTheDay, useNotifications, useUnreadNotificationCount, useNotificationSettings, useNotificationPermissionStatus, useNotificationReconciler, useNotificationTapRouting, useNotificationReceivedRefresh, useRestAlertScheduling, useNotificationPermissionSheet, plus the plain loaders `reconcileNotifications` and `loadNotificationSettings`
+  hooks/                    data hooks that reload on focus: useExercises, useExercise, useRecentlyUsedExercises, useExerciseForm, useWorkouts, useWorkoutWithItems, useWorkoutEditor, useWorkoutActions, useExercisePicks, useSaveWorkout, useUnsavedChangesGuard, useReorderingSheetLock, useWorkoutSavedNoticeOnFocus, usePlans, usePlan, usePlanActions, useScheduledWorkouts, useWeekPages, useSelectedDate, useScheduledWeeks, useSession, useStartSession, useActiveSession, useFinishedSession, useRestTimer, useSessionExercisePicks, useHealthAuthorization, useDailyHealth, useOverlappingHealthWorkouts, useUnlinkHealthWorkout, useProfile, useWeeklyStreak, useHealthRange, useFocusReloadKey, useProfileForm, useBodyMeasurements, useMeasurementForm, useTrainingTotals, usePersonalRecords, useNewRecordCount, useExercisesWithHistory, useExerciseHistory, useClassStatistics, useCoachSnapshot, useCoachConversation, useTipOfTheDay, useNotifications, useUnreadNotificationCount, useNotificationSettings, useNotificationPermissionStatus, useNotificationReconciler, useNotificationTapRouting, useNotificationReceivedRefresh, useRestAlertScheduling, useNotificationPermissionSheet, useSwimSession, useSwimStatistics, useSwimStrokes, plus the plain loaders `reconcileNotifications` and `loadNotificationSettings`
   stores/                   exercisePickerStore, workoutSavedStore for returning values between screens; dataVersionStore, restTimerStore for module-level state; with tests
+  swimming/                 pure swim logic with tests: distance totals and presets, set text, editor reducer, rep expansion, session totals, tick changes, duration, pace (phase 13)
   plans/                    pure plan logic with tests: build scheduled workouts, time of day, summaries, copy day, weekday grouping, day marker state, week cache
   workouts/                 pure builder logic with tests: reducer, normalisation, grouping blocks, target set columns, save rows, drag maths, rest presets, class type nuggies, editor context and provider, duration estimation, target set descriptions
   sessions/                 pure session logic with tests: start and resume rules, fill and change operations, rest timer control, finishing and discard logic, personal record detection
