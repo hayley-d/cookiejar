@@ -10,12 +10,9 @@ export function filterExercises<Item extends { name: string; bodyPart: BodyPart 
   { searchText, bodyPart }: ExerciseFilter,
 ) {
   const normalizedSearchText = searchText.trim().toLocaleLowerCase();
-  if (normalizedSearchText === '' && bodyPart === null) {
-    return exercises;
-  }
   return exercises.filter(
     (exercise) =>
-      (bodyPart === null || exercise.bodyPart === bodyPart) &&
+      (bodyPart === null ? exercise.bodyPart !== 'swimming' : exercise.bodyPart === bodyPart) &&
       exercise.name.toLocaleLowerCase().includes(normalizedSearchText),
   );
 }

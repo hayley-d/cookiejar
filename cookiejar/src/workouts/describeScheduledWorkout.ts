@@ -8,6 +8,7 @@ const kindFallbackLabels: Record<WorkoutKind, string> = {
   individual: 'Workout',
   class: 'Class',
   activity: 'Activity',
+  swim: 'Swim',
 };
 
 export function describeScheduledWorkoutKind(scheduledWorkout: ScheduledWorkout): string {
@@ -21,7 +22,7 @@ export function describeScheduledWorkoutKind(scheduledWorkout: ScheduledWorkout)
 
 export function describeScheduledWorkoutSummary(scheduledWorkout: ScheduledWorkout): string | null {
   const { kind, durationMinutes, exerciseCount, targetSetCount, targetRestSeconds } = scheduledWorkout.workout;
-  if (kind === 'activity') {
+  if (kind === 'activity' || kind === 'swim') {
     return null;
   }
   if (kind === 'class') {

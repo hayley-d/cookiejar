@@ -29,12 +29,14 @@ const bodyPartsByCsvValue: Record<string, BodyPart> = {
   core: 'core',
   grip: 'forearms',
   forearms: 'forearms',
+  swimming: 'swimming',
 };
 
 const trackingTypesByCsvValue: Record<string, TrackingType> = {
   'reps and sets': 'repetitions',
   'weighted reps and sets': 'repetitions_and_weight',
   'assisted reps and sets': 'repetitions_and_assistance',
+  distance: 'distance',
 };
 
 export function splitCsvLine(line: string): string[] {

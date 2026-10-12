@@ -7,7 +7,7 @@ import { SegmentedControl } from '@/components/molecules/SegmentedControl';
 import { ScrollBox } from '@/components/primitives/ScrollBox';
 import { TextField } from '@/components/primitives/TextField';
 import type { ExerciseFormErrors, ExerciseFormValues } from '@/exercises/validateExerciseForm';
-import { bodyPartLabels, bodyParts } from '@/types/BodyPart';
+import { bodyPartLabels, gymBodyParts } from '@/types/BodyPart';
 import { trackingTypeLabels, trackingTypes } from '@/types/TrackingType';
 
 type ExerciseFormProperties = {
@@ -17,7 +17,7 @@ type ExerciseFormProperties = {
   footer?: ReactNode;
 };
 
-const bodyPartOptions = bodyParts.map((bodyPart) => ({ value: bodyPart, label: bodyPartLabels[bodyPart] }));
+const bodyPartOptions = gymBodyParts.map((bodyPart) => ({ value: bodyPart, label: bodyPartLabels[bodyPart] }));
 
 const trackingTypeSegments = trackingTypes.map((trackingType) => ({
   value: trackingType,

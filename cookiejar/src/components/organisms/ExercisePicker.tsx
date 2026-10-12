@@ -21,7 +21,7 @@ import {
   type AlphabeticalSection,
 } from '@/exercises/groupExercisesAlphabetically';
 import { useTheme } from '@/theme/useTheme';
-import { bodyPartLabels, bodyParts, type BodyPart } from '@/types/BodyPart';
+import { bodyPartLabels, bodyParts, gymBodyParts, type BodyPart } from '@/types/BodyPart';
 import { videoPlayHandler, type ExerciseVideo } from '@/exercises/exerciseVideo';
 import type { Exercise } from '@/types/Exercise';
 
@@ -169,7 +169,7 @@ export function ExercisePicker({
           style={{ flexGrow: 0 }}
         >
           <Chip label="All" isSelected={selectedBodyPart === null} onPress={() => setSelectedBodyPart(null)} />
-          {bodyParts.map((bodyPart) => (
+          {(variant === 'browse' ? bodyParts : gymBodyParts).map((bodyPart) => (
             <Chip
               key={bodyPart}
               label={bodyPartLabels[bodyPart]}

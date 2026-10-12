@@ -1,6 +1,6 @@
 import type { DefaultExercise } from '@/exercises/parseExerciseLibraryCsv';
 
-export const defaultExerciseLibraryVersion = '4af6ac0f';
+export const defaultExerciseLibraryVersion = 'ef3a5f51';
 
 export const defaultExercises: DefaultExercise[] = [
   {
@@ -492,5 +492,96 @@ export const defaultExercises: DefaultExercise[] = [
     "imageUrl": "https://cdn.motra.com/exercise-assets/358345c148/thumbnailOriginal.jpg",
     "videoUrl": null,
     "defaultTrackingType": "repetitions_and_weight"
+  },
+  {
+    "name": "Freestyle",
+    "bodyPart": "swimming",
+    "imageUrl": null,
+    "videoUrl": null,
+    "defaultTrackingType": "distance"
+  },
+  {
+    "name": "Breaststroke",
+    "bodyPart": "swimming",
+    "imageUrl": null,
+    "videoUrl": null,
+    "defaultTrackingType": "distance"
+  },
+  {
+    "name": "Backstroke",
+    "bodyPart": "swimming",
+    "imageUrl": null,
+    "videoUrl": null,
+    "defaultTrackingType": "distance"
+  },
+  {
+    "name": "Butterfly",
+    "bodyPart": "swimming",
+    "imageUrl": null,
+    "videoUrl": null,
+    "defaultTrackingType": "distance"
+  },
+  {
+    "name": "Freestyle Kick",
+    "bodyPart": "swimming",
+    "imageUrl": null,
+    "videoUrl": null,
+    "defaultTrackingType": "distance"
+  },
+  {
+    "name": "Breaststroke Kick",
+    "bodyPart": "swimming",
+    "imageUrl": null,
+    "videoUrl": null,
+    "defaultTrackingType": "distance"
+  },
+  {
+    "name": "Backstroke Kick",
+    "bodyPart": "swimming",
+    "imageUrl": null,
+    "videoUrl": null,
+    "defaultTrackingType": "distance"
+  },
+  {
+    "name": "Butterfly Kick",
+    "bodyPart": "swimming",
+    "imageUrl": null,
+    "videoUrl": null,
+    "defaultTrackingType": "distance"
+  },
+  {
+    "name": "Pull",
+    "bodyPart": "swimming",
+    "imageUrl": null,
+    "videoUrl": null,
+    "defaultTrackingType": "distance"
+  },
+  {
+    "name": "Medley",
+    "bodyPart": "swimming",
+    "imageUrl": null,
+    "videoUrl": null,
+    "defaultTrackingType": "distance"
+  },
+  {
+    "name": "Choice",
+    "bodyPart": "swimming",
+    "imageUrl": null,
+    "videoUrl": null,
+    "defaultTrackingType": "distance"
+  },
+  {
+    "name": "Drill",
+    "bodyPart": "swimming",
+    "imageUrl": null,
+    "videoUrl": null,
+    "defaultTrackingType": "distance"
+  },
+  {
+    "name": "Underwater Streamline",
+    "bodyPart": "swimming",
+    "imageUrl": null,
+    "videoUrl": null,
+    "defaultTrackingType": "distance"
   }
 ];

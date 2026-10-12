@@ -99,6 +99,14 @@ describe('parseExerciseLibraryCsv', () => {
     );
   });
 
+  test('maps swimming strokes with distance tracking', () => {
+    const csvText = [header, 'Freestyle,swimming,,distance,'].join('\n');
+
+    expect(parseExerciseLibraryCsv(csvText)).toEqual([
+      { name: 'Freestyle', bodyPart: 'swimming', imageUrl: null, videoUrl: null, defaultTrackingType: 'distance' },
+    ]);
+  });
+
   test('rejects duplicate names regardless of case', () => {
     const csvText = [header, 'Dips,chest,,reps and sets,', 'dips,chest,,reps and sets,'].join('\n');
 
@@ -113,6 +121,13 @@ describe('parseExerciseLibraryCsv', () => {
 });
 
 describe('default exercise library', () => {
+  test('has the 13 swimming strokes tracked by distance', () => {
+    const strokes = defaultExercises.filter((exercise) => exercise.bodyPart === 'swimming');
+
+    expect(strokes).toHaveLength(13);
+    expect(strokes.every((stroke) => stroke.defaultTrackingType === 'distance')).toBe(true);
+  });
+
   test('the generated module matches assets/workouts.csv', async () => {
     const csvText = await Bun.file('assets/workouts.csv').text();
     const generatedModule = await Bun.file('src/exercises/defaultExercises.ts').text();
