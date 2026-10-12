@@ -38,26 +38,27 @@ type CreateHubProperties = {
   onToastDismissed: () => void;
 };
 
-const workoutMenuOptions = ['Edit', 'Duplicate', 'Delete', 'Cancel'];
-const workoutMenuDeleteIndex = 2;
-const workoutMenuCancelIndex = 3;
+const editableWorkoutMenuOptions = ['Edit', 'Duplicate', 'Delete', 'Cancel'];
+const builtInWorkoutMenuOptions = ['Duplicate', 'Delete', 'Cancel'];
 
 type WorkoutMenuHandlers = Pick<CreateHubProperties, 'onEditWorkout' | 'onDuplicateWorkout' | 'onDeleteWorkout'>;
 
 function openWorkoutMenu(workout: WorkoutSummary, handlers: WorkoutMenuHandlers) {
+  const menuOptions = workout.builtInKey === null ? editableWorkoutMenuOptions : builtInWorkoutMenuOptions;
   ActionSheetIOS.showActionSheetWithOptions(
     {
       title: workout.name,
-      options: workoutMenuOptions,
-      destructiveButtonIndex: workoutMenuDeleteIndex,
-      cancelButtonIndex: workoutMenuCancelIndex,
+      options: menuOptions,
+      destructiveButtonIndex: menuOptions.indexOf('Delete'),
+      cancelButtonIndex: menuOptions.indexOf('Cancel'),
     },
     (optionIndex) => {
-      if (optionIndex === 0) {
+      const selectedOption = menuOptions[optionIndex];
+      if (selectedOption === 'Edit') {
         handlers.onEditWorkout(workout);
-      } else if (optionIndex === 1) {
+      } else if (selectedOption === 'Duplicate') {
         handlers.onDuplicateWorkout(workout);
-      } else if (optionIndex === workoutMenuDeleteIndex) {
+      } else if (selectedOption === 'Delete') {
         handlers.onDeleteWorkout(workout);
       }
     },

@@ -1,11 +1,15 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useSQLiteContext } from 'expo-sqlite';
+import { Alert } from 'react-native';
 
 import { IconButton } from '@/components/atoms/IconButton';
+import { TextButton } from '@/components/atoms/TextButton';
 import { EmptyState } from '@/components/molecules/EmptyState';
 import { ActivityWorkoutDetail } from '@/components/organisms/ActivityWorkoutDetail';
 import { ClassWorkoutDetail } from '@/components/organisms/ClassWorkoutDetail';
 import { SwimWorkoutDetail } from '@/components/organisms/SwimWorkoutDetail';
 import { IndividualWorkoutDetail } from '@/components/organisms/IndividualWorkoutDetail';
+import { duplicateWorkout } from '@/database/repositories/workoutRepository';
 import { exerciseVideoHref } from '@/exercises/exerciseVideo';
 import { useStartSession } from '@/hooks/useStartSession';
 import { useWorkoutWithItems } from '@/hooks/useWorkoutWithItems';
@@ -34,6 +38,7 @@ export default function WorkoutDetailScreen() {
   const workoutId = Number(workoutIdParameter);
   const workoutLookup = useWorkoutWithItems(workoutId);
   const { startSession } = useStartSession();
+  const database = useSQLiteContext();
 
   if (workoutLookup.status === 'missing' || workoutLookup.status === 'failed') {
     return (
@@ -60,22 +65,32 @@ export default function WorkoutDetailScreen() {
   const planEntryId = parseOptionalInteger(planEntryIdParameter);
   const startWorkout = () => void startSession({ workoutId: workout.id, date, planEntryId });
 
+  const duplicateToEdit = async () => {
+    try {
+      const duplicatedWorkoutId = await duplicateWorkout(database, workout.id);
+      router.push({ pathname: '/workouts/[workoutId]/edit', params: { workoutId: String(duplicatedWorkoutId) } });
+    } catch {
+      Alert.alert('Could not duplicate the workout', 'Something went wrong. Please try again.');
+    }
+  };
+
+  const editAction =
+    workout.builtInKey === null ? (
+      <IconButton
+        icon="pencil"
+        accessibilityLabel="Edit workout"
+        onPress={() =>
+          router.push({ pathname: '/workouts/[workoutId]/edit', params: { workoutId: String(workout.id) } })
+        }
+        color="accent"
+      />
+    ) : (
+      <TextButton label="Duplicate to edit" onPress={() => void duplicateToEdit()} />
+    );
+
   return (
     <>
-      <Stack.Screen
-        options={{
-          headerRight: () => (
-            <IconButton
-              icon="pencil"
-              accessibilityLabel="Edit workout"
-              onPress={() =>
-                router.push({ pathname: '/workouts/[workoutId]/edit', params: { workoutId: String(workout.id) } })
-              }
-              color="accent"
-            />
-          ),
-        }}
-      />
+      <Stack.Screen options={{ headerRight: () => editAction }} />
       {workout.kind === 'individual' ? (
         <IndividualWorkoutDetail
           workout={workout}

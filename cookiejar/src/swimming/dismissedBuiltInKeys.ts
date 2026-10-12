@@ -18,3 +18,7 @@ export function parseDismissedBuiltInKeys(storedValue: string | null): string[] 
 export function serializeDismissedBuiltInKeys(dismissedKeys: string[]): string {
   return JSON.stringify([...new Set(dismissedKeys)]);
 }
+
+export function addDismissedBuiltInKey(storedValue: string | null, builtInKey: string): string {
+  return serializeDismissedBuiltInKeys([...parseDismissedBuiltInKeys(storedValue), builtInKey]);
+}

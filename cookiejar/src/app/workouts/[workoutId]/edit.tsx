@@ -22,7 +22,7 @@ export default function EditWorkoutScreen() {
   const { state, dispatch } = useWorkoutEditor();
 
   useEffect(() => {
-    if (workoutLookup.status === 'found' && state.workoutId !== workoutId) {
+    if (workoutLookup.status === 'found' && workoutLookup.workout.builtInKey === null && state.workoutId !== workoutId) {
       dispatch({ type: 'loaded', workout: toLoadedWorkout(workoutLookup.workout) });
     }
   }, [dispatch, state.workoutId, workoutId, workoutLookup]);
@@ -41,6 +41,21 @@ export default function EditWorkoutScreen() {
               ? 'This workout may have been deleted.'
               : 'Something went wrong while loading it. Please try again.'
           }
+          actionLabel="Close"
+          onAction={() => router.back()}
+        />
+      </>
+    );
+  }
+
+  if (workoutLookup.status === 'found' && workoutLookup.workout.builtInKey !== null) {
+    return (
+      <>
+        <Stack.Screen options={{ headerLeft: () => closeButton }} />
+        <EmptyState
+          nuggie="workout"
+          title="Built-in workouts can't be edited"
+          message="Duplicate it to get a copy you can change."
           actionLabel="Close"
           onAction={() => router.back()}
         />
