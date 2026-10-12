@@ -10,6 +10,7 @@ import {
 import { describeSwimRounds, describeSwimSet } from '@/swimming/describeSwimSet';
 import { swimSectionDistance, swimWorkoutDistance } from '@/swimming/swimDistance';
 import type { SwimSection } from '@/swimming/swimTypes';
+import { toggleSwimEquipment } from '@/swimming/toggleSwimEquipment';
 import { createKeyCounter } from '@/workouts/workoutEditorReducer';
 
 const freestyle = { id: 1, name: 'Freestyle' };
@@ -82,21 +83,53 @@ describe('swimEditorReducer', () => {
     expect(reduce(details, { type: 'setRemoved', setKey: 'missing' })).toBe(details);
     expect(reduce(details, { type: 'setChanged', setKey: 'missing', changes: { repetitions: 2 } })).toBe(details);
     expect(reduce(details, { type: 'sectionRemoved', sectionKey: 'missing' })).toBe(details);
-    expect(reduce(details, { type: 'sectionMoved', sectionKey: details.sections[0].key, offset: -1 })).toBe(details);
-    expect(reduce(details, { type: 'sectionMoved', sectionKey: details.sections[2].key, offset: 1 })).toBe(details);
+    const sectionKeys = details.sections.map((section) => section.key);
+    expect(reduce(details, { type: 'sectionsReordered', sectionKeys })).toBe(details);
+    expect(reduce(details, { type: 'sectionsReordered', sectionKeys: [sectionKeys[1], sectionKeys[0]] })).toBe(details);
+    expect(reduce(details, { type: 'sectionsReordered', sectionKeys: [sectionKeys[1], sectionKeys[1], sectionKeys[0]] })).toBe(details);
+    expect(reduce(details, { type: 'sectionsReordered', sectionKeys: [sectionKeys[1], 'missing', sectionKeys[0]] })).toBe(details);
+    expect(reduce(details, { type: 'blocksReordered', sectionKey: 'missing', blockKeys: [] })).toBe(details);
     expect(reduce(details, { type: 'setAdded', sectionKey: 'missing', stroke: freestyle })).toBe(details);
   });
 
-  test('sections can be renamed, added, moved and removed', () => {
+  test('sections can be renamed, added, reordered and removed', () => {
     const { createKey, reduce } = createReducer();
     let details = createDefaultSwimDetails(createKey);
     details = reduce(details, { type: 'sectionRenamed', sectionKey: details.sections[1].key, name: 'Kick set' });
     details = reduce(details, { type: 'sectionAdded' });
     expect(details.sections.map((section) => section.name)).toEqual(['Warm up', 'Kick set', 'Cool down', 'Section 4']);
-    details = reduce(details, { type: 'sectionMoved', sectionKey: details.sections[3].key, offset: -1 });
+    const [warmUpKey, kickSetKey, coolDownKey, fourthSectionKey] = details.sections.map((section) => section.key);
+    details = reduce(details, {
+      type: 'sectionsReordered',
+      sectionKeys: [warmUpKey, kickSetKey, fourthSectionKey, coolDownKey],
+    });
     expect(details.sections.map((section) => section.name)).toEqual(['Warm up', 'Kick set', 'Section 4', 'Cool down']);
     details = reduce(details, { type: 'sectionRemoved', sectionKey: details.sections[2].key });
     expect(details.sections.map((section) => section.name)).toEqual(['Warm up', 'Kick set', 'Cool down']);
+  });
+
+  test('blocks reorder within their section and a grouped block moves as one', () => {
+    const { createKey, reduce } = createReducer();
+    let details = createDefaultSwimDetails(createKey);
+    const sectionKey = details.sections[1].key;
+    details = reduce(details, { type: 'setAdded', sectionKey, stroke: freestyle });
+    details = reduce(details, { type: 'setAdded', sectionKey, stroke: freestyle });
+    const [firstBlockKey, secondBlockKey] = details.sections[1].blocks.map((block) => block.key);
+    details = reduce(details, { type: 'setAddedToBlock', blockKey: firstBlockKey });
+    details = reduce(details, { type: 'blocksReordered', sectionKey, blockKeys: [secondBlockKey, firstBlockKey] });
+    expect(details.sections[1].blocks.map((block) => block.key)).toEqual([secondBlockKey, firstBlockKey]);
+    expect(details.sections[1].blocks[1].sets).toHaveLength(2);
+  });
+
+  test('blocks cannot be reordered with keys from another section', () => {
+    const { createKey, reduce } = createReducer();
+    let details = createDefaultSwimDetails(createKey);
+    details = reduce(details, { type: 'setAdded', sectionKey: details.sections[0].key, stroke: freestyle });
+    details = reduce(details, { type: 'setAdded', sectionKey: details.sections[1].key, stroke: freestyle });
+    const otherBlockKey = details.sections[1].blocks[0].key;
+    expect(
+      reduce(details, { type: 'blocksReordered', sectionKey: details.sections[0].key, blockKeys: [otherBlockKey] }),
+    ).toBe(details);
   });
 
   test('details such as the pool length can change', () => {
@@ -321,5 +354,15 @@ describe('rest normalisation', () => {
     expect(findSwimSet(zeroFixedRest, setKey)?.restSeconds).toBeNull();
     const positiveSetRest = reduce(details, { type: 'setChanged', setKey, changes: { restAfterSeconds: 45 } });
     expect(findSwimSet(positiveSetRest, setKey)?.restAfterSeconds).toBe(45);
+  });
+});
+
+describe('toggleSwimEquipment', () => {
+  test('adds equipment in list order', () => {
+    expect(toggleSwimEquipment(['kickboard'], 'fins')).toEqual(['fins', 'kickboard']);
+  });
+
+  test('removes equipment that is already selected', () => {
+    expect(toggleSwimEquipment(['fins', 'kickboard'], 'fins')).toEqual(['kickboard']);
   });
 });

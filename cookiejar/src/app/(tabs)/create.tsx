@@ -39,6 +39,9 @@ export default function CreateScreen() {
           toast={toast}
           onNewWorkout={() => router.push('/workouts/new')}
           onNewPlan={() => router.push('/plans/new')}
+          onOpenWorkout={(workout) =>
+            router.push({ pathname: '/workout/[workoutId]', params: { workoutId: String(workout.id) } })
+          }
           onOpenPlan={(plan) =>
             router.push({ pathname: '/plans/[planId]', params: { planId: String(plan.id) } })
           }

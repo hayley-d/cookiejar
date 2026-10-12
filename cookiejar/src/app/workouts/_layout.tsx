@@ -22,7 +22,6 @@ export default function WorkoutBuilderLayout() {
         <Stack.Screen name="activity-details" options={{ title: 'Activity details' }} />
         <Stack.Screen name="editor" />
         <Stack.Screen name="swim-editor" />
-        <Stack.Screen name="swim-set" options={{ title: 'Set' }} />
         <Stack.Screen name="[workoutId]/edit" options={{ title: 'Edit workout' }} />
         <Stack.Screen
           name="superset-info"

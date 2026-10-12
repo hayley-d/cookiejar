@@ -30,7 +30,8 @@ export type SwimEditorAction =
   | { type: 'sectionAdded' }
   | { type: 'sectionRenamed'; sectionKey: string; name: string }
   | { type: 'sectionRemoved'; sectionKey: string }
-  | { type: 'sectionMoved'; sectionKey: string; offset: -1 | 1 }
+  | { type: 'sectionsReordered'; sectionKeys: string[] }
+  | { type: 'blocksReordered'; sectionKey: string; blockKeys: string[] }
   | { type: 'setAdded'; sectionKey: string; stroke: SwimStroke }
   | { type: 'setAddedToBlock'; blockKey: string }
   | { type: 'blockRoundsChanged'; blockKey: string; rounds: number }
@@ -148,6 +149,21 @@ function hasBlock(details: SwimDetails, blockKey: string): boolean {
   return details.sections.some((section) => section.blocks.some((block) => block.key === blockKey));
 }
 
+function reorderByKeys<Keyed extends { key: string }>(entries: Keyed[], orderedKeys: string[]): Keyed[] | null {
+  if (orderedKeys.length !== entries.length || new Set(orderedKeys).size !== orderedKeys.length) {
+    return null;
+  }
+  const entriesByKey = new Map(entries.map((entry) => [entry.key, entry]));
+  const reorderedEntries = orderedKeys.flatMap((key) => {
+    const entry = entriesByKey.get(key);
+    return entry === undefined ? [] : [entry];
+  });
+  if (reorderedEntries.length !== entries.length) {
+    return null;
+  }
+  return reorderedEntries.every((entry, index) => entry === entries[index]) ? null : reorderedEntries;
+}
+
 function lastSetOf(section: EditorSwimSection): EditorSwimSet | undefined {
   return section.blocks.at(-1)?.sets.at(-1);
 }
@@ -192,18 +208,22 @@ export function createSwimEditorReducer(createKey: CreateSwimKey) {
         const remainingSections = details.sections.filter((section) => section.key !== action.sectionKey);
         return remainingSections.length === details.sections.length ? details : { ...details, sections: remainingSections };
       }
-      case 'sectionMoved': {
-        const sectionIndex = details.sections.findIndex((section) => section.key === action.sectionKey);
-        const targetIndex = sectionIndex + action.offset;
-        if (sectionIndex === -1 || targetIndex < 0 || targetIndex >= details.sections.length) {
+      case 'sectionsReordered': {
+        const reorderedSections = reorderByKeys(details.sections, action.sectionKeys);
+        return reorderedSections === null ? details : { ...details, sections: reorderedSections };
+      }
+      case 'blocksReordered': {
+        const targetSection = details.sections.find((section) => section.key === action.sectionKey);
+        const reorderedBlocks = targetSection === undefined ? null : reorderByKeys(targetSection.blocks, action.blockKeys);
+        if (reorderedBlocks === null) {
           return details;
         }
-        const reorderedSections = [...details.sections];
-        [reorderedSections[sectionIndex], reorderedSections[targetIndex]] = [
-          reorderedSections[targetIndex],
-          reorderedSections[sectionIndex],
-        ];
-        return { ...details, sections: reorderedSections };
+        return {
+          ...details,
+          sections: details.sections.map((section) =>
+            section.key === action.sectionKey ? { ...section, blocks: reorderedBlocks } : section,
+          ),
+        };
       }
       case 'setAdded': {
         const targetSection = details.sections.find((section) => section.key === action.sectionKey);
