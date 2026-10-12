@@ -19,4 +19,8 @@ export type Session = {
   healthMaximumHeartRate: number | null;
   healthActiveKilocalories: number | null;
   healthDurationSeconds: number | null;
+  distanceMeters: number | null;
+  elevationGainMeters: number | null;
+  activeKilocalories: number | null;
+  averageHeartRate: number | null;
 };

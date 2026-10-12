@@ -21,6 +21,10 @@ function makeSession(overrides: { completedAt: string | null; repetitions: numbe
     healthMaximumHeartRate: null,
     healthActiveKilocalories: null,
     healthDurationSeconds: null,
+    distanceMeters: null,
+    elevationGainMeters: null,
+    activeKilocalories: null,
+    averageHeartRate: null,
     plannedDurationMinutes: null,
     exercises: [
       {

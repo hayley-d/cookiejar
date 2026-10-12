@@ -21,6 +21,10 @@ function makeSession(): SessionWithExercises {
     healthMaximumHeartRate: null,
     healthActiveKilocalories: null,
     healthDurationSeconds: null,
+    distanceMeters: null,
+    elevationGainMeters: null,
+    activeKilocalories: null,
+    averageHeartRate: null,
     plannedDurationMinutes: null,
     exercises: [
       { sessionExerciseId: 10, exerciseId: 5 },

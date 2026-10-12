@@ -83,7 +83,20 @@ export default function WorkoutDetailScreen() {
         />
       ) : null}
       {workout.kind === 'class' ? <ClassWorkoutDetail workout={workout} onStart={startWorkout} /> : null}
-      {workout.kind === 'activity' ? <ActivityWorkoutDetail workout={workout} /> : null}
+      {workout.kind === 'activity' ? (
+        <ActivityWorkoutDetail
+          workout={workout}
+          onLogActivity={() =>
+            router.push({
+              pathname: '/activities/log',
+              params:
+                planEntryId === null
+                  ? { workoutId: String(workout.id), date }
+                  : { workoutId: String(workout.id), date, planEntryId: String(planEntryId) },
+            })
+          }
+        />
+      ) : null}
     </>
   );
 }

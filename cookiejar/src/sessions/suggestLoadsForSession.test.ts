@@ -58,6 +58,10 @@ function makeSession(exercises: SessionExerciseWithSets[]): SessionWithExercises
     healthMaximumHeartRate: null,
     healthActiveKilocalories: null,
     healthDurationSeconds: null,
+    distanceMeters: null,
+    elevationGainMeters: null,
+    activeKilocalories: null,
+    averageHeartRate: null,
     plannedDurationMinutes: null,
     exercises,
   };

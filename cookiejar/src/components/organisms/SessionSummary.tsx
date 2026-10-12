@@ -1,4 +1,5 @@
 import { Button } from '@/components/atoms/Button';
+import { ActivitySummary } from '@/components/organisms/ActivitySummary';
 import { NuggieImage } from '@/components/atoms/NuggieImage';
 import { HealthSuggestionBanner } from '@/components/molecules/HealthSuggestionBanner';
 import { LinkedHealthWorkoutRow } from '@/components/molecules/LinkedHealthWorkoutRow';
@@ -46,6 +47,10 @@ export function SessionSummary({
   onLinkGarmin,
   onUnlinkGarmin,
 }: SessionSummaryProperties) {
+  if (session.workoutKind === 'activity') {
+    return <ActivitySummary session={session} nuggie={nuggie} now={now} onDone={onDone} onUnlinkGarmin={onUnlinkGarmin} />;
+  }
+
   const totals = calculateSessionTotals(session, now);
   const bestRecords = selectBestRecordPerExercise(personalRecords);
   const exerciseNames = new Map(

@@ -86,6 +86,10 @@ type SessionRow = {
   health_maximum_heart_rate: number | null;
   health_active_kilocalories: number | null;
   health_duration_seconds: number | null;
+  distance_meters: number | null;
+  elevation_gain_meters: number | null;
+  active_kilocalories: number | null;
+  average_heart_rate: number | null;
   planned_duration_minutes: number | null;
 };
 
@@ -230,6 +234,58 @@ export async function startSession(database: SQLiteDatabase, request: SessionSta
   return sessionId;
 }
 
+export type ActivityLogInsert = {
+  workoutId: number;
+  planEntryId: number | null;
+  activityType: ActivityType;
+  scheduledDate: string;
+  startedAt: string;
+  finishedAt: string;
+  distanceMeters: number | null;
+  elevationGainMeters: number | null;
+  activeKilocalories: number | null;
+  averageHeartRate: number | null;
+  notes: string | null;
+};
+
+export async function insertActivitySession(database: SQLiteDatabase, log: ActivityLogInsert): Promise<number> {
+  let sessionId: number | null = null;
+
+  await database.withTransactionAsync(async () => {
+    const workout = await database.getFirstAsync<{ name: string }>(
+      'SELECT name FROM workouts WHERE id = ?',
+      log.workoutId,
+    );
+    if (workout === null) {
+      throw new Error('The workout to log no longer exists');
+    }
+    const result = await database.runAsync(
+      `INSERT INTO sessions
+        (workout_id, plan_entry_id, workout_name, workout_kind, activity_type, scheduled_date, started_at,
+          finished_at, distance_meters, elevation_gain_meters, active_kilocalories, average_heart_rate, notes)
+      VALUES (?, ?, ?, 'activity', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      log.workoutId,
+      log.planEntryId,
+      workout.name,
+      log.activityType,
+      log.scheduledDate,
+      log.startedAt,
+      log.finishedAt,
+      log.distanceMeters,
+      log.elevationGainMeters,
+      log.activeKilocalories,
+      log.averageHeartRate,
+      log.notes,
+    );
+    sessionId = result.lastInsertRowId;
+  });
+
+  if (sessionId === null) {
+    throw new Error('The activity was not logged');
+  }
+  return sessionId;
+}
+
 export async function getSessionWithExercises(
   database: SQLiteDatabase,
   sessionId: number,
@@ -240,6 +296,8 @@ export async function getSessionWithExercises(
       sessions.notes,
       sessions.health_workout_uuid, sessions.health_average_heart_rate, sessions.health_maximum_heart_rate,
       sessions.health_active_kilocalories, sessions.health_duration_seconds,
+      sessions.distance_meters, sessions.elevation_gain_meters, sessions.active_kilocalories,
+      sessions.average_heart_rate,
       workouts.duration_minutes AS planned_duration_minutes
     FROM sessions
     LEFT JOIN workouts ON workouts.id = sessions.workout_id
@@ -314,6 +372,10 @@ export async function getSessionWithExercises(
     healthMaximumHeartRate: sessionRow.health_maximum_heart_rate,
     healthActiveKilocalories: sessionRow.health_active_kilocalories,
     healthDurationSeconds: sessionRow.health_duration_seconds,
+    distanceMeters: sessionRow.distance_meters,
+    elevationGainMeters: sessionRow.elevation_gain_meters,
+    activeKilocalories: sessionRow.active_kilocalories,
+    averageHeartRate: sessionRow.average_heart_rate,
     plannedDurationMinutes: sessionRow.planned_duration_minutes,
     exercises,
   };

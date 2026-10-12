@@ -159,6 +159,16 @@ function ThemedNavigation() {
             sheetGrabberVisible: true,
           }}
         />
+        <Stack.Screen
+          name="activities/log"
+          options={{
+            presentation: 'formSheet',
+            title: 'Log activity',
+            headerLargeTitleEnabled: false,
+            sheetAllowedDetents: [0.95],
+            sheetGrabberVisible: true,
+          }}
+        />
         <Stack.Screen name="exercises/picker" options={{ presentation: 'fullScreenModal', headerShown: false }} />
         <Stack.Screen
           name="exercises/video"
