@@ -32,6 +32,10 @@ export default function NewWorkoutScreen() {
       router.push('/workouts/activity-details');
       return;
     }
+    if (selectedKind === 'swim') {
+      router.push('/workouts/swim-editor');
+      return;
+    }
     router.push({ pathname: '/workouts/editor', params: { pickOnOpen: 'true' } });
   };
 
@@ -57,7 +61,7 @@ export default function NewWorkoutScreen() {
         </FormField>
         <FormField
           label="Type"
-          error={hasAttemptedNext && selectedKind === null ? 'Choose Individual, Class or Activity' : undefined}
+          error={hasAttemptedNext && selectedKind === null ? 'Choose Individual, Class, Activity or Swim' : undefined}
         >
           <KindChoiceCard
             title="Individual workout"
@@ -79,6 +83,13 @@ export default function NewWorkoutScreen() {
             nuggie="hiking"
             isSelected={selectedKind === 'activity'}
             onPress={() => setSelectedKind('activity')}
+          />
+          <KindChoiceCard
+            title="Swim"
+            description="Sections of sets with strokes, distances and rests"
+            nuggie="shark"
+            isSelected={selectedKind === 'swim'}
+            onPress={() => setSelectedKind('swim')}
           />
         </FormField>
       </ScrollBox>

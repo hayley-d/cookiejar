@@ -6,6 +6,7 @@ import { ImageUrlField } from '@/components/molecules/ImageUrlField';
 import { SegmentedControl } from '@/components/molecules/SegmentedControl';
 import { ScrollBox } from '@/components/primitives/ScrollBox';
 import { TextField } from '@/components/primitives/TextField';
+import { Typography } from '@/components/primitives/Typography';
 import type { ExerciseFormErrors, ExerciseFormValues } from '@/exercises/validateExerciseForm';
 import { bodyPartLabels, gymBodyParts } from '@/types/BodyPart';
 import { trackingTypeLabels, trackingTypes } from '@/types/TrackingType';
@@ -38,11 +39,15 @@ export function ExerciseForm({ values, errors, onChangeValues, footer }: Exercis
         />
       </FormField>
       <FormField label="Body part" error={errors.bodyPart}>
-        <ChipGroup
-          options={bodyPartOptions}
-          selectedValue={values.bodyPart}
-          onSelect={(bodyPart) => onChangeValues({ ...values, bodyPart })}
-        />
+        {values.bodyPart === 'swimming' ? (
+          <Typography>{bodyPartLabels.swimming}</Typography>
+        ) : (
+          <ChipGroup
+            options={bodyPartOptions}
+            selectedValue={values.bodyPart}
+            onSelect={(bodyPart) => onChangeValues({ ...values, bodyPart })}
+          />
+        )}
       </FormField>
       <FormField label="Usually measured by" error={errors.defaultTrackingType}>
         <SegmentedControl

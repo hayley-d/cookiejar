@@ -300,9 +300,11 @@ All routes are nested under `src/app/workouts/_layout.tsx`, which wraps them in 
 
 | Route | Presentation | Purpose |
 | --- | --- | --- |
-| `/workouts/new` | Stack push (first) | Name and kind choice (Individual or Class) |
+| `/workouts/new` | Stack push (first) | Name and kind choice (Individual, Class, Activity or Swim) |
 | `/workouts/class-details` | Stack push | Step 2 for class workouts: class type, duration, description, image URL |
 | `/workouts/activity-details` | Stack push | Step 2 for activity workouts: activity type (Hike, Run, Walk), description, image URL. Editing an activity reopens it |
+| `/workouts/swim-editor` | Stack push | Step 2 for swim workouts: pool length (25 m or 50 m), description, image URL and one card per section (rename, move, remove, add set), with the workout total and Save in the footer. Editing a swim reopens it |
+| `/workouts/swim-set` | Stack push | Edits one set by `setKey`: stroke chips (Swimming exercises only), repetitions stepper, distance with pool length presets, Rest or Send-off with a time, remove |
 | `/workouts/editor` | Stack push | Step 2 for individual workouts: exercise picker on open (if `pickOnOpen`), then exercise editor with target sets, superset grouping, and drag to reorder |
 | `/workouts/[workoutId]/edit` | Stack push (first, no anchor) | Loads an existing workout into the editor or the class form after `loaded`. Both show a Name field at the top (only when `workoutId` is set), so a saved workout or a duplicate can be renamed; Save is disabled and the error shows inline while the name is empty. It is pushed from the Create hub without `withAnchor`, and `workouts/_layout.tsx` sets no `unstable_settings.anchor`, so the builder stack opens as `[edit]` and never stacks it on `new` |
 | `/workouts/superset-info` | Form sheet | Info about supersets with the `coach` nuggie and a tip |
@@ -346,6 +348,10 @@ When a workout is saved, the route calls `announceWorkoutSaved(workoutName)` int
 ### Picker Reuse
 
 The exercise picker is opened from inside the builder by calling `beginExercisePick()` into the existing `exercisePickerStore`, then pushing `/exercises/picker` with `mode: 'multiple'` (for Add exercises) or `mode: 'single'` (for Replace). The picker pushes back with results to the same store, so the builder gets them through `useExercisePickResult()`. `useExercisePicks` loads the picked exercises; if that fails it clears the pending pick (ending `isLoadingPick`) and shows an Alert.
+
+### Swim Workouts
+
+A swim workout keeps `swimDetails` in the editor state (pool length, description, image URL and sections of blocks of sets), reduced by `createSwimEditorReducer` in `src/swimming/swimEditorReducer.ts` through the `swimChanged` action. Every set lives in a block; the Ticket 2 UI adds each set in its own block with one round and no rest after, while save and load already round-trip rounds, rest after, equipment and notes. `saveWorkout` writes the workout row (with `pool_length_meters`) and, in the same transaction, deletes and re-inserts `swim_sections`, `swim_blocks`, `swim_sets` and `swim_set_equipment`. `getWorkoutWithItems` returns a `swim` structure for swim workouts, and `duplicateWorkout` copies it. The pure `src/swimming/` modules (`swimDistance`, `swimDistancePresets`, `describeSwimSet`, `formatSwimTime`) are covered by `bun test`.
 
 ### Pure Modules
 

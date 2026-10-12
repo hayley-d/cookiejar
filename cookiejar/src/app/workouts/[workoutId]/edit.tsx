@@ -9,6 +9,7 @@ import { toLoadedWorkout } from '@/workouts/toLoadedWorkout';
 import ActivityDetailsScreen from '../activity-details';
 import ClassDetailsScreen from '../class-details';
 import WorkoutEditorScreen from '../editor';
+import SwimEditorScreen from '../swim-editor';
 
 type EditWorkoutParameters = {
   workoutId: string;
@@ -57,6 +58,7 @@ export default function EditWorkoutScreen() {
       {state.kind === 'class' ? <ClassDetailsScreen /> : null}
       {state.kind === 'activity' ? <ActivityDetailsScreen /> : null}
       {state.kind === 'individual' ? <WorkoutEditorScreen /> : null}
+      {state.kind === 'swim' ? <SwimEditorScreen /> : null}
     </>
   );
 }
