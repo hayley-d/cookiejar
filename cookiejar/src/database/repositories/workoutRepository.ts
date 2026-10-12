@@ -27,9 +27,10 @@ type WorkoutSummaryRow = {
   created_at: string;
   updated_at: string;
   exercise_count: number;
+  swim_distance_meters: number;
 };
 
-type WorkoutRow = Omit<WorkoutSummaryRow, 'exercise_count'> & { pool_length_meters: number | null };
+type WorkoutRow = Omit<WorkoutSummaryRow, 'exercise_count' | 'swim_distance_meters'> & { pool_length_meters: number | null };
 
 type SwimSectionRow = { id: number; name: string };
 
@@ -90,6 +91,7 @@ function toWorkoutSummary(row: WorkoutSummaryRow): WorkoutSummary {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     exerciseCount: row.exercise_count,
+    swimDistanceMeters: row.swim_distance_meters,
   };
 }
 
@@ -97,7 +99,12 @@ export async function listWorkouts(database: SQLiteDatabase): Promise<WorkoutSum
   const rows = await database.getAllAsync<WorkoutSummaryRow>(
     `SELECT workouts.id, workouts.name, workouts.kind, workouts.class_type, workouts.activity_type,
       workouts.duration_minutes, workouts.description, workouts.image_url, workouts.created_at, workouts.updated_at,
-      COUNT(workout_items.id) AS exercise_count
+      COUNT(workout_items.id) AS exercise_count,
+      (SELECT COALESCE(SUM(swim_blocks.rounds * swim_sets.repetitions * swim_sets.distance_meters), 0)
+        FROM swim_sections
+        JOIN swim_blocks ON swim_blocks.section_id = swim_sections.id
+        JOIN swim_sets ON swim_sets.block_id = swim_blocks.id
+        WHERE swim_sections.workout_id = workouts.id) AS swim_distance_meters
     FROM workouts
     LEFT JOIN workout_items ON workout_items.workout_id = workouts.id
     GROUP BY workouts.id

@@ -24,29 +24,35 @@ describe('workoutNameError', () => {
 
 describe('describeWorkout', () => {
   test('a class shows its duration', () => {
-    expect(describeWorkout({ kind: 'class', durationMinutes: 50, exerciseCount: 0 })).toBe('Class · 50 min');
+    expect(describeWorkout({ kind: 'class', durationMinutes: 50, exerciseCount: 0, swimDistanceMeters: 0 })).toBe('Class · 50 min');
   });
 
   test('a class without a duration shows only Class', () => {
-    expect(describeWorkout({ kind: 'class', durationMinutes: null, exerciseCount: 0 })).toBe('Class');
+    expect(describeWorkout({ kind: 'class', durationMinutes: null, exerciseCount: 0, swimDistanceMeters: 0 })).toBe('Class');
   });
 
   test('an activity shows Activity', () => {
-    expect(describeWorkout({ kind: 'activity', durationMinutes: null, exerciseCount: 0 })).toBe('Activity');
+    expect(describeWorkout({ kind: 'activity', durationMinutes: null, exerciseCount: 0, swimDistanceMeters: 0 })).toBe('Activity');
   });
 
   test('a swim shows Swim', () => {
-    expect(describeWorkout({ kind: 'swim', durationMinutes: null, exerciseCount: 0 })).toBe('Swim');
+    expect(describeWorkout({ kind: 'swim', durationMinutes: null, exerciseCount: 0, swimDistanceMeters: 0 })).toBe('Swim');
+  });
+
+  test('a swim with distance shows its total distance', () => {
+    expect(describeWorkout({ kind: 'swim', durationMinutes: null, exerciseCount: 0, swimDistanceMeters: 1500 })).toBe(
+      'Swim · 1,500 m',
+    );
   });
 
   test('an individual workout counts its exercises', () => {
-    expect(describeWorkout({ kind: 'individual', durationMinutes: null, exerciseCount: 6 })).toBe(
+    expect(describeWorkout({ kind: 'individual', durationMinutes: null, exerciseCount: 6, swimDistanceMeters: 0 })).toBe(
       'Individual · 6 exercises',
     );
   });
 
   test('one exercise is singular', () => {
-    expect(describeWorkout({ kind: 'individual', durationMinutes: null, exerciseCount: 1 })).toBe(
+    expect(describeWorkout({ kind: 'individual', durationMinutes: null, exerciseCount: 1, swimDistanceMeters: 0 })).toBe(
       'Individual · 1 exercise',
     );
   });
@@ -78,17 +84,23 @@ describe('activityTypeNuggie', () => {
 
 describe('workoutNuggie', () => {
   test('an individual workout shows the workout nuggie', () => {
-    expect(workoutNuggie({ classType: null, activityType: null })).toBe('workout');
+    expect(workoutNuggie({ kind: 'individual', classType: null, activityType: null })).toBe('workout');
   });
 
   test('a class shows its class nuggie', () => {
-    expect(workoutNuggie({ classType: 'yoga', activityType: null })).toBe('yoga');
-    expect(workoutNuggie({ classType: 'spin', activityType: null })).toBe('workout');
+    expect(workoutNuggie({ kind: 'class', classType: 'yoga', activityType: null })).toBe('yoga');
+    expect(workoutNuggie({ kind: 'class', classType: 'spin', activityType: null })).toBe('workout');
   });
 
   test('an activity shows its activity nuggie', () => {
-    expect(workoutNuggie({ classType: null, activityType: 'hike' })).toBe('hiking');
-    expect(workoutNuggie({ classType: null, activityType: 'walk' })).toBe('goodJob');
+    expect(workoutNuggie({ kind: 'activity', classType: null, activityType: 'hike' })).toBe('hiking');
+    expect(workoutNuggie({ kind: 'activity', classType: null, activityType: 'walk' })).toBe('goodJob');
+  });
+});
+
+describe('workoutNuggie for swims', () => {
+  test('a swim shows the shark nuggie', () => {
+    expect(workoutNuggie({ kind: 'swim', classType: null, activityType: null })).toBe('shark');
   });
 });
 

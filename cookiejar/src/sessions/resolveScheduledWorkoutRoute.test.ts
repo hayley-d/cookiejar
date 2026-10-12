@@ -133,6 +133,30 @@ describe('resolveScheduledWorkoutRoute', () => {
     });
   });
 
+  test('planned swim opens the swim workout with its date and plan entry', () => {
+    const planned = scheduledWorkout('planned');
+    const result = resolveScheduledWorkoutRoute(
+      scheduledWorkout('planned', { workout: { ...planned.workout, kind: 'swim' } }),
+    );
+    expect(result).toEqual({
+      pathname: '/workout/[workoutId]',
+      params: { workoutId: '1', date: '2026-10-05', planEntryId: '1' },
+    });
+  });
+
+  test('in-progress swim opens the logger and completed swim opens the summary', () => {
+    const inProgress = scheduledWorkout('inProgress');
+    const completed = scheduledWorkout('completed');
+    expect(
+      resolveScheduledWorkoutRoute(
+        scheduledWorkout('inProgress', { workout: { ...inProgress.workout, kind: 'swim' } }),
+      ),
+    ).toEqual({ pathname: '/sessions/[sessionId]', params: { sessionId: '100' } });
+    expect(
+      resolveScheduledWorkoutRoute(scheduledWorkout('completed', { workout: { ...completed.workout, kind: 'swim' } })),
+    ).toEqual({ pathname: '/sessions/[sessionId]/summary', params: { sessionId: '100' } });
+  });
+
   test('planned card returns null when workout id is null', () => {
     const result = resolveScheduledWorkoutRoute(
       scheduledWorkout('planned', { workout: { ...scheduledWorkout('planned').workout, id: null } }),
